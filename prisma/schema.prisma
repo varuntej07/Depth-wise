@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String?
+  avatarUrl String?   @map("avatar_url")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  sessions  Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  rootQuery String   @map("root_query")
+  title     String?
+  isPublic  Boolean  @default(false) @map("is_public")
+  nodeCount Int      @default(0) @map("node_count")
+  maxDepth  Int      @default(0) @map("max_depth")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nodes   Node[]
+  edges   Edge[]
+  history ConversationHistory[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([isPublic, createdAt(sort: Desc)])
+  @@map("sessions")
+}
+
+model Node {
+  id         String   @id @default(uuid())
+  sessionId  String   @map("session_id")
+  parentId   String?  @map("parent_id")
+
+  title      String
+  content    String?
+  summary    String?
+
+  depth      Int
+  positionX  Float    @map("position_x")
+  positionY  Float    @map("position_y")
+
+  explored   Boolean  @default(false)
+
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  parent     Node?    @relation("NodeChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children   Node[]   @relation("NodeChildren")
+
+  edgesAsSource Edge[] @relation("SourceEdges")
+  edgesAsTarget Edge[] @relation("TargetEdges")
+
+  @@index([sessionId])
+  @@index([parentId])
+  @@index([sessionId, depth])
+  @@map("nodes")
+}
+
+model Edge {
+  id        String  @id @default(uuid())
+  sessionId String  @map("session_id")
+  sourceId  String  @map("source_id")
+  targetId  String  @map("target_id")
+
+  animated  Boolean @default(true)
+
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  source    Node    @relation("SourceEdges", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    Node    @relation("TargetEdges", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId])
+  @@index([sessionId])
+  @@map("edges")
+}
+
+model ConversationHistory {
+  id        String   @id @default(uuid())
+  sessionId String   @map("session_id")
+  nodeId    String?  @map("node_id")
+
+  role      String
+  content   String
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("conversation_history")
+}
