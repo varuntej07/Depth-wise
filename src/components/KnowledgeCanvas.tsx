@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -21,7 +21,7 @@ import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
 
 const nodeTypes = {
-  knowledge: (props: any) => {
+  knowledge: (props: { data: GraphNode['data']; id: string; selected: boolean }) => {
     // Render skeleton if it's a skeleton node
     if (props.data.isSkeleton) {
       return <SkeletonNode {...props} />;
@@ -36,8 +36,8 @@ const edgeTypes = {
 
 const KnowledgeCanvas: React.FC = () => {
   const { nodes: storeNodes, edges: storeEdges, updateNode } = useGraphStore();
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   // Find all edges in the path from root to a given node
@@ -78,7 +78,7 @@ const KnowledgeCanvas: React.FC = () => {
 
   // Sync store with React Flow state
   useEffect(() => {
-    setNodes(storeNodes as Node[]);
+    setNodes(storeNodes as unknown as Node[]);
   }, [storeNodes, setNodes]);
 
   // Enhanced edges with depth and highlight information
@@ -94,7 +94,7 @@ const KnowledgeCanvas: React.FC = () => {
       },
     }));
 
-    setEdges(enhancedEdges as Edge[]);
+    setEdges(enhancedEdges as unknown as Edge[]);
   }, [storeEdges, hoveredNodeId, getPathToRoot, getEdgeDepth, setEdges]);
 
   const onConnect = useCallback(
@@ -159,7 +159,14 @@ const KnowledgeCanvas: React.FC = () => {
         nodeIdsToRemove.forEach((id) => useGraphStore.getState().removeNode(id));
 
         // Add new nodes
-        const newNodes: GraphNode[] = data.branches.map((branch: any) => ({
+        const newNodes: GraphNode[] = data.branches.map((branch: {
+          id: string;
+          title: string;
+          content: string;
+          summary: string;
+          depth: number;
+          position: { x: number; y: number };
+        }) => ({
           id: branch.id,
           type: 'knowledge',
           position: branch.position,
@@ -176,7 +183,11 @@ const KnowledgeCanvas: React.FC = () => {
         }));
 
         // Add new edges
-        const newEdges: GraphEdge[] = data.edges.map((edge: any) => ({
+        const newEdges: GraphEdge[] = data.edges.map((edge: {
+          id: string;
+          source: string;
+          target: string;
+        }) => ({
           id: edge.id,
           source: edge.source,
           target: edge.target,
@@ -234,18 +245,10 @@ const KnowledgeCanvas: React.FC = () => {
           size={1}
           style={{ backgroundColor: '#0f172a' }}
         />
-        <Controls
-          style={{
-            button: {
-              backgroundColor: '#1e293b',
-              color: '#06b6d4',
-              borderColor: '#334155',
-            }
-          }}
-        />
+        <Controls />
         <MiniMap
           nodeColor={(node) => {
-            const knowledgeNode = node as GraphNode;
+            const knowledgeNode = node as unknown as GraphNode;
             if (knowledgeNode.data.loading) return '#3b82f6';
             if (knowledgeNode.data.explored) return '#06b6d4';
             return '#64748b';

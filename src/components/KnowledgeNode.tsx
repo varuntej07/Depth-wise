@@ -34,10 +34,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
   };
 
   const depthColors = getDepthColor(data.depth);
-
-  // Determine if content is long (more than 150 characters)
   const contentText = data.content || data.summary || '';
-  const isLongContent = contentText.length > 150;
 
   return (
     <>

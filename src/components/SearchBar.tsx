@@ -104,7 +104,14 @@ const SearchBar: React.FC = () => {
       };
 
       // Create branch nodes
-      const branchNodes: GraphNode[] = data.branches.map((branch: any) => ({
+      const branchNodes: GraphNode[] = data.branches.map((branch: {
+        id: string;
+        title: string;
+        content: string;
+        summary: string;
+        depth: number;
+        position: { x: number; y: number };
+      }) => ({
         id: branch.id,
         type: 'knowledge',
         position: branch.position,

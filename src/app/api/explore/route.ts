@@ -5,7 +5,7 @@ import { generateBranches } from '@/lib/claude';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, parentId, depth } = body;
+    const { sessionId, parentId } = body;
 
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
@@ -60,7 +60,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Build exploration path
-    const path: string[] = [session.rootQuery];
     let currentNode = parentNode;
     const nodeChain = [currentNode];
 

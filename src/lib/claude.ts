@@ -145,7 +145,7 @@ export async function generateBranches(
       answer: result.answer || '',
       branches: result.branches || [],
     };
-  } catch (error) {
+  } catch {
     console.error('Failed to parse Claude response:', content.text);
     throw new Error('Failed to parse AI response');
   }

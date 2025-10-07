@@ -11,6 +11,7 @@ export interface KnowledgeNodeData {
   sessionId: string;
   parentId?: string;
   isSkeleton?: boolean;
+  [key: string]: unknown;
 }
 
 export interface GraphNode extends ReactFlowNode {

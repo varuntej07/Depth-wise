@@ -1,4 +1,4 @@
-import { Branch } from './graph';
+import { Branch, GraphNode, GraphEdge } from './graph';
 
 export interface CreateSessionRequest {
   query: string;
@@ -30,8 +30,8 @@ export interface GetSessionResponse {
   sessionId: string;
   rootQuery: string;
   createdAt: string;
-  nodes: any[];
-  edges: any[];
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 }
 
 export interface ErrorResponse {

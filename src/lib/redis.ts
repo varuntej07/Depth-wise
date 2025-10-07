@@ -30,7 +30,7 @@ export const cache = {
     return data ? JSON.parse(data) : null;
   },
 
-  async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     const client = getRedisClient();
     const serialized = JSON.stringify(value);
     if (ttlSeconds) {
