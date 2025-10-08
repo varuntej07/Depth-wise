@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Create new child nodes
-    // Node width is 360px, so we use 440px spacing to ensure proper gaps
-    const horizontalSpacing = 440;
+    // Node width is 400px, so we use 480px spacing to ensure proper gaps
+    const horizontalSpacing = 480;
     const verticalSpacing = 300;
 
     const newNodes = branches.map((branch, index) =>

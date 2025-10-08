@@ -35,6 +35,8 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
 
   const depthColors = getDepthColor(data.depth);
   const contentText = data.content || data.summary || '';
+  const wordCount = contentText.trim().split(/\s+/).filter(word => word.length > 0).length;
+  const shouldShowViewDetails = wordCount > 50; // Show button if more than 50 words
 
   return (
     <>
@@ -52,7 +54,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
         />
 
         <Card
-          className={`w-[360px] h-[280px] bg-slate-900/90 backdrop-blur-sm border-2 ${
+          className={`min-w-[400px] w-[400px] h-[280px] bg-slate-900/90 backdrop-blur-sm border-2 ${
             data.error
               ? 'border-red-500/50 shadow-red-500/20'
               : depthColors.border
@@ -67,10 +69,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
           } flex flex-col`}
         >
         <CardHeader className="pb-3 border-b border-slate-800">
-          <CardTitle className={`text-lg font-semibold leading-tight text-white`}>
-            {data.title}
-          </CardTitle>
-          <div className={`text-xs ${depthColors.text} mt-1 flex items-center gap-2`}>
+          <div className={`text-xs ${depthColors.text} mb-2 flex items-center justify-center gap-2`}>
             <span>Level {data.depth}</span>
             {data.explored && (
               <span className="flex items-center gap-1">
@@ -81,8 +80,11 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               </span>
             )}
           </div>
+          <CardTitle className={`text-lg font-semibold leading-tight text-white`}>
+            {data.title}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="pt-4 space-y-3 flex-1 flex flex-col overflow-hidden">
+        <CardContent className="pt-2 space-y-2 flex-1 flex flex-col overflow-hidden">
           {/* Content with fixed truncation */}
           {contentText && (
             <div className="flex-1 overflow-hidden">
@@ -90,14 +92,14 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
                 {data.content || data.summary}
               </div>
 
-              {/* View Details button for any content */}
-              {contentText && (
+              {/* Read more button only for longer content */}
+              {shouldShowViewDetails && (
                 <button
                   onClick={() => setIsModalOpen(true)}
                   className={`mt-2 text-xs ${depthColors.text} hover:underline flex items-center gap-1 transition-colors`}
                 >
                   <Maximize2 className="w-3 h-3" />
-                  <span>View Details</span>
+                  <span>Read more</span>
                 </button>
               )}
             </div>

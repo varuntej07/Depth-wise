@@ -49,7 +49,7 @@ const SearchBar: React.FC = () => {
     const skeletonBranches: GraphNode[] = Array.from({ length: 4 }).map((_, index) => ({
       id: `skeleton-${index}`,
       type: 'knowledge',
-      position: { x: (index - 1.5) * 440, y: 300 },
+      position: { x: (index - 1.5) * 480, y: 300 },
       data: {
         title: '',
         depth: 2,

@@ -119,7 +119,7 @@ const KnowledgeCanvas: React.FC = () => {
         id: `skeleton-${nodeId}-${index}`,
         type: 'knowledge',
         position: {
-          x: node.position.x + (index - 1) * 440,
+          x: node.position.x + (index - 1) * 480,
           y: node.position.y + 300,
         },
         data: {
