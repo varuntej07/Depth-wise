@@ -119,8 +119,8 @@ const KnowledgeCanvas: React.FC = () => {
         id: `skeleton-${nodeId}-${index}`,
         type: 'knowledge',
         position: {
-          x: node.position.x + (index - 1) * 480,
-          y: node.position.y + 300,
+          x: node.position.x + (index - 1) * 550,
+          y: node.position.y + 400,
         },
         data: {
           title: '',
@@ -232,12 +232,23 @@ const KnowledgeCanvas: React.FC = () => {
         onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
         onNodeMouseLeave={() => setHoveredNodeId(null)}
         fitView
+        fitViewOptions={{
+          padding: 0.2,
+          includeHiddenNodes: false,
+          minZoom: 0.1,
+          maxZoom: 1,
+        }}
         minZoom={0.1}
         maxZoom={2}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={true}
+        panOnScroll={true}
+        panOnDrag={true}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
+        zoomOnDoubleClick={false}
+        preventScrolling={true}
       >
         <Background
           color="#06b6d4"
@@ -245,7 +256,7 @@ const KnowledgeCanvas: React.FC = () => {
           size={1}
           style={{ backgroundColor: '#0f172a' }}
         />
-        <Controls />
+        <Controls showInteractive={false} />
         <MiniMap
           nodeColor={(node) => {
             const knowledgeNode = node as unknown as GraphNode;
@@ -257,6 +268,7 @@ const KnowledgeCanvas: React.FC = () => {
           style={{
             backgroundColor: '#1e293b',
           }}
+          className="hidden sm:block"
           pannable
           zoomable
         />

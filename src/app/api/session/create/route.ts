@@ -37,9 +37,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Create child nodes for branches
-    // Node width is 400px, so we use 480px spacing to ensure proper gaps
-    const horizontalSpacing = 480;
-    const verticalSpacing = 300;
+    // Node width is 280px (mobile) to 400px (desktop), use 320px spacing for mobile compatibility
+    const horizontalSpacing = 320;
+    const verticalSpacing = 280;
 
     const childNodes = branches.map((branch, index) =>
       mockDb.createNode({

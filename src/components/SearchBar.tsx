@@ -49,7 +49,7 @@ const SearchBar: React.FC = () => {
     const skeletonBranches: GraphNode[] = Array.from({ length: 4 }).map((_, index) => ({
       id: `skeleton-${index}`,
       type: 'knowledge',
-      position: { x: (index - 1.5) * 480, y: 300 },
+      position: { x: (index - 1.5) * 320, y: 280 },
       data: {
         title: '',
         depth: 2,
@@ -160,17 +160,17 @@ const SearchBar: React.FC = () => {
   return (
     <form
       onSubmit={handleSearch}
-      className="w-full max-w-3xl mx-auto flex gap-3 items-center"
+      className="w-full max-w-3xl mx-auto flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center"
     >
       <div className="relative flex-1 group">
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-cyan-500 h-5 w-5 z-10" />
+        <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-cyan-500 h-4 w-4 sm:h-5 sm:w-5 z-10" />
         <Input
           type="text"
           placeholder="Ask anything... (e.g., How does quantum computing work?)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           disabled={isSearching}
-          className="pl-12 pr-4 h-14 text-base bg-slate-900/80 backdrop-blur-sm border-2 border-cyan-500/30 focus:border-cyan-500 text-white placeholder:text-slate-500 rounded-xl focus:ring-0 focus:ring-offset-0 transition-all duration-300 focus:shadow-[0_0_30px_rgba(6,182,212,0.3)] group-hover:border-cyan-500/50"
+          className="pl-10 sm:pl-12 pr-3 sm:pr-4 h-12 sm:h-14 text-sm sm:text-base bg-slate-900/80 backdrop-blur-sm border-2 border-cyan-500/30 focus:border-cyan-500 text-white placeholder:text-slate-500 placeholder:text-xs sm:placeholder:text-sm rounded-xl focus:ring-0 focus:ring-offset-0 transition-all duration-300 focus:shadow-[0_0_30px_rgba(6,182,212,0.3)] group-hover:border-cyan-500/50"
         />
         <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/20 to-violet-500/20 opacity-0 group-hover:opacity-100 blur-xl transition-opacity -z-10"></div>
       </div>
@@ -178,17 +178,17 @@ const SearchBar: React.FC = () => {
         type="submit"
         disabled={!query.trim() || isSearching}
         size="lg"
-        className="h-14 px-8 bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 text-white font-medium rounded-xl hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed border-0"
+        className="h-12 sm:h-14 px-6 sm:px-8 bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 text-white font-medium rounded-xl hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed border-0"
       >
         {isSearching ? (
           <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Exploring...
+            <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+            <span className="text-sm sm:text-base">Exploring...</span>
           </>
         ) : (
           <>
-            <span>Explore</span>
-            <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className="text-sm sm:text-base">Explore</span>
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
           </>

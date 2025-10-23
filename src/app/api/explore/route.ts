@@ -93,10 +93,11 @@ export async function POST(request: NextRequest) {
       coveredTopics,
     });
 
-    // Create new child nodes
-    // Node width is 400px, so we use 480px spacing to ensure proper gaps
-    const horizontalSpacing = 480;
-    const verticalSpacing = 300;
+    // Spaces for new nodes
+    const horizontalSpacing = 600;
+    const verticalSpacing = 450;
+
+    const baseX = parentNode.positionX - ((branches.length - 1) / 2) * horizontalSpacing;       // Calculates a proper left-edge baseline 
 
     const newNodes = branches.map((branch, index) =>
       mockDb.createNode({
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
         summary: branch.summary,
         content: branch.summary,
         depth: parentNode.depth + 1,
-        positionX: parentNode.positionX + (index - (branches.length - 1) / 2) * horizontalSpacing,
+        positionX: baseX + index * horizontalSpacing,       // Spaces each node sequentially from that baseline using index * horizontalSpacing
         positionY: parentNode.positionY + verticalSpacing,
         explored: false,
       })

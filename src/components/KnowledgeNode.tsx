@@ -54,7 +54,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
         />
 
         <Card
-          className={`min-w-[400px] w-[400px] h-[280px] bg-slate-900/90 backdrop-blur-sm border-2 ${
+          className={`min-w-[280px] w-[280px] sm:min-w-[320px] sm:w-[320px] md:min-w-[400px] md:w-[400px] h-[260px] sm:h-[280px] bg-slate-900/90 backdrop-blur-sm border-2 ${
             data.error
               ? 'border-red-500/50 shadow-red-500/20'
               : depthColors.border
@@ -68,8 +68,8 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               : ''
           } flex flex-col`}
         >
-        <CardHeader className="pb-3 border-b border-slate-800">
-          <div className={`text-xs ${depthColors.text} mb-2 flex items-center justify-center gap-2`}>
+        <CardHeader className="pb-2 sm:pb-3 border-b border-slate-800">
+          <div className={`text-xs ${depthColors.text} mb-1.5 sm:mb-2 flex items-center justify-center gap-2`}>
             <span>Level {data.depth}</span>
             {data.explored && (
               <span className="flex items-center gap-1">
@@ -80,7 +80,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               </span>
             )}
           </div>
-          <CardTitle className={`text-lg font-semibold leading-tight text-white`}>
+          <CardTitle className={`text-base sm:text-lg font-semibold leading-tight text-white`}>
             {data.title}
           </CardTitle>
         </CardHeader>
@@ -88,7 +88,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
           {/* Content with fixed truncation */}
           {contentText && (
             <div className="flex-1 overflow-hidden">
-              <div className="text-sm text-slate-300 leading-relaxed line-clamp-3">
+              <div className="text-xs sm:text-sm text-slate-300 leading-relaxed line-clamp-3">
                 {data.content || data.summary}
               </div>
 
@@ -96,7 +96,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               {shouldShowViewDetails && (
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className={`mt-2 text-xs ${depthColors.text} hover:underline flex items-center gap-1 transition-colors`}
+                  className={`mt-1.5 sm:mt-2 text-xs ${depthColors.text} hover:underline flex items-center gap-1 transition-colors`}
                 >
                   <Maximize2 className="w-3 h-3" />
                   <span>Read more</span>
@@ -126,10 +126,10 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
           {!data.explored && !data.loading && !data.error && (
             <button
               onClick={handleExplore}
-              className={`w-full text-sm ${depthColors.text} hover:bg-slate-800/50 border border-${depthColors.border.split('-')[1]}-500/30 rounded-lg py-2 px-4 font-medium transition-all duration-200 hover:border-${depthColors.border.split('-')[1]}-500/60 flex items-center justify-center gap-2 group`}
+              className={`w-full text-xs sm:text-sm ${depthColors.text} hover:bg-slate-800/50 border border-${depthColors.border.split('-')[1]}-500/30 rounded-lg py-1.5 sm:py-2 px-3 sm:px-4 font-medium transition-all duration-200 hover:border-${depthColors.border.split('-')[1]}-500/60 flex items-center justify-center gap-2 group`}
             >
               <span>Explore Deeper</span>
-              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </button>
