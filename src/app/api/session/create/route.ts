@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/mock-db';
+import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 
 export async function POST(request: NextRequest) {
@@ -11,12 +11,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
-    // Create session
-    const session = mockDb.createSession({
-      rootQuery: query,
-      title: query.slice(0, 100),
-    });
-
     // Generate initial branches using Claude
     const { answer, branches } = await generateBranches({
       rootQuery: query,
@@ -25,63 +19,82 @@ export async function POST(request: NextRequest) {
       coveredTopics: [],
     });
 
-    // Create root node
-    const rootNode = mockDb.createNode({
-      sessionId: session.id,
-      title: query,
-      content: answer,
-      depth: 1,
-      positionX: 0,
-      positionY: 0,
-      explored: true,
-    });
+    // Create session with root node and child nodes in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create session
+      const session = await tx.session.create({
+        data: {
+          rootQuery: query,
+          title: query.slice(0, 100),
+          nodeCount: 1 + branches.length,
+          maxDepth: 2,
+        },
+      });
 
-    // Create child nodes for branches
-    // Node width is 280px (mobile) to 400px (desktop), use 320px spacing for mobile compatibility
-    const horizontalSpacing = 320;
-    const verticalSpacing = 280;
+      // Create root node
+      const rootNode = await tx.node.create({
+        data: {
+          sessionId: session.id,
+          title: query,
+          content: answer,
+          depth: 1,
+          positionX: 0,
+          positionY: 0,
+          explored: true,
+        },
+      });
 
-    const childNodes = branches.map((branch, index) =>
-      mockDb.createNode({
-        sessionId: session.id,
-        parentId: rootNode.id,
-        title: branch.title,
-        summary: branch.summary,
-        content: branch.summary,
-        depth: 2,
-        positionX: (index - (branches.length - 1) / 2) * horizontalSpacing,
-        positionY: verticalSpacing,
-        explored: false,
-      })
-    );
+      // Create child nodes for branches
+      // Node width is 280px (mobile) to 400px (desktop), use 320px spacing for mobile compatibility
+      const horizontalSpacing = 320;
+      const verticalSpacing = 280;
 
-    // Create edges
-    childNodes.forEach((childNode) =>
-      mockDb.createEdge({
-        sessionId: session.id,
-        sourceId: rootNode.id,
-        targetId: childNode.id,
-        animated: true,
-      })
-    );
+      const childNodes = await Promise.all(
+        branches.map((branch, index) =>
+          tx.node.create({
+            data: {
+              sessionId: session.id,
+              parentId: rootNode.id,
+              title: branch.title,
+              summary: branch.summary,
+              content: branch.summary,
+              depth: 2,
+              positionX: (index - (branches.length - 1) / 2) * horizontalSpacing,
+              positionY: verticalSpacing,
+              explored: false,
+            },
+          })
+        )
+      );
 
-    // Update session stats
-    mockDb.updateSession(session.id, {
-      nodeCount: 1 + childNodes.length,
-      maxDepth: 2,
+      // Create edges
+      await Promise.all(
+        childNodes.map((childNode) =>
+          tx.edge.create({
+            data: {
+              sessionId: session.id,
+              sourceId: rootNode.id,
+              targetId: childNode.id,
+              animated: true,
+            },
+          })
+        )
+      );
+
+      return { session, rootNode, childNodes };
     });
 
     return NextResponse.json({
-      sessionId: session.id,
-      createdAt: session.createdAt.toISOString(),
+      sessionId: result.session.id,
+      createdAt: result.session.createdAt.toISOString(),
       rootNode: {
-        id: rootNode.id,
-        title: rootNode.title,
-        content: rootNode.content,
-        depth: rootNode.depth,
-        position: { x: rootNode.positionX, y: rootNode.positionY },
+        id: result.rootNode.id,
+        title: result.rootNode.title,
+        content: result.rootNode.content,
+        depth: result.rootNode.depth,
+        position: { x: result.rootNode.positionX, y: result.rootNode.positionY },
       },
-      branches: childNodes.map((node) => ({
+      branches: result.childNodes.map((node) => ({
         id: node.id,
         title: node.title,
         summary: node.summary,

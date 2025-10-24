@@ -4,9 +4,13 @@ import SearchBar from '@/components/SearchBar';
 import KnowledgeCanvas from '@/components/KnowledgeCanvas';
 import ErrorAlert from '@/components/ErrorAlert';
 import useGraphStore from '@/store/graphStore';
+import { SignInButton } from '@/components/auth/SignInButton';
+import { UserMenu } from '@/components/auth/UserMenu';
+import { useSession } from 'next-auth/react';
 
 export default function Home() {
   const { error, setError, nodes } = useGraphStore();
+  const { data: session, status } = useSession();
 
   return (
     <div className={`${nodes.length === 0 ? 'min-h-screen' : 'h-screen'} w-screen flex flex-col bg-slate-950 relative`}>
@@ -36,9 +40,13 @@ export default function Home() {
               <button className="hidden sm:block text-slate-400 hover:text-cyan-400 transition-colors text-sm">
                 Documentation
               </button>
-              <button className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-all text-xs sm:text-sm">
-                Sign In
-              </button>
+              {status === 'loading' ? (
+                <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-500 animate-spin"></div>
+              ) : session ? (
+                <UserMenu />
+              ) : (
+                <SignInButton />
+              )}
             </nav>
           </div>
         </div>

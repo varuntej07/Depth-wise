@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/mock-db';
+import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 
 export async function POST(request: NextRequest) {
@@ -16,19 +16,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Get session and parent node
-    const session = mockDb.findSession(sessionId);
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+    });
 
     if (!session) {
       return NextResponse.json(
         {
-          error: 'Session expired or not found. The server may have restarted. Please start a new search.',
+          error: 'Session expired or not found. Please start a new search.',
           code: 'SESSION_NOT_FOUND'
         },
         { status: 404 }
       );
     }
 
-    const parentNode = mockDb.findNode(parentId);
+    const parentNode = await prisma.node.findUnique({
+      where: { id: parentId },
+    });
 
     if (!parentNode) {
       return NextResponse.json({ error: 'Parent node not found' }, { status: 404 });
@@ -37,9 +41,13 @@ export async function POST(request: NextRequest) {
     // Check if already explored
     if (parentNode.explored) {
       // Return existing children
-      const existingChildren = mockDb.findNodesByParent(parentNode.id);
+      const existingChildren = await prisma.node.findMany({
+        where: { parentId: parentNode.id },
+      });
 
-      const existingEdges = mockDb.findEdgesBySource(parentNode.id);
+      const existingEdges = await prisma.edge.findMany({
+        where: { sourceId: parentNode.id },
+      });
 
       return NextResponse.json({
         parentId: parentNode.id,
@@ -59,13 +67,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Build exploration path
+    // Build exploration path by traversing up parent chain
+    const nodeChain = [parentNode];
     let currentNode = parentNode;
-    const nodeChain = [currentNode];
 
-    // Build parent chain
     while (currentNode.parentId) {
-      const parent = mockDb.findNode(currentNode.parentId);
+      const parent = await prisma.node.findUnique({
+        where: { id: currentNode.parentId },
+      });
       if (parent) {
         nodeChain.unshift(parent);
         currentNode = parent;
@@ -77,7 +86,9 @@ export async function POST(request: NextRequest) {
     const pathTitles = nodeChain.map((n) => n.title);
 
     // Get sibling nodes for context
-    const siblings = mockDb.findNodesByParent(parentNode.parentId || '');
+    const siblings = await prisma.node.findMany({
+      where: { parentId: parentNode.parentId || undefined },
+    });
 
     const coveredTopics = siblings.map((s) => s.title);
 
@@ -93,51 +104,77 @@ export async function POST(request: NextRequest) {
       coveredTopics,
     });
 
-    // Spaces for new nodes
-    const horizontalSpacing = 600;
-    const verticalSpacing = 450;
+    // Create new nodes and edges in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Spaces for new nodes
+      const horizontalSpacing = 600;
+      const verticalSpacing = 450;
 
-    const baseX = parentNode.positionX - ((branches.length - 1) / 2) * horizontalSpacing;       // Calculates a proper left-edge baseline 
+      const baseX = parentNode.positionX - ((branches.length - 1) / 2) * horizontalSpacing;
 
-    const newNodes = branches.map((branch, index) =>
-      mockDb.createNode({
-        sessionId: session.id,
-        parentId: parentNode.id,
-        title: branch.title,
-        summary: branch.summary,
-        content: branch.summary,
-        depth: parentNode.depth + 1,
-        positionX: baseX + index * horizontalSpacing,       // Spaces each node sequentially from that baseline using index * horizontalSpacing
-        positionY: parentNode.positionY + verticalSpacing,
-        explored: false,
-      })
-    );
+      // Create new nodes
+      const newNodes = await Promise.all(
+        branches.map((branch, index) =>
+          tx.node.create({
+            data: {
+              sessionId: session.id,
+              parentId: parentNode.id,
+              title: branch.title,
+              summary: branch.summary,
+              content: branch.summary,
+              depth: parentNode.depth + 1,
+              positionX: baseX + index * horizontalSpacing,
+              positionY: parentNode.positionY + verticalSpacing,
+              explored: false,
+            },
+          })
+        )
+      );
 
-    // Create edges
-    const newEdges = newNodes.map((childNode) =>
-      mockDb.createEdge({
-        sessionId: session.id,
-        sourceId: parentNode.id,
-        targetId: childNode.id,
-        animated: true,
-      })
-    );
+      // Create edges
+      const newEdges = await Promise.all(
+        newNodes.map((childNode) =>
+          tx.edge.create({
+            data: {
+              sessionId: session.id,
+              sourceId: parentNode.id,
+              targetId: childNode.id,
+              animated: true,
+            },
+          })
+        )
+      );
 
-    // Update parent node as explored
-    mockDb.updateNode(parentNode.id, { explored: true });
+      // Update parent node as explored
+      await tx.node.update({
+        where: { id: parentNode.id },
+        data: { explored: true },
+      });
 
-    // Update session stats
-    const nodeCount = mockDb.countNodesBySession(session.id);
-    const maxDepthNode = mockDb.getMaxDepthNode(session.id);
+      // Update session stats
+      const nodeCount = await tx.node.count({
+        where: { sessionId: session.id },
+      });
 
-    mockDb.updateSession(session.id, {
-      nodeCount,
-      maxDepth: maxDepthNode?.depth || 0,
+      const maxDepthNode = await tx.node.findFirst({
+        where: { sessionId: session.id },
+        orderBy: { depth: 'desc' },
+      });
+
+      await tx.session.update({
+        where: { id: session.id },
+        data: {
+          nodeCount,
+          maxDepth: maxDepthNode?.depth || 0,
+        },
+      });
+
+      return { newNodes, newEdges };
     });
 
     return NextResponse.json({
       parentId: parentNode.id,
-      branches: newNodes.map((node) => ({
+      branches: result.newNodes.map((node) => ({
         id: node.id,
         title: node.title,
         summary: node.summary,
@@ -145,7 +182,7 @@ export async function POST(request: NextRequest) {
         depth: node.depth,
         position: { x: node.positionX, y: node.positionY },
       })),
-      edges: newEdges.map((edge) => ({
+      edges: result.newEdges.map((edge) => ({
         id: edge.id,
         source: edge.sourceId,
         target: edge.targetId,
