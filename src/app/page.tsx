@@ -37,9 +37,6 @@ export default function Home() {
               </span>
             </div>
             <nav className="flex items-center gap-2 sm:gap-6">
-              <button className="hidden sm:block text-slate-400 hover:text-cyan-400 transition-colors text-sm">
-                Documentation
-              </button>
               {status === 'loading' ? (
                 <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-500 animate-spin"></div>
               ) : session ? (
