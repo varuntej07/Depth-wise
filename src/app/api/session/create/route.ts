@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     // Create session with root node and child nodes in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create session
-      const session = await tx.session.create({
+      const session = await tx.graphSession.create({
         data: {
           rootQuery: query,
           title: query.slice(0, 100),

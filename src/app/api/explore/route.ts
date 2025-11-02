@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get session and parent node
-    const session = await prisma.session.findUnique({
+    const session = await prisma.graphSession.findUnique({
       where: { id: sessionId },
     });
 
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
         orderBy: { depth: 'desc' },
       });
 
-      await tx.session.update({
+      await tx.graphSession.update({
         where: { id: session.id },
         data: {
           nodeCount,

@@ -16,8 +16,9 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  accounts Account[]
-  sessions Session[]
+  accounts      Account[]       @relation()
+  authSessions  Session[]       @relation("AuthSessions")
+  graphSessions GraphSession[]  @relation("GraphSessions")
 
   @@map("users")
 }
@@ -51,7 +52,19 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+// Auth.js Session model for authentication
 model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation("AuthSessions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_sessions")
+}
+
+// Graph Session model for your application
+model GraphSession {
   id        String   @id @default(uuid())
   userId    String?  @map("user_id")
   rootQuery String   @map("root_query")
@@ -62,7 +75,7 @@ model Session {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User?   @relation("GraphSessions", fields: [userId], references: [id], onDelete: Cascade)
   nodes   Node[]
   edges   Edge[]
   history ConversationHistory[]
@@ -89,9 +102,9 @@ model Node {
 
   createdAt  DateTime @default(now()) @map("created_at")
 
-  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  parent     Node?    @relation("NodeChildren", fields: [parentId], references: [id], onDelete: Cascade)
-  children   Node[]   @relation("NodeChildren")
+  session    GraphSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  parent     Node?         @relation("NodeChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children   Node[]        @relation("NodeChildren")
 
   edgesAsSource Edge[] @relation("SourceEdges")
   edgesAsTarget Edge[] @relation("TargetEdges")
@@ -110,9 +123,9 @@ model Edge {
 
   animated  Boolean @default(true)
 
-  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  source    Node    @relation("SourceEdges", fields: [sourceId], references: [id], onDelete: Cascade)
-  target    Node    @relation("TargetEdges", fields: [targetId], references: [id], onDelete: Cascade)
+  session   GraphSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  source    Node         @relation("SourceEdges", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    Node         @relation("TargetEdges", fields: [targetId], references: [id], onDelete: Cascade)
 
   @@unique([sourceId, targetId])
   @@index([sessionId])
@@ -129,7 +142,7 @@ model ConversationHistory {
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session   GraphSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
   @@map("conversation_history")
