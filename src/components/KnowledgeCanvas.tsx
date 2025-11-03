@@ -19,6 +19,7 @@ import SkeletonNode from './SkeletonNode';
 import KnowledgeEdge from './KnowledgeEdge';
 import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
+import { LAYOUT_CONFIG } from '@/lib/layout';
 
 const nodeTypes = {
   knowledge: (props: { data: GraphNode['data']; id: string; selected: boolean }) => {
@@ -114,13 +115,13 @@ const KnowledgeCanvas: React.FC = () => {
       // Mark as loading
       updateNode(nodeId, { loading: true, error: undefined });
 
-      // Add skeleton nodes for preview
+      // Add skeleton nodes for preview using centralized layout config
       const skeletonNodes: GraphNode[] = Array.from({ length: 3 }).map((_, index) => ({
         id: `skeleton-${nodeId}-${index}`,
         type: 'knowledge',
         position: {
-          x: node.position.x + (index - 1) * 550,
-          y: node.position.y + 400,
+          x: node.position.x + (index - 1) * LAYOUT_CONFIG.level2Plus.horizontalSpacing,
+          y: node.position.y + LAYOUT_CONFIG.level2Plus.verticalSpacing,
         },
         data: {
           title: '',
@@ -133,7 +134,16 @@ const KnowledgeCanvas: React.FC = () => {
         },
       }));
 
+      // Create skeleton edges
+      const skeletonEdges: GraphEdge[] = skeletonNodes.map((skeletonNode) => ({
+        id: `edge-${nodeId}-${skeletonNode.id}`,
+        source: nodeId,
+        target: skeletonNode.id,
+        animated: true,
+      }));
+
       useGraphStore.getState().addNodes(skeletonNodes);
+      useGraphStore.getState().addEdges(skeletonEdges);
 
       try {
         const sessionId = useGraphStore.getState().sessionId;

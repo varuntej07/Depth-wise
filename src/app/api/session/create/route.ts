@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
+import { LAYOUT_CONFIG } from '@/lib/layout';
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,9 +46,8 @@ export async function POST(request: NextRequest) {
       });
 
       // Create child nodes for branches
-      // Node width is 280px (mobile) to 400px (desktop), use 320px spacing for mobile compatibility
-      const horizontalSpacing = 320;
-      const verticalSpacing = 280;
+      // Use centralized layout configuration to prevent node overlap
+      const { horizontalSpacing, verticalSpacing } = LAYOUT_CONFIG.level1;
 
       const childNodes = await Promise.all(
         branches.map((branch, index) =>

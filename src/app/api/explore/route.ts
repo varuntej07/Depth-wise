@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
+import { LAYOUT_CONFIG } from '@/lib/layout';
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,9 +107,8 @@ export async function POST(request: NextRequest) {
 
     // Create new nodes and edges in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Spaces for new nodes
-      const horizontalSpacing = 600;
-      const verticalSpacing = 450;
+      // Use centralized layout configuration for consistent spacing
+      const { horizontalSpacing, verticalSpacing } = LAYOUT_CONFIG.level2Plus;
 
       const baseX = parentNode.positionX - ((branches.length - 1) / 2) * horizontalSpacing;
 

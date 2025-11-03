@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Loader2 } from 'lucide-react';
 import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
+import { LAYOUT_CONFIG } from '@/lib/layout';
 
 const SearchBar: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -45,11 +46,14 @@ const SearchBar: React.FC = () => {
       },
     ];
 
-    // Add skeleton child nodes
+    // Add skeleton child nodes using centralized layout config
     const skeletonBranches: GraphNode[] = Array.from({ length: 4 }).map((_, index) => ({
       id: `skeleton-${index}`,
       type: 'knowledge',
-      position: { x: (index - 1.5) * 320, y: 280 },
+      position: {
+        x: (index - 1.5) * LAYOUT_CONFIG.level1.horizontalSpacing,
+        y: LAYOUT_CONFIG.level1.verticalSpacing
+      },
       data: {
         title: '',
         depth: 2,
@@ -61,8 +65,17 @@ const SearchBar: React.FC = () => {
       },
     }));
 
+    // Create skeleton edges
+    const skeletonEdges: GraphEdge[] = skeletonBranches.map((node) => ({
+      id: `edge-${skeletonRootId}-${node.id}`,
+      source: skeletonRootId,
+      target: node.id,
+      animated: true,
+    }));
+
     if (!retryQuery) {
       addNodes([...skeletonNodes, ...skeletonBranches]);
+      addEdges(skeletonEdges);
     }
 
     try {
