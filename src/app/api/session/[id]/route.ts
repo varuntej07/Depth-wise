@@ -28,11 +28,7 @@ export async function GET(
             createdAt: 'asc',
           },
         },
-        edges: {
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
+        edges: true,
       },
     });
 
