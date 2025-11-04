@@ -80,7 +80,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               </span>
             )}
           </div>
-          <CardTitle className={`text-base sm:text-lg font-semibold leading-tight text-white`}>
+          <CardTitle className={`text-lg sm:text-xl font-semibold leading-tight text-white`}>
             {data.title}
           </CardTitle>
         </CardHeader>
@@ -88,7 +88,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
           {/* Content with fixed truncation */}
           {contentText && (
             <div className="flex-1 overflow-hidden">
-              <div className="text-xs sm:text-sm text-slate-300 leading-relaxed line-clamp-3">
+              <div className="text-sm sm:text-base text-slate-300 leading-relaxed line-clamp-3">
                 {data.content || data.summary}
               </div>
 
