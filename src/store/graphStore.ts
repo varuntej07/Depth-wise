@@ -20,8 +20,10 @@ interface GraphState {
   updateNode: (id: string, updates: Partial<GraphNode['data']>) => void;
   removeNode: (id: string) => void;
   clearGraph: () => void;
+  loadSession: (sessionId: string, rootQuery: string, nodes: GraphNode[], edges: GraphEdge[]) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  clearError: () => void;
 
   // Computed
   getNodeById: (id: string) => GraphNode | undefined;
@@ -72,8 +74,18 @@ const useGraphStore = create<GraphState>((set, get) => ({
       error: null,
     }),
 
+  loadSession: (sessionId, rootQuery, nodes, edges) =>
+    set({
+      sessionId,
+      rootQuery,
+      nodes,
+      edges,
+      error: null,
+    }),
+
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
 
   getNodeById: (id) => get().nodes.find((n) => n.id === id),
 
