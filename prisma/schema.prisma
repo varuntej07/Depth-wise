@@ -16,11 +16,34 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
+  // Subscription fields
+  subscriptionTier   SubscriptionTier @default(FREE) @map("subscription_tier")
+  subscriptionStatus SubscriptionStatus @default(ACTIVE) @map("subscription_status")
+  subscriptionId     String? @unique @map("subscription_id") // Stripe subscription ID
+  customerId         String? @unique @map("customer_id") // Stripe customer ID
+
+  // Usage tracking
+  explorationsUsed   Int      @default(0) @map("explorations_used")
+  explorationsReset  DateTime @default(now()) @map("explorations_reset")
+
   accounts      Account[]       @relation()
   authSessions  Session[]       @relation("AuthSessions")
   graphSessions GraphSession[]  @relation("GraphSessions")
 
   @@map("users")
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  INCOMPLETE
 }
 
 model Account {

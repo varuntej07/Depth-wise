@@ -250,3 +250,113 @@
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
+
+/* Custom Toggle Switch */
+.toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background-color: #334155;
+  border: 2px solid #475569;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.toggle:checked {
+  background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%);
+  border-color: transparent;
+}
+
+.toggle::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle:checked::before {
+  transform: translateX(20px);
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.4);
+}
+
+.toggle:hover {
+  border-color: #64748b;
+}
+
+.toggle:checked:hover {
+  border-color: #06b6d4;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid #06b6d4;
+  outline-offset: 2px;
+}
+
+/* Sidebar Layout Utilities */
+.sidebar-layout {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+}
+
+.sidebar-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sidebar transition smoothing */
+@media (min-width: 768px) {
+  .sidebar-content-wrapper.collapsed {
+    margin-left: 64px;
+  }
+
+  .sidebar-content-wrapper.expanded {
+    margin-left: 280px;
+  }
+}
+
+/* Scrollbar styling for sidebar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Tooltip for collapsed sidebar items */
+@keyframes tooltip-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.sidebar-tooltip {
+  animation: tooltip-appear 0.2s ease-out;
+}
