@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 
 export async function POST(request: NextRequest) {
   try {
+    // Get authenticated user
+    const session = await auth();
+    let userId: string | null = null;
+
+    if (session?.user?.email) {
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+      });
+      userId = user?.id || null;
+    }
+
     const body = await request.json();
     const { query } = body;
 
@@ -21,21 +33,23 @@ export async function POST(request: NextRequest) {
     });
 
     // Create session with root node and child nodes in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create session
-      const session = await tx.graphSession.create({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await prisma.$transaction(async (tx: any) => {
+      // Create session (linked to user if authenticated)
+      const graphSession = await tx.graphSession.create({
         data: {
           rootQuery: query,
           title: query.slice(0, 100),
           nodeCount: 1 + branches.length,
           maxDepth: 2,
+          userId: userId,
         },
       });
 
       // Create root node
       const rootNode = await tx.node.create({
         data: {
-          sessionId: session.id,
+          sessionId: graphSession.id,
           title: query,
           content: answer,
           depth: 1,
@@ -50,10 +64,10 @@ export async function POST(request: NextRequest) {
       const { horizontalSpacing, verticalSpacing } = LAYOUT_CONFIG.level1;
 
       const childNodes = await Promise.all(
-        branches.map((branch, index) =>
+        branches.map((branch: typeof branches[0], index: number) =>
           tx.node.create({
             data: {
-              sessionId: session.id,
+              sessionId: graphSession.id,
               parentId: rootNode.id,
               title: branch.title,
               summary: branch.summary,
@@ -72,7 +86,7 @@ export async function POST(request: NextRequest) {
         childNodes.map((childNode) =>
           tx.edge.create({
             data: {
-              sessionId: session.id,
+              sessionId: graphSession.id,
               sourceId: rootNode.id,
               targetId: childNode.id,
               animated: true,
@@ -81,7 +95,7 @@ export async function POST(request: NextRequest) {
         )
       );
 
-      return { session, rootNode, childNodes };
+      return { session: graphSession, rootNode, childNodes };
     });
 
     return NextResponse.json({
@@ -94,7 +108,7 @@ export async function POST(request: NextRequest) {
         depth: result.rootNode.depth,
         position: { x: result.rootNode.positionX, y: result.rootNode.positionY },
       },
-      branches: result.childNodes.map((node) => ({
+      branches: result.childNodes.map((node: typeof result.childNodes[0]) => ({
         id: node.id,
         title: node.title,
         summary: node.summary,

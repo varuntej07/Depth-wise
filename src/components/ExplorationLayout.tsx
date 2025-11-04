@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchBar from './SearchBar';
 import KnowledgeCanvas from './KnowledgeCanvas';
-import { ChatSidebar } from './ChatSidebar';
+import { ChatSidebar } from './Sidebar';
 import { BottomToolbar } from './BottomToolbar';
 import ErrorAlert from './ErrorAlert';
 import NodeDetailModal from './NodeDetailModal';
@@ -23,11 +23,42 @@ export function ExplorationLayout() {
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const [selectedNodeData, setSelectedNodeData] = useState<KnowledgeNodeData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [chatHistory] = useState<ChatItem[]>([]);
+  const [chatHistory, setChatHistory] = useState<ChatItem[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  const { nodes, error, clearError } = useGraphStore();
+  const { nodes, error, clearError, sessionId, loadSession, setLoading } = useGraphStore();
   const hasExistingGraph = nodes.length > 0;
+
+  // Fetch chat history function
+  const fetchChatHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetch('/api/sessions');
+      if (response.ok) {
+        const data = await response.json();
+        setChatHistory(data.sessions);
+      } else {
+        console.error('Failed to fetch chat history');
+      }
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  // Fetch chat history on mount
+  useEffect(() => {
+    fetchChatHistory();
+  }, []);
+
+  // Refresh chat history when a new session is created
+  useEffect(() => {
+    if (sessionId && !chatHistory.find((chat) => chat.id === sessionId)) {
+      fetchChatHistory();
+    }
+  }, [sessionId]);
 
   // Handle node selection from canvas
   useEffect(() => {
@@ -47,9 +78,35 @@ export function ExplorationLayout() {
     setIsSidebarCollapsed(true);
   };
 
-  const handleSelectChat = (id: string) => {
+  const handleSelectChat = async (id: string) => {
+    // Don't reload if already selected
+    if (id === sessionId) {
+      return;
+    }
+
     setSelectedChatId(id);
-    // TODO: Load chat from database when schema is provided
+    setLoading(true);
+
+    try {
+      const response = await fetch(`/api/session/${id}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to load session');
+      }
+
+      const data = await response.json();
+
+      // Load the session into the graph store
+      loadSession(data.sessionId, data.rootQuery, data.nodes, data.edges);
+
+      // Collapse the sidebar after loading (optional, for better UX)
+      setIsSidebarCollapsed(true);
+    } catch (error) {
+      console.error('Error loading session:', error);
+      useGraphStore.getState().setError('Failed to load chat history');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDownload = () => {
@@ -80,7 +137,7 @@ export function ExplorationLayout() {
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onNewChat={handleNewChat}
         chatHistory={chatHistory}
-        selectedChatId={selectedChatId}
+        selectedChatId={selectedChatId || undefined}
         onSelectChat={handleSelectChat}
       />
 
