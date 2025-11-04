@@ -23,10 +23,10 @@ export function ExplorationLayout() {
   const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
   const [selectedNodeData, setSelectedNodeData] = useState<KnowledgeNodeData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [chatHistory, setChatHistory] = useState<ChatItem[]>([]);
+  const [chatHistory] = useState<ChatItem[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
 
-  const { nodes, error, clearError, rootQuery } = useGraphStore();
+  const { nodes, error, clearError } = useGraphStore();
   const hasExistingGraph = nodes.length > 0;
 
   // Handle node selection from canvas

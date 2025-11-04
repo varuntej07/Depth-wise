@@ -8,7 +8,6 @@ import useGraphStore from '@/store/graphStore';
 import { SignInButton } from '@/components/auth/SignInButton';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { useSession } from 'next-auth/react';
-import { Menu } from 'lucide-react';
 import { ChatSidebar } from '@/components/Sidebar';
 
 export default function Home() {

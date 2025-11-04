@@ -6,10 +6,8 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageCircle,
-  Users,
   Star,
   Plus,
-  Settings,
   LogOut,
   User,
 } from 'lucide-react';

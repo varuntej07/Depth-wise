@@ -10,14 +10,15 @@ import {
   Share2,
   FileText,
   Code2,
-  HeadphonesIcon
+  HeadphonesIcon,
+  type LucideIcon
 } from 'lucide-react';
 
 export interface SubscriptionFeature {
   id: string;
   name: string;
   description: string;
-  icon: any;
+  icon: LucideIcon;
   included: boolean;
   comingSoon?: boolean;
 }
@@ -28,7 +29,7 @@ export interface SubscriptionPlan {
   description: string;
   price: number;
   priceId?: string; // Stripe price ID
-  icon: any;
+  icon: LucideIcon;
   iconColor: string;
   badgeColor: string;
   popular?: boolean;
