@@ -2,6 +2,7 @@
 
 import { signOut, useSession } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
+import Image from "next/image"
 
 export function UserMenu() {
   const { data: session } = useSession()
@@ -32,9 +33,11 @@ export function UserMenu() {
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-violet-500 rounded-full opacity-0 group-hover:opacity-100 blur transition-opacity"></div>
           {session.user.image ? (
-            <img
+            <Image
               src={session.user.image}
               alt={session.user.name || 'User'}
+              width={32}
+              height={32}
               className="w-7 h-7 sm:w-8 sm:h-8 rounded-full relative border-2 border-cyan-500/50"
             />
           ) : (
@@ -69,9 +72,11 @@ export function UserMenu() {
           <div className="p-3 sm:p-4 border-b border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-violet-500/5">
             <div className="flex items-center gap-3">
               {session.user.image ? (
-                <img
+                <Image
                   src={session.user.image}
                   alt={session.user.name || 'User'}
+                  width={48}
+                  height={48}
                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-cyan-500/50"
                 />
               ) : (

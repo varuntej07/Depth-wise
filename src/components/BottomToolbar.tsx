@@ -38,7 +38,14 @@ export function BottomToolbar({
 }: BottomToolbarProps) {
   const [hoveredTool, setHoveredTool] = useState<string | null>(null);
 
-  const tools = [
+  const tools: Array<{
+    id: string;
+    icon?: typeof PenTool;
+    label?: string;
+    onClick?: () => void;
+    color?: string;
+    isDivider?: boolean;
+  }> = [
     {
       id: 'pen',
       icon: PenTool,
@@ -150,6 +157,8 @@ export function BottomToolbar({
 
           const Icon = tool.icon;
           const isActive = hoveredTool === tool.id;
+
+          if (!Icon) return null;
 
           return (
             <motion.button
