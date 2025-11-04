@@ -25,14 +25,12 @@ export function ExplorationLayout() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatItem[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const { nodes, error, clearError, sessionId, loadSession, setLoading } = useGraphStore();
   const hasExistingGraph = nodes.length > 0;
 
   // Fetch chat history function
   const fetchChatHistory = async () => {
-    setIsLoadingHistory(true);
     try {
       const response = await fetch('/api/sessions');
       if (response.ok) {
@@ -43,8 +41,6 @@ export function ExplorationLayout() {
       }
     } catch (error) {
       console.error('Error fetching chat history:', error);
-    } finally {
-      setIsLoadingHistory(false);
     }
   };
 
@@ -58,7 +54,7 @@ export function ExplorationLayout() {
     if (sessionId && !chatHistory.find((chat) => chat.id === sessionId)) {
       fetchChatHistory();
     }
-  }, [sessionId]);
+  }, [sessionId, chatHistory]);
 
   // Handle node selection from canvas
   useEffect(() => {
