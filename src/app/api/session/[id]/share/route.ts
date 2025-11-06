@@ -22,10 +22,14 @@ import { prisma } from '@/lib/db';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Step 1: Check if user is authenticated
+    // Step 1: Await params to get the session ID (Next.js 15 requirement)
+    const params = await props.params;
+    const sessionId = params.id;
+
+    // Step 2: Check if user is authenticated
     // We need to know who is making this request to verify ownership
     const session = await auth();
 
@@ -36,7 +40,7 @@ export async function POST(
       );
     }
 
-    // Step 2: Find the user in our database using their email
+    // Step 3: Find the user in our database using their email
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
@@ -47,9 +51,6 @@ export async function POST(
         { status: 404 }
       );
     }
-
-    // Step 3: Get the session ID from the URL
-    const sessionId = params.id;
 
     // Step 4: Find the graph session in the database
     const graphSession = await prisma.graphSession.findUnique({

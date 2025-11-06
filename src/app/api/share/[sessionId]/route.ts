@@ -20,10 +20,11 @@ import { prisma } from '@/lib/db';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  props: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    // Step 1: Get the session ID from the URL
+    // Step 1: Await params to get the session ID (Next.js 15 requirement)
+    const params = await props.params;
     const sessionId = params.sessionId;
 
     // Step 2: Find the graph session in the database

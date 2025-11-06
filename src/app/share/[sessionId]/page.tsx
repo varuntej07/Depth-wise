@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import KnowledgeCanvas from '@/components/KnowledgeCanvas';
 import ErrorAlert from '@/components/ErrorAlert';
 import useGraphStore from '@/store/graphStore';
@@ -22,7 +22,6 @@ import Link from 'next/link';
  */
 export default function SharePage() {
   const params = useParams();
-  const router = useRouter();
   const sessionId = params.sessionId as string;
 
   // Local state for this page
