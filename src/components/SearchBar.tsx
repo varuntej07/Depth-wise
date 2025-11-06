@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Loader2, Plus } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
@@ -187,25 +187,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
         transition={{ duration: 0.3 }}
         className="fixed top-4 left-1/2 transform -translate-x-1/2 z-20 w-full max-w-2xl px-4 sm:px-6"
       >
-        <div className="relative flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center">
-          {/* Read-only query display */}
-          <div className="relative flex-1 group">
-            <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-cyan-500 h-4 w-4 z-10" />
-            <div className="pl-10 sm:pl-12 pr-3 sm:pr-4 h-10 sm:h-12 text-sm bg-slate-900/80 backdrop-blur-sm border-2 border-cyan-500/30 text-white rounded-lg flex items-center">
-              <span className="truncate">{rootQuery || 'Exploring...'}</span>
-            </div>
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-cyan-500/10 to-violet-500/10 blur-xl -z-10" />
-          </div>
-          {/* New Search button */}
-          <Button
-            type="button"
-            onClick={clearGraph}
-            size="lg"
-            className="h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 text-white font-medium rounded-lg hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all duration-300 border-0 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm">New Search</span>
-          </Button>
+        <div className="text-center">
+          <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
+            {rootQuery || 'Exploring...'}
+          </h2>
         </div>
       </motion.div>
     );
