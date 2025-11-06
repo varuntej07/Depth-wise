@@ -302,53 +302,36 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                           Your Shareable Link
                         </label>
 
-                        {/* Link Display with Premium Copy Button */}
+                        {/* Link Display with Copy Button */}
                         <div className="relative group">
                           {/* Background glow on hover */}
                           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 rounded-xl opacity-0 group-hover:opacity-100 blur transition-opacity" />
 
-                          <div className="relative flex items-stretch gap-2 p-1 bg-slate-800/50 backdrop-blur-sm border border-white/10 rounded-xl">
-                            {/* URL Display */}
-                            <div className="flex-1 px-4 py-3 bg-slate-900/50 rounded-lg">
-                              <p className="text-sm text-cyan-400 truncate font-mono">
+                          <div className="relative flex items-center gap-2 p-3 bg-slate-800/50 backdrop-blur-sm border border-white/10 rounded-xl">
+                            {/* URL Display - with proper overflow handling */}
+                            <div className="flex-1 min-w-0 px-3 py-2 bg-slate-900/50 rounded-lg">
+                              <p className="text-xs sm:text-sm text-cyan-400 font-mono break-all">
                                 {shareUrl}
                               </p>
                             </div>
 
-                            {/* Copy Button with animation */}
+                            {/* Copy Button with icon */}
                             <motion.button
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                               onClick={handleCopyLink}
-                              className={`relative px-6 py-3 rounded-lg font-semibold transition-all overflow-hidden ${
+                              className={`flex-shrink-0 p-3 rounded-lg font-semibold transition-all ${
                                 copied
                                   ? 'bg-green-500 text-white'
                                   : 'bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:shadow-lg hover:shadow-cyan-500/50'
                               }`}
+                              title={copied ? 'Copied!' : 'Copy link'}
                             >
-                              {/* Button background animation */}
-                              {!copied && (
-                                <motion.div
-                                  animate={{ x: ['-100%', '100%'] }}
-                                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                                />
+                              {copied ? (
+                                <Check className="w-5 h-5" />
+                              ) : (
+                                <Copy className="w-5 h-5" />
                               )}
-
-                              {/* Button content */}
-                              <span className="relative flex items-center gap-2">
-                                {copied ? (
-                                  <>
-                                    <Check className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Copied!</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Copy</span>
-                                  </>
-                                )}
-                              </span>
                             </motion.button>
                           </div>
                         </div>

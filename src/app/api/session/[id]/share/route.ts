@@ -29,30 +29,7 @@ export async function POST(
     const params = await props.params;
     const sessionId = params.id;
 
-    // Step 2: Check if user is authenticated
-    // We need to know who is making this request to verify ownership
-    const session = await auth();
-
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'You must be signed in to share graphs' },
-        { status: 401 } // 401 = Unauthorized
-      );
-    }
-
-    // Step 3: Find the user in our database using their email
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Step 4: Find the graph session in the database
+    // Step 2: Find the graph session in the database first
     const graphSession = await prisma.graphSession.findUnique({
       where: { id: sessionId },
     });
@@ -65,14 +42,43 @@ export async function POST(
       );
     }
 
-    // Step 5: Security check - verify the user owns this session
-    // This prevents users from making other people's graphs public/private
-    if (graphSession.userId !== user.id) {
-      return NextResponse.json(
-        { error: 'You can only share your own graphs' },
-        { status: 403 } // 403 = Forbidden
-      );
+    // Step 3: Check authentication and ownership
+    // Anonymous users (userId: null) can share their own graphs
+    // Authenticated users can only share their own graphs
+    const session = await auth();
+
+    if (graphSession.userId !== null) {
+      // This is an authenticated user's graph
+      // Must be signed in to toggle share status
+      if (!session?.user?.email) {
+        return NextResponse.json(
+          { error: 'You must be signed in to share this graph' },
+          { status: 401 } // 401 = Unauthorized
+        );
+      }
+
+      // Find the authenticated user in our database
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+      });
+
+      if (!user) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
+
+      // Security check - verify the user owns this session
+      if (graphSession.userId !== user.id) {
+        return NextResponse.json(
+          { error: 'You can only share your own graphs' },
+          { status: 403 } // 403 = Forbidden
+        );
+      }
     }
+    // If graphSession.userId is null, it's an anonymous graph
+    // We allow anyone to toggle it (no ownership check needed for anonymous graphs)
 
     // Step 6: Get the desired public status from the request body
     const body = await request.json();
