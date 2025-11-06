@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const coveredTopics = siblings.map((s) => s.title);
 
     // Generate new branches
-    const { branches } = await generateBranches({
+    const { answer, branches } = await generateBranches({
       rootQuery: session.rootQuery,
       currentNode: {
         title: parentNode.title,
@@ -145,10 +145,13 @@ export async function POST(request: NextRequest) {
         )
       );
 
-      // Update parent node as explored
+      // Update parent node as explored and add the full answer
       await tx.node.update({
         where: { id: parentNode.id },
-        data: { explored: true },
+        data: {
+          explored: true,
+          content: answer, // Add the full generated answer to the parent node
+        },
       });
 
       // Update session stats
@@ -174,6 +177,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       parentId: parentNode.id,
+      parentContent: answer, // Include the full answer for the parent node
       branches: result.newNodes.map((node) => ({
         id: node.id,
         title: node.title,

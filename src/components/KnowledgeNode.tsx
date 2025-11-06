@@ -35,8 +35,9 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
 
   const depthColors = getDepthColor(data.depth);
   const contentText = data.content || data.summary || '';
-  const wordCount = contentText.trim().split(/\s+/).filter(word => word.length > 0).length;
-  const shouldShowViewDetails = wordCount > 50; // Show button if more than 50 words
+  const charCount = contentText.length;
+  const shouldShowViewDetails = charCount > 200; // Show button if more than 200 characters
+  const isRootNode = data.depth === 1;
 
   return (
     <>
@@ -54,7 +55,11 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
         />
 
         <Card
-          className={`min-w-[280px] w-[280px] sm:min-w-[320px] sm:w-[320px] md:min-w-[400px] md:w-[400px] h-[260px] sm:h-[280px] bg-slate-900/90 backdrop-blur-sm border-2 ${
+          className={`${
+            isRootNode
+              ? 'min-w-[320px] w-[320px] sm:min-w-[400px] sm:w-[400px] md:min-w-[500px] md:w-[500px]'
+              : 'min-w-[280px] w-[280px] sm:min-w-[340px] sm:w-[340px] md:min-w-[420px] md:w-[420px]'
+          } min-h-fit bg-slate-900/90 backdrop-blur-sm border-2 ${
             data.error
               ? 'border-red-500/50 shadow-red-500/20'
               : depthColors.border
@@ -84,12 +89,17 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
             {data.title}
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-2 space-y-2 flex-1 flex flex-col overflow-hidden">
-          {/* Content with fixed truncation */}
+        <CardContent className="pt-3 pb-3 space-y-2 flex-1 flex flex-col overflow-hidden">
+          {/* Content display - full text for <=200 chars, truncated for longer */}
           {contentText && (
             <div className="flex-1 overflow-hidden">
-              <div className="text-sm sm:text-base text-slate-300 leading-relaxed line-clamp-3">
-                {data.content || data.summary}
+              <div className={`text-sm sm:text-base text-slate-300 leading-relaxed ${
+                shouldShowViewDetails ? 'line-clamp-3' : ''
+              }`}>
+                {shouldShowViewDetails
+                  ? (data.content || data.summary)?.slice(0, 200) + '...'
+                  : (data.content || data.summary)
+                }
               </div>
 
               {/* Read more button only for longer content */}

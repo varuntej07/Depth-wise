@@ -2,23 +2,23 @@
  * Centralized layout configuration for React Flow Knowledge Graph
  *
  * Spacing calculations:
- * - Skeleton nodes are 360px wide
- * - Actual nodes are 280px (mobile), 320px (tablet), 400px (desktop)
- * - Spacing must accommodate skeleton width (360px) + comfortable gap
+ * - Root nodes: 320px (mobile), 400px (tablet), 500px (desktop)
+ * - Child nodes: 280px (mobile), 340px (tablet), 420px (desktop)
+ * - Spacing must accommodate largest node width + comfortable gap
  *
- * Level 1 spacing: 360px + 120px gap = 480px
- * Level 2+ spacing: 360px + 260px gap = 620px (increased for visual hierarchy)
+ * Level 1 spacing: 500px root + 420px child + 140px gap = 560px
+ * Level 2+ spacing: 420px + 200px gap = 620px (for visual hierarchy)
  */
 export const LAYOUT_CONFIG = {
   // Level 1: Root to first children
   level1: {
-    horizontalSpacing: 480,  // Accommodates 360px skeleton + 120px gap
-    verticalSpacing: 300,    // Slightly increased for better vertical spacing
+    horizontalSpacing: 560,  // Accommodates wider root node + child node + gap
+    verticalSpacing: 320,    // Slightly increased for adaptive height
   },
 
   // Level 2+: Deeper exploration (more space for visual clarity)
   level2Plus: {
-    horizontalSpacing: 620,  // Accommodates 360px skeleton + 260px gap
+    horizontalSpacing: 620,  // Accommodates 420px node + 200px gap
     verticalSpacing: 450,    // Maintains current vertical spacing
   },
 } as const;

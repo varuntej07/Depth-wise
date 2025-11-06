@@ -168,6 +168,11 @@ const KnowledgeCanvas: React.FC = () => {
         const nodeIdsToRemove = skeletonNodes.map((n) => n.id);
         nodeIdsToRemove.forEach((id) => useGraphStore.getState().removeNode(id));
 
+        // Update parent node with full content if provided
+        if (data.parentContent) {
+          updateNode(nodeId, { content: data.parentContent });
+        }
+
         // Add new nodes
         const newNodes: GraphNode[] = data.branches.map((branch: {
           id: string;
