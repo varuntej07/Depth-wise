@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KnowledgeNodeData } from '@/types/graph';
 import { Loader2, AlertCircle, RotateCw, Maximize2 } from 'lucide-react';
 import NodeDetailModal from './NodeDetailModal';
+import useGraphStore from '@/store/graphStore';
 
 interface KnowledgeNodeProps {
   data: KnowledgeNodeData;
@@ -27,8 +28,14 @@ const getDepthColor = (depth: number) => {
 const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Check if we're viewing a shared (public) graph
+  // If so, we shouldn't allow exploration (read-only mode)
+  const { isPublic } = useGraphStore();
+  const isReadOnly = isPublic;
+
   const handleExplore = () => {
-    if (data.loading || data.explored) return;
+    // Don't allow exploration on read-only (shared) graphs
+    if (data.loading || data.explored || isReadOnly) return;
     const event = new CustomEvent('explore-node', { detail: { nodeId: id } });
     window.dispatchEvent(event);
   };
@@ -115,25 +122,27 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
             </div>
           )}
 
-          {/* Error state with retry button */}
+          {/* Error state with retry button - Only show retry on non-read-only graphs */}
           {data.error && !data.loading && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <p className="text-xs">{data.error}</p>
               </div>
-              <button
-                onClick={handleExplore}
-                className="w-full text-sm text-red-400 hover:bg-red-500/10 border border-red-500/30 rounded-lg py-2 px-4 font-medium transition-all duration-200 hover:border-red-500/60 flex items-center justify-center gap-2 group"
-              >
-                <RotateCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                <span>Retry</span>
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={handleExplore}
+                  className="w-full text-sm text-red-400 hover:bg-red-500/10 border border-red-500/30 rounded-lg py-2 px-4 font-medium transition-all duration-200 hover:border-red-500/60 flex items-center justify-center gap-2 group"
+                >
+                  <RotateCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
+                  <span>Retry</span>
+                </button>
+              )}
             </div>
           )}
 
-          {/* Normal explore button */}
-          {!data.explored && !data.loading && !data.error && (
+          {/* Normal explore button - Only show on non-read-only graphs */}
+          {!data.explored && !data.loading && !data.error && !isReadOnly && (
             <button
               onClick={handleExplore}
               className={`w-full text-xs sm:text-sm ${depthColors.text} hover:bg-slate-800/50 border border-${depthColors.border.split('-')[1]}-500/30 rounded-lg py-1.5 sm:py-2 px-3 sm:px-4 font-medium transition-all duration-200 hover:border-${depthColors.border.split('-')[1]}-500/60 flex items-center justify-center gap-2 group`}

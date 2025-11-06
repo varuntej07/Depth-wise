@@ -9,6 +9,7 @@ import { SignInButton } from '@/components/auth/SignInButton';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { useSession } from 'next-auth/react';
 import { ChatSidebar } from '@/components/Sidebar';
+import { ShareButton } from '@/components/ShareButton';
 
 interface ChatItem {
   id: string;
@@ -99,6 +100,10 @@ export default function Home() {
         <header className="w-full border-b border-cyan-500/20 bg-slate-900/50 backdrop-blur-xl h-16 flex-shrink-0">
           <div className="h-full px-4 sm:px-6 flex items-center justify-end">
             <nav className="flex items-center gap-2 sm:gap-4">
+              {/* Share button - only shows when a graph is loaded */}
+              <ShareButton />
+
+              {/* User authentication section */}
               {status === 'loading' ? (
                 <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-500 animate-spin"></div>
               ) : session ? (

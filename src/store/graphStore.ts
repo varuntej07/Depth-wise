@@ -8,6 +8,9 @@ interface GraphState {
   nodes: GraphNode[];
   edges: GraphEdge[];
 
+  // Share state - tracks if current graph is public
+  isPublic: boolean;
+
   // UI State
   isLoading: boolean;
   error: string | null;
@@ -20,10 +23,13 @@ interface GraphState {
   updateNode: (id: string, updates: Partial<GraphNode['data']>) => void;
   removeNode: (id: string) => void;
   clearGraph: () => void;
-  loadSession: (sessionId: string, rootQuery: string, nodes: GraphNode[], edges: GraphEdge[]) => void;
+  loadSession: (sessionId: string, rootQuery: string, nodes: GraphNode[], edges: GraphEdge[], isPublic?: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
+
+  // Share actions
+  setIsPublic: (isPublic: boolean) => void;
 
   // Computed
   getNodeById: (id: string) => GraphNode | undefined;
@@ -36,11 +42,15 @@ const useGraphStore = create<GraphState>((set, get) => ({
   rootQuery: null,
   nodes: [],
   edges: [],
+  isPublic: false, // Graphs are private by default
   isLoading: false,
   error: null,
 
   setSessionId: (id) => set({ sessionId: id }),
   setRootQuery: (query) => set({ rootQuery: query }),
+
+  // Update the share status of the current graph
+  setIsPublic: (isPublic) => set({ isPublic }),
 
   addNodes: (newNodes) =>
     set((state) => ({
@@ -71,15 +81,18 @@ const useGraphStore = create<GraphState>((set, get) => ({
       edges: [],
       sessionId: null,
       rootQuery: null,
+      isPublic: false, // Reset share status when clearing
       error: null,
     }),
 
-  loadSession: (sessionId, rootQuery, nodes, edges) =>
+  // Load a session with all its data, optionally including share status
+  loadSession: (sessionId, rootQuery, nodes, edges, isPublic = false) =>
     set({
       sessionId,
       rootQuery,
       nodes,
       edges,
+      isPublic, // Load the share status from the session
       error: null,
     }),
 
