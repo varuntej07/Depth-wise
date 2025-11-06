@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
@@ -17,7 +17,7 @@ interface SearchBarProps {
 const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const { setSessionId, setRootQuery, addNodes, addEdges, clearGraph, setError, nodes } =
+  const { setSessionId, setRootQuery, addNodes, addEdges, clearGraph, setError, nodes, rootQuery } =
     useGraphStore();
 
   const hasExistingGraph = nodes.length > 0;
@@ -178,43 +178,36 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
     }, 0);
   };
 
-  // Compact layout (when graph exists)
+  // Compact layout (when graph exists) - Read-only display
   if (isCompact && hasExistingGraph) {
     return (
-      <motion.form
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        onSubmit={handleSearch}
         className="fixed top-4 left-1/2 transform -translate-x-1/2 z-20 w-full max-w-2xl px-4 sm:px-6"
       >
         <div className="relative flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center">
+          {/* Read-only query display */}
           <div className="relative flex-1 group">
             <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-cyan-500 h-4 w-4 z-10" />
-            <Input
-              type="text"
-              placeholder="Ask something new..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              disabled={isSearching}
-              className="pl-10 sm:pl-12 pr-3 sm:pr-4 h-10 sm:h-12 text-sm bg-slate-900/80 backdrop-blur-sm border-2 border-cyan-500/30 focus:border-cyan-500 text-white placeholder:text-slate-500 rounded-lg focus:ring-0 focus:ring-offset-0 transition-all duration-300 focus:shadow-[0_0_30px_rgba(6,182,212,0.3)]"
-            />
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-cyan-500/20 to-violet-500/20 opacity-0 group-hover:opacity-100 blur-xl transition-opacity -z-10" />
+            <div className="pl-10 sm:pl-12 pr-3 sm:pr-4 h-10 sm:h-12 text-sm bg-slate-900/80 backdrop-blur-sm border-2 border-cyan-500/30 text-white rounded-lg flex items-center">
+              <span className="truncate">{rootQuery || 'Exploring...'}</span>
+            </div>
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-cyan-500/10 to-violet-500/10 blur-xl -z-10" />
           </div>
+          {/* New Search button */}
           <Button
-            type="submit"
-            disabled={!query.trim() || isSearching}
+            type="button"
+            onClick={clearGraph}
             size="lg"
-            className="h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 text-white font-medium rounded-lg hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border-0"
+            className="h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 text-white font-medium rounded-lg hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all duration-300 border-0 flex items-center gap-2"
           >
-            {isSearching ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <span className="text-sm">Search</span>
-            )}
+            <Plus className="w-4 h-4" />
+            <span className="text-sm">New Search</span>
           </Button>
         </div>
-      </motion.form>
+      </motion.div>
     );
   }
 

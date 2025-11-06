@@ -48,7 +48,7 @@ export async function GET(
     // Format nodes for React Flow
     const formattedNodes = graphSession.nodes.map((node: typeof graphSession.nodes[0]) => ({
       id: node.id,
-      type: 'knowledgeNode',
+      type: 'knowledge',
       position: { x: node.positionX, y: node.positionY },
       data: {
         title: node.title,
@@ -57,7 +57,7 @@ export async function GET(
         depth: node.depth,
         explored: node.explored,
         sessionId: graphSession.id,
-        parentId: node.parentId,
+        parentId: node.parentId || undefined,
       },
     }));
 
@@ -66,7 +66,6 @@ export async function GET(
       id: edge.id,
       source: edge.sourceId,
       target: edge.targetId,
-      type: 'smoothstep',
       animated: edge.animated,
     }));
 

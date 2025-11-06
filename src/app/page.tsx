@@ -10,9 +10,17 @@ import { UserMenu } from '@/components/auth/UserMenu';
 import { useSession } from 'next-auth/react';
 import { ChatSidebar } from '@/components/Sidebar';
 
+interface ChatItem {
+  id: string;
+  title: string;
+  timestamp: Date;
+  isPinned?: boolean;
+}
+
 export default function Home() {
-  const { error, setError, nodes } = useGraphStore();
+  const { error, setError, nodes, sessionId, clearGraph, loadSession } = useGraphStore();
   const { data: session, status } = useSession();
+  const [chatHistory, setChatHistory] = useState<ChatItem[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebarCollapsed');
@@ -21,12 +29,47 @@ export default function Home() {
     return false;
   });
 
+  // Fetch chat history when user logs in or when sessionId changes
+  useEffect(() => {
+    if (session?.user) {
+      fetchChatHistory();
+    }
+  }, [session, sessionId]);
+
+  const fetchChatHistory = async () => {
+    try {
+      const response = await fetch('/api/sessions');
+      if (!response.ok) return;
+      const data = await response.json();
+      setChatHistory(data.sessions || []);
+    } catch (error) {
+      console.error('Failed to fetch chat history:', error);
+    }
+  };
+
   // Persist sidebar state
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
   const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
+
+  const handleNewChat = () => {
+    clearGraph();
+  };
+
+  const handleSelectChat = async (chatId: string) => {
+    try {
+      const response = await fetch(`/api/session/${chatId}`);
+      if (!response.ok) throw new Error('Failed to load session');
+
+      const data = await response.json();
+      loadSession(data.sessionId, data.rootQuery, data.nodes, data.edges);
+    } catch (error) {
+      console.error('Error loading session:', error);
+      setError('Failed to load chat session');
+    }
+  };
 
   return (
     <div className="h-screen w-screen flex bg-slate-950 relative overflow-hidden">
@@ -39,7 +82,14 @@ export default function Home() {
       <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse-slow delay-1000 pointer-events-none"></div>
 
       {/* Sidebar */}
-      <ChatSidebar isCollapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} onNewChat={() => {}} />
+      <ChatSidebar
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebar}
+        onNewChat={handleNewChat}
+        chatHistory={chatHistory}
+        selectedChatId={sessionId || undefined}
+        onSelectChat={handleSelectChat}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col relative z-10 md:ml-0 transition-all duration-300" style={{
