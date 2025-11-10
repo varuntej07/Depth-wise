@@ -19,7 +19,7 @@ if (typeof window !== 'undefined') {
       element_allowlist: ['a', 'button', 'form', 'input', 'select', 'textarea', 'label'],
     },
     // Development logging
-    loaded: (posthog) => {
+    loaded: () => {
       if (process.env.NODE_ENV === 'development') {
         console.log('✅ PostHog initialized successfully')
       }
