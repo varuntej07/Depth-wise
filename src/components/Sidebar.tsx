@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
+import { usePostHog } from 'posthog-js/react';
 
 interface ChatItem {
   id: string;
@@ -38,6 +39,7 @@ export function ChatSidebar({
   onSelectChat,
 }: ChatSidebarProps) {
   const { data: session } = useSession();
+  const posthog = usePostHog();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -121,7 +123,10 @@ export function ChatSidebar({
         {/* New Chat Button */}
         <div className="p-3">
           <motion.button
-            onClick={onNewChat}
+            onClick={() => {
+              posthog.capture('new_chat_clicked');
+              onNewChat();
+            }}
             whileHover={{ scale: 0.98 }}
             className={`w-full flex items-center justify-center gap-2 p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 transition-colors ${
               isCollapsed ? 'px-2' : 'px-4'
@@ -150,7 +155,13 @@ export function ChatSidebar({
                     chat={chat}
                     isSelected={selectedChatId === chat.id}
                     isCollapsed={isCollapsed}
-                    onSelect={() => onSelectChat?.(chat.id)}
+                    onSelect={() => {
+                      posthog.capture('session_selected', {
+                        session_id: chat.id,
+                        from_pinned: true,
+                      });
+                      onSelectChat?.(chat.id);
+                    }}
                   />
                 ))}
               </div>
@@ -172,7 +183,13 @@ export function ChatSidebar({
                     chat={chat}
                     isSelected={selectedChatId === chat.id}
                     isCollapsed={isCollapsed}
-                    onSelect={() => onSelectChat?.(chat.id)}
+                    onSelect={() => {
+                      posthog.capture('session_selected', {
+                        session_id: chat.id,
+                        from_pinned: false,
+                      });
+                      onSelectChat?.(chat.id);
+                    }}
                   />
                 ))}
               </div>

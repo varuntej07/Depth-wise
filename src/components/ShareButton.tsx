@@ -5,6 +5,7 @@ import { Share2 } from 'lucide-react';
 import { ShareModal } from './ShareModal';
 import useGraphStore from '@/store/graphStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePostHog } from 'posthog-js/react';
 
 /**
  * Floating Share Button Component (FAB)
@@ -22,6 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export const ShareButton: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const posthog = usePostHog();
 
   // Get session info from store to determine if we should show the button
   const { sessionId, isPublic } = useGraphStore();
@@ -45,7 +47,13 @@ export const ShareButton: React.FC = () => {
           >
             {/* Main Share Button */}
             <motion.button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                posthog.capture('share_button_clicked', {
+                  session_id: sessionId,
+                  is_public: isPublic,
+                });
+                setIsModalOpen(true);
+              }}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
               whileHover={{ scale: 1.05 }}

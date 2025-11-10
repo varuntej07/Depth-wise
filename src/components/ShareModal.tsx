@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, Copy, Check, Share2, Globe, Lock, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useGraphStore from '@/store/graphStore';
+import { usePostHog } from 'posthog-js/react';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ interface ShareModalProps {
 export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
   // Get the current session info from the store
   const { sessionId, isPublic, setIsPublic } = useGraphStore();
+  const posthog = usePostHog();
 
   // Local state for UI feedback
   const [isLoading, setIsLoading] = useState(false);
@@ -68,6 +70,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
       // Update the store with the new share status
       setIsPublic(data.isPublic);
 
+      // Track share toggle
+      posthog.capture('graph_visibility_toggled', {
+        session_id: sessionId,
+        is_public: data.isPublic,
+      });
+
       // Reset copied state when toggling
       setCopied(false);
 
@@ -89,6 +97,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
     try {
       // Modern clipboard API
       await navigator.clipboard.writeText(shareUrl);
+
+      // Track link copy
+      posthog.capture('share_link_copied', {
+        session_id: sessionId,
+        share_url: shareUrl,
+      });
 
       // Show success feedback with ripple
       setCopied(true);

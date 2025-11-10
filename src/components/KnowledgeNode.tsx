@@ -7,6 +7,7 @@ import { KnowledgeNodeData } from '@/types/graph';
 import { Loader2, AlertCircle, RotateCw, Maximize2 } from 'lucide-react';
 import NodeDetailModal from './NodeDetailModal';
 import useGraphStore from '@/store/graphStore';
+import { usePostHog } from 'posthog-js/react';
 
 interface KnowledgeNodeProps {
   data: KnowledgeNodeData;
@@ -27,6 +28,7 @@ const getDepthColor = (depth: number) => {
 
 const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const posthog = usePostHog();
 
   // Check if we're viewing a shared (public) graph
   // If so, we shouldn't allow exploration (read-only mode)
@@ -36,6 +38,16 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
   const handleExplore = () => {
     // Don't allow exploration on read-only (shared) graphs
     if (data.loading || data.explored || isReadOnly) return;
+
+    // Track node exploration
+    posthog.capture('node_explored', {
+      node_id: id,
+      node_title: data.title,
+      depth: data.depth,
+      session_id: data.sessionId,
+      is_retry: !!data.error,
+    });
+
     const event = new CustomEvent('explore-node', { detail: { nodeId: id } });
     window.dispatchEvent(event);
   };
@@ -112,7 +124,14 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               {/* Read more button only for longer content */}
               {shouldShowViewDetails && (
                 <button
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={() => {
+                    posthog.capture('node_detail_viewed', {
+                      node_id: id,
+                      node_title: data.title,
+                      depth: data.depth,
+                    });
+                    setIsModalOpen(true);
+                  }}
                   className={`mt-1.5 sm:mt-2 text-xs ${depthColors.text} hover:underline flex items-center gap-1 transition-colors`}
                 >
                   <Maximize2 className="w-3 h-3" />

@@ -9,6 +9,7 @@ import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 import { SuggestionsGrid } from './SuggestionCard';
+import { usePostHog } from 'posthog-js/react';
 
 interface SearchBarProps {
   isCompact?: boolean;
@@ -19,6 +20,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
   const [isSearching, setIsSearching] = useState(false);
   const { setSessionId, setRootQuery, addNodes, addEdges, clearGraph, setError, nodes, rootQuery } =
     useGraphStore();
+  const posthog = usePostHog();
 
   const hasExistingGraph = nodes.length > 0;
 
@@ -27,6 +29,13 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
 
     const searchQuery = retryQuery || query.trim();
     if (!searchQuery || isSearching) return;
+
+    // Track search initiated
+    posthog.capture('search_initiated', {
+      query: searchQuery,
+      query_length: searchQuery.length,
+      is_retry: !!retryQuery,
+    });
 
     setIsSearching(true);
     setError(null);
@@ -153,6 +162,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
       addNodes([rootNode, ...branchNodes]);
       addEdges(edges);
 
+      // Track successful exploration
+      posthog.capture('exploration_created', {
+        session_id: data.sessionId,
+        query: searchQuery,
+        branches_count: branchNodes.length,
+        has_content: !!data.rootNode.content,
+      });
+
       if (!retryQuery) {
         setQuery('');
       }
@@ -160,6 +177,12 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
       console.error('Search error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to start exploration';
       setError(`${errorMessage}. Please try again.`);
+
+      // Track search failure
+      posthog.capture('search_failed', {
+        query: searchQuery,
+        error: errorMessage,
+      });
 
       if (!retryQuery) {
         clearGraph();
@@ -170,6 +193,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
   };
 
   const handleSuggestionClick = (suggestionQuery: string) => {
+    // Track suggestion click
+    posthog.capture('suggestion_clicked', {
+      suggestion: suggestionQuery,
+    });
+
     setQuery(suggestionQuery);
     // Trigger search after state update
     setTimeout(() => {
