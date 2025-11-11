@@ -12,6 +12,8 @@ import { ChatSidebar } from '@/components/Sidebar';
 import { ShareButton } from '@/components/ShareButton';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { UsageIndicator } from '@/components/UsageIndicator';
+import Link from 'next/link';
+import { Crown } from 'lucide-react';
 
 interface ChatItem {
   id: string;
@@ -103,21 +105,23 @@ export default function Home() {
         }`}
       >
         {/* Header */}
-        <header className="w-full border-b border-cyan-500/20 bg-slate-900/50 backdrop-blur-xl h-16 flex-shrink-0">
-          <div className="h-full px-4 sm:px-6 flex items-center justify-end">
-            <nav className="flex items-center gap-2 sm:gap-4">
+        <header className="w-full bg-slate-900/50 backdrop-blur-xl h-16 flex-shrink-0">
+          <div className="h-full px-4 sm:px-6 flex items-center justify-center">
+            <div className="flex items-center gap-3">
               {/* Usage Indicator - only show when user is logged in */}
               {session && <UsageIndicator />}
 
-              {/* User authentication section */}
-              {status === 'loading' ? (
-                <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-500 animate-spin"></div>
-              ) : session ? (
-                <UserMenu />
-              ) : (
-                <SignInButton />
+              {/* Upgrade Button - only show when user is logged in */}
+              {session && (
+                <Link
+                  href="/pricing"
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 rounded-lg text-white text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-violet-500/50"
+                >
+                  <Crown className="w-4 h-4" />
+                  <span>Upgrade</span>
+                </Link>
               )}
-            </nav>
+            </div>
           </div>
         </header>
 
