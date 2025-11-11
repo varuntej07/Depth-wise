@@ -13,19 +13,23 @@ export function UserMenu() {
 
   // Close menu when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
-    // Use 'click' instead of 'mousedown' to allow button clicks to register first
-    if (isOpen) {
-      // Small delay to allow the dropdown to render
-      setTimeout(() => {
-        document.addEventListener('click', handleClickOutside)
-      }, 0)
-    }
-    return () => document.removeEventListener('click', handleClickOutside)
+    };
+
+    // Use setTimeout to prevent immediate closure
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [isOpen])
 
   if (!session?.user) return null
@@ -34,8 +38,13 @@ export function UserMenu() {
     <div className="relative" ref={menuRef}>
       {/* User Avatar Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-cyan-500/30 hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all group"
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log('Avatar clicked, isOpen:', isOpen, 'will become:', !isOpen);
+          setIsOpen(!isOpen);
+        }}
+        className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-cyan-500/30 hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all group cursor-pointer"
       >
         {/* Avatar */}
         <div className="relative">
@@ -75,7 +84,7 @@ export function UserMenu() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 sm:w-64 rounded-xl bg-slate-900 border border-cyan-500/30 shadow-2xl shadow-cyan-500/20 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-2 w-56 sm:w-64 rounded-xl bg-slate-900 border-2 border-cyan-500/50 shadow-2xl shadow-cyan-500/30 overflow-hidden z-[9999]">
           {/* User Info Section */}
           <div className="p-3 sm:p-4 border-b border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-violet-500/5">
             <div className="flex items-center gap-3">
