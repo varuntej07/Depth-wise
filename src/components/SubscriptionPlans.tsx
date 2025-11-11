@@ -3,10 +3,8 @@
 import { SUBSCRIPTION_PLANS } from '@/lib/subscription-config';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 
 export default function SubscriptionPlans() {
-  const { data: session } = useSession();
   const plans = Object.values(SUBSCRIPTION_PLANS);
 
   return (

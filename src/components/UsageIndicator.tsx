@@ -54,7 +54,7 @@ export const UsageIndicator: React.FC = () => {
     return null;
   }
 
-  const { explorationsUsed, explorationsLimit, tier, percentage } = usage;
+  const { explorationsUsed, explorationsLimit, percentage } = usage;
 
   // Color coding based on percentage
   const getColorClasses = () => {

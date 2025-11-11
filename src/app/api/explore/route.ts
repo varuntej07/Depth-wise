@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
-import { auth } from '@/lib/auth';
 import { getMaxDepth } from '@/lib/subscription-config';
 
 export async function POST(request: NextRequest) {

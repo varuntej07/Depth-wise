@@ -163,7 +163,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
                       <Crown className="w-4 h-4 text-violet-400" />
-                      What you'll get with {suggestedPlan.name}:
+                      What you&apos;ll get with {suggestedPlan.name}:
                     </h3>
                     <div className="space-y-2">
                       {suggestedPlan.features.slice(0, 4).map((feature) => {
