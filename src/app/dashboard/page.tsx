@@ -97,7 +97,7 @@ export default function DashboardPage() {
 
           <Link
             href="/pricing"
-            className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-violet-500 hover:shadow-lg hover:shadow-cyan-500/50 rounded-lg text-white font-medium transition-all"
+            className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-violet-500 hover:shadow-lg hover:shadow-cyan-500/50 rounded-lg text-white font-medium transition-all cursor-pointer hover:scale-105"
           >
             Upgrade Plan
           </Link>
@@ -146,7 +146,7 @@ export default function DashboardPage() {
             {usage.tier === 'FREE' && (
               <Link
                 href="/pricing"
-                className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:shadow-lg hover:shadow-cyan-500/50 rounded-xl text-white font-medium transition-all"
+                className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:shadow-lg hover:shadow-cyan-500/50 rounded-xl text-white font-medium transition-all cursor-pointer hover:scale-105"
               >
                 Upgrade Now
               </Link>

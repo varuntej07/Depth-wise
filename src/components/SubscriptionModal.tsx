@@ -206,7 +206,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={onClose}
-                    className="flex-1 px-6 py-2.5 text-sm font-medium text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+                    className="flex-1 px-6 py-2.5 text-sm font-medium text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all cursor-pointer"
                   >
                     Maybe Later
                   </motion.button>
@@ -214,7 +214,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleUpgrade}
-                    className="flex-1 px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-cyan-500 to-violet-500 hover:shadow-lg hover:shadow-cyan-500/50 rounded-xl transition-all"
+                    className="flex-1 px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-cyan-500 to-violet-500 hover:shadow-lg hover:shadow-cyan-500/50 rounded-xl transition-all cursor-pointer"
                   >
                     Upgrade Now
                   </motion.button>

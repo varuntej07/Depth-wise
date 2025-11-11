@@ -3,8 +3,10 @@
 import { SUBSCRIPTION_PLANS } from '@/lib/subscription-config';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function SubscriptionPlans() {
+  const router = useRouter();
   const plans = Object.values(SUBSCRIPTION_PLANS);
 
   return (
@@ -81,20 +83,22 @@ export default function SubscriptionPlans() {
                   </div>
 
                   <button
-                    className={`w-full py-3 px-6 rounded-full font-medium transition-all ${
+                    className={`w-full py-3 px-6 rounded-full font-medium transition-all cursor-pointer ${
                       plan.price === 0
-                        ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        ? 'bg-slate-700 text-slate-300 hover:bg-slate-600 cursor-default'
                         : isPopular
-                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:shadow-lg hover:shadow-cyan-500/50'
-                        : 'bg-gradient-to-r from-violet-500 to-pink-500 text-white hover:shadow-lg hover:shadow-violet-500/50'
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:shadow-lg hover:shadow-cyan-500/50 hover:scale-105'
+                        : 'bg-gradient-to-r from-violet-500 to-pink-500 text-white hover:shadow-lg hover:shadow-violet-500/50 hover:scale-105'
                     }`}
                     onClick={() => {
                       if (plan.price === 0) {
                         // Already on free plan
+                        router.push('/dashboard');
                         return;
                       }
-                      // Placeholder for Stripe checkout
-                      alert('Stripe checkout will be integrated here. Please set up your Stripe account first.');
+                      // TODO: Integrate Stripe checkout
+                      // For now, show coming soon message
+                      alert('Stripe integration coming soon! This will redirect you to secure checkout.');
                     }}
                   >
                     {plan.price === 0 ? 'Current Plan' : `Upgrade to ${plan.name}`}

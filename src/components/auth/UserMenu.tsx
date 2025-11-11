@@ -3,9 +3,11 @@
 import { signOut, useSession } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 export function UserMenu() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -100,10 +102,10 @@ export function UserMenu() {
           {/* Menu Items */}
           <div className="py-1">
             <button
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center gap-2"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center gap-2 cursor-pointer"
               onClick={() => {
                 setIsOpen(false)
-                window.location.href = '/dashboard'
+                router.push('/dashboard')
               }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -113,10 +115,10 @@ export function UserMenu() {
             </button>
 
             <button
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center gap-2 font-medium"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center gap-2 font-medium cursor-pointer"
               onClick={() => {
                 setIsOpen(false)
-                window.location.href = '/pricing'
+                router.push('/pricing')
               }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
