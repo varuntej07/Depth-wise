@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
@@ -10,9 +10,16 @@ import {
   Plus,
   LogOut,
   User,
+  LayoutDashboard,
+  Sparkles,
+  Settings,
+  BookOpen,
+  HelpCircle,
+  ChevronUp,
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { usePostHog } from 'posthog-js/react';
+import { useRouter } from 'next/navigation';
 
 interface ChatItem {
   id: string;
@@ -40,7 +47,10 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const { data: session } = useSession();
   const posthog = usePostHog();
+  const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -49,8 +59,83 @@ export function ChatSidebar({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Close account menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    if (isAccountMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAccountMenuOpen]);
+
   const pinnedChats = chatHistory.filter((chat) => chat.isPinned);
   const regularChats = chatHistory.filter((chat) => !chat.isPinned);
+
+  const menuItems = [
+    {
+      icon: LayoutDashboard,
+      label: 'Dashboard',
+      action: () => {
+        posthog.capture('account_menu_dashboard_clicked');
+        router.push('/dashboard');
+        setIsAccountMenuOpen(false);
+      },
+    },
+    {
+      icon: Sparkles,
+      label: 'Upgrade',
+      action: () => {
+        posthog.capture('account_menu_upgrade_clicked');
+        router.push('/pricing');
+        setIsAccountMenuOpen(false);
+      },
+    },
+    {
+      icon: Settings,
+      label: 'Settings',
+      action: () => {
+        posthog.capture('account_menu_settings_clicked');
+        router.push('/settings');
+        setIsAccountMenuOpen(false);
+      },
+    },
+    {
+      icon: BookOpen,
+      label: 'Learn more',
+      action: () => {
+        posthog.capture('account_menu_learn_more_clicked');
+        router.push('/learn-more');
+        setIsAccountMenuOpen(false);
+      },
+    },
+    {
+      icon: HelpCircle,
+      label: 'Get Help',
+      action: () => {
+        posthog.capture('account_menu_get_help_clicked');
+        router.push('/help');
+        setIsAccountMenuOpen(false);
+      },
+    },
+    {
+      icon: LogOut,
+      label: 'Sign out',
+      action: () => {
+        posthog.capture('account_menu_sign_out_clicked');
+        signOut();
+        setIsAccountMenuOpen(false);
+      },
+      divider: true,
+    },
+  ];
 
   return (
     <>
@@ -197,43 +282,75 @@ export function ChatSidebar({
           )}
         </nav>
 
-        {/* User Profile Section */}
-        <div className="p-3 border-t border-slate-800/50 space-y-2">
-          {!isCollapsed ? (
-            <>
-              {session ? (
-                <>
-                  <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-800/30 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white truncate">
-                        {session.user?.name || session.user?.email?.split('@')[0]}
-                      </p>
-                      <p className="text-xs text-slate-400 truncate">{session.user?.email}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => signOut()}
-                    className="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-all text-sm"
+        {/* Account Menu Section */}
+        <div className="p-3 border-t border-slate-800/50" ref={accountMenuRef}>
+          {session ? (
+            <div className="relative">
+              {/* Account Menu Dropdown */}
+              <AnimatePresence>
+                {isAccountMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50"
                   >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
-                  </button>
-                </>
+                    <div className="p-2 space-y-0.5">
+                      {menuItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={item.label}>
+                            {item.divider && <div className="h-px bg-slate-700/50 my-1.5" />}
+                            <button
+                              onClick={item.action}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/70 transition-all text-left group"
+                            >
+                              <Icon className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                              <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                                {item.label}
+                              </span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Account Button */}
+              {!isCollapsed ? (
+                <button
+                  onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-slate-800/50 transition-all group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium text-white truncate">
+                      {session.user?.name || session.user?.email?.split('@')[0]}
+                    </p>
+                  </div>
+                  <ChevronUp
+                    className={`w-4 h-4 text-slate-400 transition-transform ${
+                      isAccountMenuOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
               ) : (
-                <p className="text-xs text-slate-500 text-center">Sign in to save chats</p>
+                <button
+                  onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                  className="w-full p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center transition-colors"
+                  title="Account menu"
+                >
+                  <User className="w-4 h-4 text-slate-400" />
+                </button>
               )}
-            </>
+            </div>
           ) : (
-            <button
-              onClick={() => signOut()}
-              className="w-full p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center transition-colors"
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4 text-slate-400" />
-            </button>
+            <p className="text-xs text-slate-500 text-center">Sign in to save chats</p>
           )}
         </div>
       </motion.aside>
@@ -324,29 +441,63 @@ export function ChatSidebar({
               )}
             </nav>
 
-            {/* User Profile */}
-            <div className="p-3 border-t border-slate-800/50 space-y-2">
+            {/* Account Menu Section - Mobile */}
+            <div className="p-3 border-t border-slate-800/50">
               {session ? (
-                <>
-                  <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-800/30 transition-colors">
+                <div className="relative">
+                  {/* Account Menu Dropdown - Mobile */}
+                  <AnimatePresence>
+                    {isAccountMenuOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50"
+                      >
+                        <div className="p-2 space-y-0.5">
+                          {menuItems.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <div key={item.label}>
+                                {item.divider && <div className="h-px bg-slate-700/50 my-1.5" />}
+                                <button
+                                  onClick={item.action}
+                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/70 transition-all text-left group"
+                                >
+                                  <Icon className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                                  <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                                    {item.label}
+                                  </span>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Account Button - Mobile */}
+                  <button
+                    onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                    className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-slate-800/50 transition-all group"
+                  >
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center flex-shrink-0">
                       <User className="w-4 h-4 text-white" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white truncate">
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-medium text-white truncate">
                         {session.user?.name || session.user?.email?.split('@')[0]}
                       </p>
-                      <p className="text-xs text-slate-400 truncate">{session.user?.email}</p>
                     </div>
-                  </div>
-                  <button
-                    onClick={() => signOut()}
-                    className="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-all text-sm"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
+                    <ChevronUp
+                      className={`w-4 h-4 text-slate-400 transition-transform ${
+                        isAccountMenuOpen ? 'rotate-180' : ''
+                      }`}
+                    />
                   </button>
-                </>
+                </div>
               ) : (
                 <p className="text-xs text-slate-500 text-center">Sign in to save chats</p>
               )}
