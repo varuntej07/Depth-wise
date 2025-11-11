@@ -22,12 +22,12 @@ export default function Home() {
   const { error, setError, nodes, sessionId, clearGraph, loadSession } = useGraphStore();
   const { data: session, status } = useSession();
   const [chatHistory, setChatHistory] = useState<ChatItem[]>([]);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   // Load sidebar state after mount to avoid hydration mismatch
   useEffect(() => {
     const saved = localStorage.getItem('sidebarCollapsed');
-    if (saved) {
+    if (saved !== null) {
       setSidebarCollapsed(JSON.parse(saved));
     }
   }, []);
