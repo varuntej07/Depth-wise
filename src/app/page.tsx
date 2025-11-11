@@ -22,13 +22,15 @@ export default function Home() {
   const { error, setError, nodes, sessionId, clearGraph, loadSession } = useGraphStore();
   const { data: session, status } = useSession();
   const [chatHistory, setChatHistory] = useState<ChatItem[]>([]);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebarCollapsed');
-      return saved ? JSON.parse(saved) : false;
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Load sidebar state after mount to avoid hydration mismatch
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved) {
+      setSidebarCollapsed(JSON.parse(saved));
     }
-    return false;
-  });
+  }, []);
 
   // Fetch chat history when user logs in or when sessionId changes
   useEffect(() => {
@@ -93,9 +95,11 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative z-10 md:ml-0 transition-all duration-300" style={{
-        marginLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? (sidebarCollapsed ? '64px' : '280px') : '0'
-      }}>
+      <div
+        className={`flex-1 flex flex-col relative z-10 transition-all duration-300 ${
+          sidebarCollapsed ? 'md:ml-16' : 'md:ml-[280px]'
+        }`}
+      >
         {/* Header */}
         <header className="w-full border-b border-cyan-500/20 bg-slate-900/50 backdrop-blur-xl h-16 flex-shrink-0">
           <div className="h-full px-4 sm:px-6 flex items-center justify-end">
