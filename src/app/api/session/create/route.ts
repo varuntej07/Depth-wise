@@ -3,16 +3,24 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
+import { canUserExplore } from '@/lib/subscription-config';
 
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
     const session = await auth();
     let userId: string | null = null;
+    let user = null;
 
     if (session?.user?.email) {
-      const user = await prisma.user.findUnique({
+      user = await prisma.user.findUnique({
         where: { email: session.user.email },
+        select: {
+          id: true,
+          subscriptionTier: true,
+          explorationsUsed: true,
+          explorationsReset: true,
+        },
       });
       userId = user?.id || null;
     }
@@ -22,6 +30,51 @@ export async function POST(request: NextRequest) {
 
     if (!query || typeof query !== 'string') {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+    }
+
+    // Check exploration limits for authenticated users
+    if (user) {
+      // Check if usage should be reset (30+ days since last reset)
+      const now = new Date();
+      const resetDate = new Date(user.explorationsReset);
+      const daysSinceReset = Math.floor(
+        (now.getTime() - resetDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Reset usage if 30+ days have passed
+      if (daysSinceReset >= 30) {
+        const newResetDate = new Date(now);
+        newResetDate.setDate(newResetDate.getDate() + 30);
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            explorationsUsed: 0,
+            explorationsReset: newResetDate,
+          },
+        });
+
+        user.explorationsUsed = 0;
+        user.explorationsReset = newResetDate;
+      }
+
+      // Check if user can explore
+      const explorationCheck = canUserExplore({
+        subscriptionTier: user.subscriptionTier,
+        explorationsUsed: user.explorationsUsed,
+        explorationsReset: user.explorationsReset,
+      });
+
+      if (!explorationCheck.allowed) {
+        return NextResponse.json(
+          {
+            error: explorationCheck.reason || 'Exploration limit reached',
+            code: 'LIMIT_REACHED',
+            tier: user.subscriptionTier,
+          },
+          { status: 429 }
+        );
+      }
     }
 
     // Generate initial branches using Claude
@@ -97,6 +150,16 @@ export async function POST(request: NextRequest) {
 
       return { session: graphSession, rootNode, childNodes };
     });
+
+    // Increment exploration counter for authenticated users
+    if (user) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          explorationsUsed: { increment: 1 },
+        },
+      });
+    }
 
     return NextResponse.json({
       sessionId: result.session.id,

@@ -20,6 +20,8 @@ import KnowledgeEdge from './KnowledgeEdge';
 import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
 import { LAYOUT_CONFIG } from '@/lib/layout';
+import { SubscriptionModal } from './SubscriptionModal';
+import { SubscriptionTier } from '@prisma/client';
 
 const nodeTypes = {
   knowledge: (props: { data: GraphNode['data']; id: string; selected: boolean }) => {
@@ -40,6 +42,9 @@ const KnowledgeCanvas: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [limitReason, setLimitReason] = useState<string>('');
+  const [userTier, setUserTier] = useState<SubscriptionTier>('FREE');
 
   // Find all edges in the path from root to a given node
   const getPathToRoot = useCallback(
@@ -159,6 +164,23 @@ const KnowledgeCanvas: React.FC = () => {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
+
+          // Handle depth limit errors
+          if (response.status === 429 && errorData.code === 'DEPTH_LIMIT_REACHED') {
+            // Remove skeleton nodes
+            const nodeIdsToRemove = skeletonNodes.map((n) => n.id);
+            nodeIdsToRemove.forEach((id) => useGraphStore.getState().removeNode(id));
+
+            // Show subscription modal
+            setLimitReason(errorData.error);
+            setUserTier(errorData.tier || 'FREE');
+            setShowSubscriptionModal(true);
+
+            // Mark parent as not loading
+            updateNode(nodeId, { loading: false });
+            return;
+          }
+
           throw new Error(errorData.error || 'Failed to explore node');
         }
 
@@ -232,11 +254,20 @@ const KnowledgeCanvas: React.FC = () => {
   }, [storeNodes, updateNode]);
 
   return (
-    <div
-      className="w-full h-full"
-      onMouseLeave={() => setHoveredNodeId(null)}
-    >
-      <ReactFlow
+    <>
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        reason={limitReason}
+        currentTier={userTier}
+        suggestedTier="STARTER"
+      />
+
+      <div
+        className="w-full h-full"
+        onMouseLeave={() => setHoveredNodeId(null)}
+      >
+        <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
@@ -288,7 +319,8 @@ const KnowledgeCanvas: React.FC = () => {
           zoomable
         />
       </ReactFlow>
-    </div>
+      </div>
+    </>
   );
 };
 

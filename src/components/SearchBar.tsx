@@ -10,6 +10,8 @@ import { GraphNode, GraphEdge } from '@/types/graph';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 import { SuggestionsGrid } from './SuggestionCard';
 import { usePostHog } from 'posthog-js/react';
+import { SubscriptionModal } from './SubscriptionModal';
+import { SubscriptionTier } from '@prisma/client';
 
 interface SearchBarProps {
   isCompact?: boolean;
@@ -18,6 +20,9 @@ interface SearchBarProps {
 const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [limitReason, setLimitReason] = useState<string>('');
+  const [userTier, setUserTier] = useState<SubscriptionTier>('FREE');
   const { setSessionId, setRootQuery, addNodes, addEdges, clearGraph, setError, nodes, rootQuery } =
     useGraphStore();
   const posthog = usePostHog();
@@ -101,6 +106,26 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
+        // Handle limit reached errors
+        if (response.status === 429 && errorData.code === 'LIMIT_REACHED') {
+          setLimitReason(errorData.error);
+          setUserTier(errorData.tier || 'FREE');
+          setShowSubscriptionModal(true);
+
+          // Track limit hit
+          posthog.capture('exploration_limit_hit', {
+            tier: errorData.tier,
+            query: searchQuery,
+          });
+
+          if (!retryQuery) {
+            clearGraph();
+          }
+          setIsSearching(false);
+          return;
+        }
+
         throw new Error(errorData.error || 'Failed to create session');
       }
 
@@ -226,12 +251,21 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
 
   // Full layout (empty state)
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="w-full flex flex-col items-center justify-center min-h-screen px-4"
-    >
+    <>
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        reason={limitReason}
+        currentTier={userTier}
+        suggestedTier="STARTER"
+      />
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="w-full flex flex-col items-center justify-center min-h-screen px-4"
+      >
       {/* Centered Content */}
       <div className="w-full max-w-3xl space-y-8 md:space-y-12">
         {/* Title and Description */}
@@ -310,7 +344,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
           <SuggestionsGrid onSelectSuggestion={handleSuggestionClick} displayCount={2} />
         </motion.div>
       </div>
-    </motion.div>
+      </motion.div>
+    </>
   );
 };
 

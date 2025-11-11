@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
+import { auth } from '@/lib/auth';
+import { getMaxDepth } from '@/lib/subscription-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +21,13 @@ export async function POST(request: NextRequest) {
     // Get session and parent node
     const session = await prisma.graphSession.findUnique({
       where: { id: sessionId },
+      include: {
+        user: {
+          select: {
+            subscriptionTier: true,
+          },
+        },
+      },
     });
 
     if (!session) {
@@ -37,6 +46,25 @@ export async function POST(request: NextRequest) {
 
     if (!parentNode) {
       return NextResponse.json({ error: 'Parent node not found' }, { status: 404 });
+    }
+
+    // Check depth limits for authenticated users
+    if (session.user) {
+      const maxAllowedDepth = getMaxDepth(session.user.subscriptionTier);
+      const nextDepth = parentNode.depth + 1;
+
+      if (nextDepth > maxAllowedDepth) {
+        return NextResponse.json(
+          {
+            error: `You've reached your maximum depth of ${maxAllowedDepth} levels. Upgrade to explore deeper!`,
+            code: 'DEPTH_LIMIT_REACHED',
+            tier: session.user.subscriptionTier,
+            currentDepth: parentNode.depth,
+            maxDepth: maxAllowedDepth,
+          },
+          { status: 429 }
+        );
+      }
     }
 
     // Check if already explored
