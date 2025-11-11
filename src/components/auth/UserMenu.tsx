@@ -18,9 +18,15 @@ export function UserMenu() {
         setIsOpen(false)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    // Use 'click' instead of 'mousedown' to allow button clicks to register first
+    if (isOpen) {
+      // Small delay to allow the dropdown to render
+      setTimeout(() => {
+        document.addEventListener('click', handleClickOutside)
+      }, 0)
+    }
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [isOpen])
 
   if (!session?.user) return null
 
@@ -102,10 +108,14 @@ export function UserMenu() {
           {/* Menu Items */}
           <div className="py-1">
             <button
+              type="button"
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center gap-2 cursor-pointer"
-              onClick={() => {
-                setIsOpen(false)
-                router.push('/dashboard')
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Dashboard button clicked');
+                setIsOpen(false);
+                router.push('/dashboard');
               }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -115,10 +125,14 @@ export function UserMenu() {
             </button>
 
             <button
+              type="button"
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center gap-2 font-medium cursor-pointer"
-              onClick={() => {
-                setIsOpen(false)
-                router.push('/pricing')
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Upgrade button clicked');
+                setIsOpen(false);
+                router.push('/pricing');
               }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -131,8 +145,14 @@ export function UserMenu() {
           {/* Sign Out Section */}
           <div className="border-t border-cyan-500/20">
             <button
-              onClick={() => signOut({ callbackUrl: '/' })}
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Sign out button clicked');
+                signOut({ callbackUrl: '/' });
+              }}
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2 cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
