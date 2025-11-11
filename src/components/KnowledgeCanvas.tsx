@@ -22,6 +22,7 @@ import { GraphNode, GraphEdge } from '@/types/graph';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 import { SubscriptionModal } from './SubscriptionModal';
 import { SubscriptionTier } from '@prisma/client';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 const nodeTypes = {
   knowledge: (props: { data: GraphNode['data']; id: string; selected: boolean }) => {
@@ -152,7 +153,7 @@ const KnowledgeCanvas: React.FC = () => {
 
       try {
         const sessionId = useGraphStore.getState().sessionId;
-        const response = await fetch('/api/explore', {
+        const response = await fetch(API_ENDPOINTS.EXPLORE_NODE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

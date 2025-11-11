@@ -8,6 +8,7 @@ import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 /**
  * Public Share Page - /share/[sessionId]
@@ -43,7 +44,7 @@ export default function SharePage() {
         setError(null);
 
         // Call the public share API
-        const response = await fetch(`/api/share/${sessionId}`);
+        const response = await fetch(API_ENDPOINTS.SHARE_GET(sessionId));
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));

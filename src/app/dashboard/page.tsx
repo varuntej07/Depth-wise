@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { SUBSCRIPTION_PLANS } from '@/lib/subscription-config';
 import { SubscriptionTier } from '@prisma/client';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 interface UsageData {
   explorationsUsed: number;
@@ -41,24 +42,34 @@ export default function DashboardPage() {
     }
   }, [status, router]);
 
-  useEffect(() => {
+  const fetchUsage = async () => {
     if (!session?.user) return;
 
-    const fetchUsage = async () => {
-      try {
-        const response = await fetch('/api/user/usage');
-        if (response.ok) {
-          const data = await response.json();
-          setUsage(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch usage:', error);
-      } finally {
-        setLoading(false);
+    try {
+      const response = await fetch(API_ENDPOINTS.USER_USAGE);
+      if (response.ok) {
+        const data = await response.json();
+        setUsage(data);
       }
+    } catch (error) {
+      console.error('Failed to fetch usage:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsage();
+  }, [session]);
+
+  // Listen for usage refresh events
+  useEffect(() => {
+    const handleRefreshUsage = () => {
+      fetchUsage();
     };
 
-    fetchUsage();
+    window.addEventListener('refresh-usage', handleRefreshUsage);
+    return () => window.removeEventListener('refresh-usage', handleRefreshUsage);
   }, [session]);
 
   if (status === 'loading' || loading) {

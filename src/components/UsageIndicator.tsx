@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, TrendingUp } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 interface UsageData {
   explorationsUsed: number;
@@ -27,27 +28,37 @@ export const UsageIndicator: React.FC = () => {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchUsage = async () => {
     if (!session?.user) {
       setLoading(false);
       return;
     }
 
-    const fetchUsage = async () => {
-      try {
-        const response = await fetch('/api/user/usage');
-        if (response.ok) {
-          const data = await response.json();
-          setUsage(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch usage:', error);
-      } finally {
-        setLoading(false);
+    try {
+      const response = await fetch(API_ENDPOINTS.USER_USAGE);
+      if (response.ok) {
+        const data = await response.json();
+        setUsage(data);
       }
+    } catch (error) {
+      console.error('Failed to fetch usage:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsage();
+  }, [session]);
+
+  // Listen for usage refresh events
+  useEffect(() => {
+    const handleRefreshUsage = () => {
+      fetchUsage();
     };
 
-    fetchUsage();
+    window.addEventListener('refresh-usage', handleRefreshUsage);
+    return () => window.removeEventListener('refresh-usage', handleRefreshUsage);
   }, [session]);
 
   if (!session?.user || loading || !usage) {

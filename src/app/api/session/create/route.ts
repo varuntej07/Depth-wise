@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
-import { canUserExplore } from '@/lib/subscription-config';
+import { canUserExplore, getSavedGraphsLimit } from '@/lib/subscription-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +20,11 @@ export async function POST(request: NextRequest) {
           subscriptionTier: true,
           explorationsUsed: true,
           explorationsReset: true,
+          _count: {
+            select: {
+              graphSessions: true,
+            },
+          },
         },
       });
       userId = user?.id || null;
@@ -71,6 +76,21 @@ export async function POST(request: NextRequest) {
             error: explorationCheck.reason || 'Exploration limit reached',
             code: 'LIMIT_REACHED',
             tier: user.subscriptionTier,
+          },
+          { status: 429 }
+        );
+      }
+
+      // Check saved graphs limit
+      const savedGraphsLimit = getSavedGraphsLimit(user.subscriptionTier);
+      if (savedGraphsLimit !== null && user._count.graphSessions >= savedGraphsLimit) {
+        return NextResponse.json(
+          {
+            error: `You've reached your saved graphs limit of ${savedGraphsLimit}. Delete old graphs or upgrade to save more!`,
+            code: 'SAVED_GRAPHS_LIMIT_REACHED',
+            tier: user.subscriptionTier,
+            currentCount: user._count.graphSessions,
+            limit: savedGraphsLimit,
           },
           { status: 429 }
         );

@@ -21,9 +21,6 @@ export async function GET() {
         explorationsUsed: true,
         explorationsReset: true,
         graphSessions: {
-          where: {
-            userId: session.user.email,
-          },
           select: {
             id: true,
           },
@@ -73,16 +70,12 @@ export async function GET() {
         ? Math.min(100, Math.round((explorationsUsed / explorationsLimit) * 100))
         : 0;
 
-    // Calculate next reset date
-    const nextResetDate = new Date(explorationsReset);
-    nextResetDate.setDate(nextResetDate.getDate() + 30);
-
     return NextResponse.json({
       explorationsUsed,
       explorationsLimit,
       tier: user.subscriptionTier,
       percentage,
-      explorationsReset: nextResetDate.toISOString(),
+      explorationsReset: explorationsReset.toISOString(),
       savedGraphsCount: user.graphSessions.length,
       savedGraphsLimit,
       maxDepth,

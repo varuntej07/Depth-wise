@@ -10,6 +10,7 @@ import ErrorAlert from './ErrorAlert';
 import NodeDetailModal from './NodeDetailModal';
 import useGraphStore from '@/store/graphStore';
 import { KnowledgeNodeData } from '@/types/graph';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 interface ChatItem {
   id: string;
@@ -32,7 +33,7 @@ export function ExplorationLayout() {
   // Fetch chat history function
   const fetchChatHistory = async () => {
     try {
-      const response = await fetch('/api/sessions');
+      const response = await fetch(API_ENDPOINTS.SESSION_LIST);
       if (response.ok) {
         const data = await response.json();
         setChatHistory(data.sessions);
@@ -84,7 +85,7 @@ export function ExplorationLayout() {
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/session/${id}`);
+      const response = await fetch(API_ENDPOINTS.SESSION_GET(id));
 
       if (!response.ok) {
         throw new Error('Failed to load session');

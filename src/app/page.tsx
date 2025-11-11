@@ -10,6 +10,8 @@ import { UserMenu } from '@/components/auth/UserMenu';
 import { useSession } from 'next-auth/react';
 import { ChatSidebar } from '@/components/Sidebar';
 import { ShareButton } from '@/components/ShareButton';
+import { API_ENDPOINTS } from '@/lib/api-config';
+import { UsageIndicator } from '@/components/UsageIndicator';
 
 interface ChatItem {
   id: string;
@@ -41,7 +43,7 @@ export default function Home() {
 
   const fetchChatHistory = async () => {
     try {
-      const response = await fetch('/api/sessions');
+      const response = await fetch(API_ENDPOINTS.SESSION_LIST);
       if (!response.ok) return;
       const data = await response.json();
       setChatHistory(data.sessions || []);
@@ -63,7 +65,7 @@ export default function Home() {
 
   const handleSelectChat = async (chatId: string) => {
     try {
-      const response = await fetch(`/api/session/${chatId}`);
+      const response = await fetch(API_ENDPOINTS.SESSION_GET(chatId));
       if (!response.ok) throw new Error('Failed to load session');
 
       const data = await response.json();
@@ -104,6 +106,9 @@ export default function Home() {
         <header className="w-full border-b border-cyan-500/20 bg-slate-900/50 backdrop-blur-xl h-16 flex-shrink-0">
           <div className="h-full px-4 sm:px-6 flex items-center justify-end">
             <nav className="flex items-center gap-2 sm:gap-4">
+              {/* Usage Indicator - only show when user is logged in */}
+              {session && <UsageIndicator />}
+
               {/* User authentication section */}
               {status === 'loading' ? (
                 <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-500 animate-spin"></div>

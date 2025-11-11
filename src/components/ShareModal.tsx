@@ -5,6 +5,7 @@ import { X, Copy, Check, Share2, Globe, Lock, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useGraphStore from '@/store/graphStore';
 import { usePostHog } from 'posthog-js/react';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -54,7 +55,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
 
     try {
       // Call the API to update the share status
-      const response = await fetch(`/api/session/${sessionId}/share`, {
+      const response = await fetch(API_ENDPOINTS.SESSION_SHARE(sessionId), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isPublic: !isPublic }),

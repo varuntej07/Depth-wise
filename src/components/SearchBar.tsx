@@ -12,6 +12,7 @@ import { SuggestionsGrid } from './SuggestionCard';
 import { usePostHog } from 'posthog-js/react';
 import { SubscriptionModal } from './SubscriptionModal';
 import { SubscriptionTier } from '@prisma/client';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 interface SearchBarProps {
   isCompact?: boolean;
@@ -98,7 +99,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
     }
 
     try {
-      const response = await fetch('/api/session/create', {
+      const response = await fetch(API_ENDPOINTS.SESSION_CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: searchQuery }),
@@ -116,6 +117,27 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
           // Track limit hit
           posthog.capture('exploration_limit_hit', {
             tier: errorData.tier,
+            query: searchQuery,
+          });
+
+          if (!retryQuery) {
+            clearGraph();
+          }
+          setIsSearching(false);
+          return;
+        }
+
+        // Handle saved graphs limit
+        if (response.status === 429 && errorData.code === 'SAVED_GRAPHS_LIMIT_REACHED') {
+          setLimitReason(errorData.error);
+          setUserTier(errorData.tier || 'FREE');
+          setShowSubscriptionModal(true);
+
+          // Track saved graphs limit hit
+          posthog.capture('saved_graphs_limit_hit', {
+            tier: errorData.tier,
+            current_count: errorData.currentCount,
+            limit: errorData.limit,
             query: searchQuery,
           });
 
@@ -194,6 +216,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
         branches_count: branchNodes.length,
         has_content: !!data.rootNode.content,
       });
+
+      // Trigger usage refresh event to update UsageIndicator
+      window.dispatchEvent(new CustomEvent('refresh-usage'));
 
       if (!retryQuery) {
         setQuery('');
