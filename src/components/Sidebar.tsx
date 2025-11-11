@@ -297,7 +297,7 @@ export function ChatSidebar({
                     className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50"
                   >
                     <div className="p-2 space-y-0.5">
-                      {menuItems.map((item, index) => {
+                      {menuItems.map((item) => {
                         const Icon = item.icon;
                         return (
                           <div key={item.label}>

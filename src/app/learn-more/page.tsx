@@ -10,7 +10,6 @@ import {
   Target,
   Zap,
   Users,
-  Heart,
   GitBranch,
   Sparkles,
   Play,

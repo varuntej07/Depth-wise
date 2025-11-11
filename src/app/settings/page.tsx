@@ -1,8 +1,6 @@
 'use client';
 
 import React from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -17,10 +15,7 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  if (status === 'loading') {
+  if (false) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black flex items-center justify-center">
         <motion.div
@@ -145,7 +140,7 @@ export default function SettingsPage() {
             <h3 className="text-lg font-bold text-white">Coming Soon</h3>
           </div>
           <p className="text-slate-300">
-            We're working hard to bring you these settings. Stay tuned for updates!
+            We&apos;re working hard to bring you these settings. Stay tuned for updates!
           </p>
         </motion.div>
       </div>
