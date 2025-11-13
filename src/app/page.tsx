@@ -106,7 +106,7 @@ export default function Home() {
       >
         {/* Header */}
         <header className="w-full bg-slate-900/50 backdrop-blur-xl h-16 flex-shrink-0">
-          <div className="h-full px-4 sm:px-6 flex items-center justify-center">
+          <div className="h-full px-4 sm:px-6 flex items-center justify-end">
             <div className="flex items-center gap-3">
               {/* Usage Indicator - only show when user is logged in */}
               {session && <UsageIndicator />}

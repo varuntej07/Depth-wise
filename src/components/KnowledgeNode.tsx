@@ -17,11 +17,11 @@ interface KnowledgeNodeProps {
 // Get color based on depth
 const getDepthColor = (depth: number) => {
   const colors = [
-    { border: 'border-cyan-500/50', shadow: 'shadow-cyan-500/20', text: 'text-cyan-400', glow: 'hover:shadow-cyan-500/40' },
-    { border: 'border-blue-500/50', shadow: 'shadow-blue-500/20', text: 'text-blue-400', glow: 'hover:shadow-blue-500/40' },
-    { border: 'border-violet-500/50', shadow: 'shadow-violet-500/20', text: 'text-violet-400', glow: 'hover:shadow-violet-500/40' },
-    { border: 'border-pink-500/50', shadow: 'shadow-pink-500/20', text: 'text-pink-400', glow: 'hover:shadow-pink-500/40' },
-    { border: 'border-amber-500/50', shadow: 'shadow-amber-500/20', text: 'text-amber-400', glow: 'hover:shadow-amber-500/40' },
+    { border: 'border-cyan-500', shadow: 'shadow-cyan-500/30', text: 'text-cyan-400', glow: 'hover:shadow-cyan-500/50' },
+    { border: 'border-blue-500', shadow: 'shadow-blue-500/30', text: 'text-blue-400', glow: 'hover:shadow-blue-500/50' },
+    { border: 'border-violet-500', shadow: 'shadow-violet-500/30', text: 'text-violet-400', glow: 'hover:shadow-violet-500/50' },
+    { border: 'border-pink-500', shadow: 'shadow-pink-500/30', text: 'text-pink-400', glow: 'hover:shadow-pink-500/50' },
+    { border: 'border-amber-500', shadow: 'shadow-amber-500/30', text: 'text-amber-400', glow: 'hover:shadow-amber-500/50' },
   ];
   return colors[Math.min(depth, colors.length - 1)];
 };
@@ -78,22 +78,22 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
             isRootNode
               ? 'min-w-[320px] w-[320px] sm:min-w-[400px] sm:w-[400px] md:min-w-[500px] md:w-[500px]'
               : 'min-w-[280px] w-[280px] sm:min-w-[340px] sm:w-[340px] md:min-w-[420px] md:w-[420px]'
-          } min-h-fit bg-slate-900/90 backdrop-blur-sm border-2 ${
+          } min-h-fit bg-slate-900 backdrop-blur-sm border-2 ${
             data.error
-              ? 'border-red-500/50 shadow-red-500/20'
+              ? 'border-red-500 shadow-red-500/30'
               : depthColors.border
           } ${
-            data.error ? 'shadow-red-500/20' : depthColors.shadow
+            data.error ? 'shadow-red-500/30' : depthColors.shadow
           } shadow-lg transition-all duration-300 ${
-            data.error ? 'hover:shadow-red-500/40' : depthColors.glow
+            data.error ? 'hover:shadow-red-500/50' : depthColors.glow
           } hover:scale-[1.02] ${
             data.loading
               ? 'animate-pulse'
               : ''
           } flex flex-col`}
         >
-        <CardHeader className="pb-2 sm:pb-3 border-b border-slate-800">
-          <div className={`text-xs ${depthColors.text} mb-1.5 sm:mb-2 flex items-center justify-center gap-2`}>
+        <CardHeader className="pb-2 border-b border-slate-800">
+          <div className={`text-xs ${depthColors.text} mb-1 flex items-center justify-center gap-2 font-medium`}>
             <span>Level {data.depth}</span>
             {data.explored && (
               <span className="flex items-center gap-1">
@@ -108,11 +108,11 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
             {data.title}
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-3 pb-3 space-y-2 flex-1 flex flex-col overflow-hidden">
+        <CardContent className="pt-2.5 pb-2.5 space-y-2 flex-1 flex flex-col overflow-hidden">
           {/* Content display - full text for <=200 chars, truncated for longer */}
           {contentText && (
             <div className="flex-1 overflow-hidden">
-              <div className={`text-sm sm:text-base text-slate-300 leading-relaxed ${
+              <div className={`text-sm sm:text-base text-slate-200 leading-relaxed ${
                 shouldShowViewDetails ? 'line-clamp-3' : ''
               }`}>
                 {shouldShowViewDetails
@@ -132,7 +132,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
                     });
                     setIsModalOpen(true);
                   }}
-                  className={`mt-1.5 sm:mt-2 text-xs ${depthColors.text} hover:underline flex items-center gap-1 transition-colors`}
+                  className={`mt-1 text-xs ${depthColors.text} hover:underline flex items-center gap-1 transition-colors font-medium`}
                 >
                   <Maximize2 className="w-3 h-3" />
                   <span>Read more</span>

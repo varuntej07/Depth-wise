@@ -43,7 +43,7 @@ export const ShareButton: React.FC = () => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-            className="fixed bottom-6 right-6 z-30"
+            className="fixed top-20 right-6 z-30"
           >
             {/* Main Share Button */}
             <motion.button

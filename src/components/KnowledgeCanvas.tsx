@@ -314,7 +314,10 @@ const KnowledgeCanvas: React.FC = () => {
           maskColor="rgba(15, 23, 42, 0.8)"
           style={{
             backgroundColor: '#1e293b',
+            width: '120px',
+            height: '80px',
           }}
+          position="bottom-right"
           className="hidden sm:block"
           pannable
           zoomable
