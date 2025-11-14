@@ -33,7 +33,7 @@ Content Structure Rules:
 
 Branch Generation Rules:
 1. Each level should be MORE TECHNICAL than the previous
-2. Generate 3-5 distinct branches that cover different aspects
+2. Generate 3 distinct branches that cover different aspects
 3. Branches should be parallel concepts, not sequential steps
 4. Use clear, specific titles (not generic like "Learn More")
 5. Provide brief summaries (1-2 sentences)

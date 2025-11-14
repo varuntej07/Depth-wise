@@ -20,6 +20,7 @@ import {
 import { useSession, signOut } from 'next-auth/react';
 import { usePostHog } from 'posthog-js/react';
 import { useRouter } from 'next/navigation';
+import { SignInButton } from './auth/SignInButton';
 
 interface ChatItem {
   id: string;
@@ -350,7 +351,9 @@ export function ChatSidebar({
               )}
             </div>
           ) : (
-            <p className="text-xs text-slate-500 text-center">Sign in to save chats</p>
+            <div className="px-3">
+              <SignInButton />
+            </div>
           )}
         </div>
       </motion.aside>
@@ -499,7 +502,9 @@ export function ChatSidebar({
                   </button>
                 </div>
               ) : (
-                <p className="text-xs text-slate-500 text-center">Sign in to save chats</p>
+                <div className="px-4">
+                  <SignInButton />
+                </div>
               )}
             </div>
           </motion.aside>
