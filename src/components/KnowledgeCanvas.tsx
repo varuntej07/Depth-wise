@@ -23,6 +23,8 @@ import { LAYOUT_CONFIG } from '@/lib/layout';
 import { SubscriptionModal } from './SubscriptionModal';
 import { SubscriptionTier } from '@prisma/client';
 import { API_ENDPOINTS } from '@/lib/api-config';
+import { SignInDialog } from './SignInDialog';
+import { useSession } from 'next-auth/react';
 
 const nodeTypes = {
   knowledge: (props: { data: GraphNode['data']; id: string; selected: boolean }) => {
@@ -46,6 +48,8 @@ const KnowledgeCanvas: React.FC = () => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [limitReason, setLimitReason] = useState<string>('');
   const [userTier, setUserTier] = useState<SubscriptionTier>('FREE');
+  const [showSignInDialog, setShowSignInDialog] = useState(false);
+  const { data: session } = useSession();
 
   // Find all edges in the path from root to a given node
   const getPathToRoot = useCallback(
@@ -117,6 +121,12 @@ const KnowledgeCanvas: React.FC = () => {
 
       const node = storeNodes.find((n) => n.id === nodeId);
       if (!node || node.data.explored || node.data.loading) return;
+
+      // Check if user is signed in before allowing exploration
+      if (!session) {
+        setShowSignInDialog(true);
+        return;
+      }
 
       // Mark as loading
       updateNode(nodeId, { loading: true, error: undefined });
@@ -252,7 +262,7 @@ const KnowledgeCanvas: React.FC = () => {
 
     window.addEventListener('explore-node', handleExploreNode);
     return () => window.removeEventListener('explore-node', handleExploreNode);
-  }, [storeNodes, updateNode]);
+  }, [storeNodes, updateNode, session]);
 
   return (
     <>
@@ -262,6 +272,11 @@ const KnowledgeCanvas: React.FC = () => {
         reason={limitReason}
         currentTier={userTier}
         suggestedTier="STARTER"
+      />
+
+      <SignInDialog
+        isOpen={showSignInDialog}
+        onClose={() => setShowSignInDialog(false)}
       />
 
       <div
