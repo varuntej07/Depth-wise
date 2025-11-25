@@ -77,14 +77,7 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="h-screen w-screen flex bg-slate-950 relative overflow-hidden">
-      {/* Animated Grid Background */}
-      <div className="fixed inset-0 bg-grid-pattern opacity-20 pointer-events-none"></div>
-      <div className="fixed inset-0 bg-gradient-to-br from-cyan-950/20 via-slate-950 to-violet-950/20 pointer-events-none"></div>
-
-      {/* Glowing orbs */}
-      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse-slow pointer-events-none"></div>
-      <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse-slow delay-1000 pointer-events-none"></div>
+    <div className="h-screen w-screen flex bg-black relative overflow-hidden">
 
       {/* Sidebar */}
       <ChatSidebar
@@ -103,7 +96,7 @@ export default function ExplorePage() {
         }`}
       >
         {/* Header */}
-        <header className="w-full bg-slate-900/50 backdrop-blur-xl h-16 flex-shrink-0">
+        <header className="w-full bg-black border-b border-zinc-800 h-16 flex-shrink-0">
           <div className="h-full px-4 sm:px-6 flex items-center justify-end">
             <div className="flex items-center gap-3">
               {/* Usage Indicator - only show when user is logged in */}
@@ -113,7 +106,7 @@ export default function ExplorePage() {
               {session && (
                 <Link
                   href="/pricing"
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 rounded-lg text-white text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-violet-500/50"
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium transition-all hover:bg-zinc-100 active:scale-95 shadow-sm"
                 >
                   <Crown className="w-4 h-4" />
                   <span>Upgrade</span>

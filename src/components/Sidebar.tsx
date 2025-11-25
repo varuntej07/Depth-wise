@@ -143,10 +143,10 @@ export function ChatSidebar({
       {/* Mobile Menu Button */}
       <button
         onClick={onToggleCollapse}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-slate-900/90 backdrop-blur-xl border border-slate-700 hover:border-cyan-500/50 transition-all"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white text-black hover:bg-zinc-100 active:scale-95 transition-all shadow-lg"
         aria-label="Toggle sidebar"
       >
-        <MessageCircle className="w-5 h-5 text-slate-400" />
+        <MessageCircle className="w-5 h-5" />
       </button>
 
       {/* Mobile Overlay */}
@@ -167,10 +167,10 @@ export function ChatSidebar({
         initial={false}
         animate={{ width: isCollapsed ? '64px' : '280px' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="hidden md:flex fixed left-0 top-0 bottom-0 bg-slate-950/95 backdrop-blur-xl border-r border-slate-800/50 z-40 flex-col"
+        className="hidden md:flex fixed left-0 top-0 bottom-0 bg-black border-r border-zinc-800 z-40 flex-col"
       >
         {/* Header with Toggle */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/50">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-zinc-800">
           {!isCollapsed && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -178,17 +178,17 @@ export function ChatSidebar({
               exit={{ opacity: 0 }}
               className="flex items-center gap-2"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-black" />
               </div>
-              <span className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+              <span className="text-sm font-bold text-white">
                 Explorations
               </span>
             </motion.div>
           )}
           {isCollapsed && (
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center mx-auto">
-              <MessageCircle className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center mx-auto">
+              <MessageCircle className="w-4 h-4 text-black" />
             </div>
           )}
         </div>
@@ -196,32 +196,31 @@ export function ChatSidebar({
         {/* Collapse Toggle Button */}
         <button
           onClick={onToggleCollapse}
-          className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-slate-800 border border-slate-700 hover:bg-slate-700 flex items-center justify-center transition-colors z-50"
+          className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 active:scale-90 flex items-center justify-center transition-all z-50"
           aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {isCollapsed ? (
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
           ) : (
-            <ChevronLeft className="w-3.5 h-3.5 text-slate-400" />
+            <ChevronLeft className="w-3.5 h-3.5 text-zinc-400" />
           )}
         </button>
 
         {/* New Chat Button */}
         <div className="p-3">
-          <motion.button
+          <button
             onClick={() => {
               posthog.capture('new_chat_clicked');
               onNewChat();
             }}
-            whileHover={{ scale: 0.98 }}
-            className={`w-full flex items-center justify-center gap-2 p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 transition-colors ${
+            className={`w-full flex items-center justify-center gap-2 p-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 active:scale-95 transition-all ${
               isCollapsed ? 'px-2' : 'px-4'
             }`}
             title={isCollapsed ? 'New chat' : undefined}
           >
-            <Plus className="w-4 h-4 text-cyan-400" />
-            {!isCollapsed && <span className="text-sm font-medium text-slate-300">New Chat</span>}
-          </motion.button>
+            <Plus className="w-4 h-4" />
+            {!isCollapsed && <span className="text-sm font-medium">New Chat</span>}
+          </button>
         </div>
 
         {/* Chat History Sections */}
@@ -284,7 +283,7 @@ export function ChatSidebar({
         </nav>
 
         {/* Account Menu Section */}
-        <div className="p-3 border-t border-slate-800/50" ref={accountMenuRef}>
+        <div className="p-3 border-t border-zinc-800" ref={accountMenuRef}>
           {session ? (
             <div className="relative">
               {/* Account Menu Dropdown */}
@@ -295,20 +294,20 @@ export function ChatSidebar({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50"
+                    className="absolute bottom-full left-0 right-0 mb-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50"
                   >
                     <div className="p-2 space-y-0.5">
                       {menuItems.map((item) => {
                         const Icon = item.icon;
                         return (
                           <div key={item.label}>
-                            {item.divider && <div className="h-px bg-slate-700/50 my-1.5" />}
+                            {item.divider && <div className="h-px bg-zinc-700 my-1.5" />}
                             <button
                               onClick={item.action}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/70 transition-all text-left group"
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-zinc-800 active:scale-98 transition-all text-left group"
                             >
-                              <Icon className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
-                              <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                              <Icon className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors" />
+                              <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
                                 {item.label}
                               </span>
                             </button>
@@ -324,10 +323,10 @@ export function ChatSidebar({
               {!isCollapsed ? (
                 <button
                   onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-slate-800/50 transition-all group"
+                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-zinc-900 active:scale-98 transition-all group"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-black" />
                   </div>
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-sm font-medium text-white truncate">
@@ -335,7 +334,7 @@ export function ChatSidebar({
                     </p>
                   </div>
                   <ChevronUp
-                    className={`w-4 h-4 text-slate-400 transition-transform ${
+                    className={`w-4 h-4 text-zinc-400 transition-transform ${
                       isAccountMenuOpen ? 'rotate-180' : ''
                     }`}
                   />
@@ -343,10 +342,10 @@ export function ChatSidebar({
               ) : (
                 <button
                   onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-                  className="w-full p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 flex items-center justify-center transition-colors"
+                  className="w-full p-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-95 flex items-center justify-center transition-all"
                   title="Account menu"
                 >
-                  <User className="w-4 h-4 text-slate-400" />
+                  <User className="w-4 h-4 text-zinc-400" />
                 </button>
               )}
             </div>
@@ -366,23 +365,23 @@ export function ChatSidebar({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-slate-950/98 backdrop-blur-xl border-r border-slate-800/50 z-50 flex flex-col overflow-y-auto"
+            className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-black border-r border-zinc-800 z-50 flex flex-col overflow-y-auto"
           >
             {/* Header */}
-            <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/50">
+            <div className="h-16 flex items-center justify-between px-4 border-b border-zinc-800">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center">
-                  <MessageCircle className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+                  <MessageCircle className="w-4 h-4 text-black" />
                 </div>
-                <span className="text-sm font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+                <span className="text-sm font-bold text-white">
                   Explorations
                 </span>
               </div>
               <button
                 onClick={onToggleCollapse}
-                className="p-2 rounded-lg hover:bg-slate-800 transition-colors"
+                className="p-2 rounded-lg hover:bg-zinc-900 active:scale-95 transition-all"
               >
-                <ChevronLeft className="w-5 h-5 text-slate-400" />
+                <ChevronLeft className="w-5 h-5 text-zinc-400" />
               </button>
             </div>
 
@@ -390,10 +389,10 @@ export function ChatSidebar({
             <div className="p-3">
               <button
                 onClick={onNewChat}
-                className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 transition-colors"
+                className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 active:scale-95 transition-all"
               >
-                <Plus className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm font-medium text-slate-300">New Chat</span>
+                <Plus className="w-4 h-4" />
+                <span className="text-sm font-medium">New Chat</span>
               </button>
             </div>
 
@@ -445,7 +444,7 @@ export function ChatSidebar({
             </nav>
 
             {/* Account Menu Section - Mobile */}
-            <div className="p-3 border-t border-slate-800/50">
+            <div className="p-3 border-t border-zinc-800">
               {session ? (
                 <div className="relative">
                   {/* Account Menu Dropdown - Mobile */}
@@ -456,20 +455,20 @@ export function ChatSidebar({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50"
+                        className="absolute bottom-full left-0 right-0 mb-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50"
                       >
                         <div className="p-2 space-y-0.5">
                           {menuItems.map((item) => {
                             const Icon = item.icon;
                             return (
                               <div key={item.label}>
-                                {item.divider && <div className="h-px bg-slate-700/50 my-1.5" />}
+                                {item.divider && <div className="h-px bg-zinc-700 my-1.5" />}
                                 <button
                                   onClick={item.action}
-                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/70 transition-all text-left group"
+                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-zinc-800 active:scale-98 transition-all text-left group"
                                 >
-                                  <Icon className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
-                                  <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                                  <Icon className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors" />
+                                  <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
                                     {item.label}
                                   </span>
                                 </button>
@@ -484,10 +483,10 @@ export function ChatSidebar({
                   {/* Account Button - Mobile */}
                   <button
                     onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-                    className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-slate-800/50 transition-all group"
+                    className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-zinc-900 active:scale-98 transition-all group"
                   >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-white" />
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 text-black" />
                     </div>
                     <div className="flex-1 min-w-0 text-left">
                       <p className="text-sm font-medium text-white truncate">
@@ -495,7 +494,7 @@ export function ChatSidebar({
                       </p>
                     </div>
                     <ChevronUp
-                      className={`w-4 h-4 text-slate-400 transition-transform ${
+                      className={`w-4 h-4 text-zinc-400 transition-transform ${
                         isAccountMenuOpen ? 'rotate-180' : ''
                       }`}
                     />
@@ -535,8 +534,8 @@ function ChatHistoryItem({ chat, isSelected, isCollapsed, onSelect }: ChatHistor
         w-full flex items-center gap-3 p-2.5 rounded-lg transition-all group relative
         ${
           isSelected
-            ? 'bg-cyan-500/10 text-cyan-400'
-            : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+            ? 'bg-white text-black'
+            : 'text-zinc-400 hover:bg-zinc-900 hover:text-white active:scale-98'
         }
         ${isCollapsed ? 'justify-center' : ''}
       `}
