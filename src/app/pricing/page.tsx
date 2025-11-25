@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export const metadata = {
-  title: 'Pricing - Knowledge Graph Explorer',
-  description: 'Choose the plan that fits your exploration needs',
+  title: 'Pricing - Depthwise',
+  description: 'Choose the plan that fits your exploration needs. Start exploring for free or upgrade for unlimited knowledge graphs.',
 };
 
 export default function PricingPage() {

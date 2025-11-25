@@ -148,7 +148,7 @@ export default function SharePage() {
             <p className="text-slate-400">{error}</p>
           </div>
           <Link
-            href="/"
+            href="/explore"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 text-white font-medium rounded-lg transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -177,7 +177,7 @@ export default function SharePage() {
         <div className="h-full px-4 sm:px-6 flex items-center justify-between">
           {/* Left side - Back to home */}
           <Link
-            href="/"
+            href="/explore"
             className="flex items-center gap-2 text-slate-400 hover:text-cyan-400 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

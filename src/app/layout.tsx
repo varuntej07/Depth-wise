@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Knowledge Graph Explorer - AI-Powered Learning",
-  description: "Explore any topic with an interactive AI-powered knowledge graph. Discover connections, dive deeper, and build your understanding.",
+  title: "Depthwise - Explore Any Topic Visually & Deeply",
+  description: "Transform your curiosity into understanding with AI-powered visual knowledge graphs. Ask any question and explore deeper with one click. No documents needed.",
 };
 
 export const viewport: Viewport = {

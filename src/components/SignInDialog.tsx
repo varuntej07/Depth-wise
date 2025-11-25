@@ -53,7 +53,7 @@ export function SignInDialog({ isOpen, onClose }: SignInDialogProps) {
           </h2>
           <p className="text-slate-300 text-sm leading-relaxed">
             To explore deeper into this topic and unlock the full power of knowledge mapping,
-            please sign in with your Google account.
+            Please sign in with your Google account.
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export function SignInDialog({ isOpen, onClose }: SignInDialogProps) {
           onClick={handleSignIn}
           className="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium transition-all duration-200 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40"
         >
-          Sign in with Google
+          Sign in
         </button>
 
         {/* Footer note */}

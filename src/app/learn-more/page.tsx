@@ -185,7 +185,7 @@ export default function LearnMorePage() {
             Begin your journey of discovery with our AI-powered knowledge graph explorer.
           </p>
           <Link
-            href="/"
+            href="/explore"
             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 hover:shadow-lg hover:shadow-cyan-500/50 rounded-xl text-white font-medium transition-all hover:scale-105"
           >
             Start Exploring
