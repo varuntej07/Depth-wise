@@ -52,4 +52,4 @@ Thumbs.db
 .DS_Store
 
 # Prisma
-prisma/migrations/
+# prisma/migrations/ should be committed to version control

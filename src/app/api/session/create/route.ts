@@ -9,10 +9,11 @@ export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
     const session = await auth();
+    const isAuthenticated = !!session?.user?.email;
     let userId: string | null = null;
     let user = null;
 
-    if (session?.user?.email) {
+    if (isAuthenticated) {
       user = await prisma.user.findUnique({
         where: { email: session.user.email },
         select: {
@@ -108,67 +109,128 @@ export async function POST(request: NextRequest) {
     // Create session with root node and child nodes in a transaction
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await prisma.$transaction(async (tx: any) => {
-      // Create session (linked to user if authenticated)
-      const graphSession = await tx.graphSession.create({
-        data: {
-          rootQuery: query,
-          title: query.slice(0, 100),
-          nodeCount: 1 + branches.length,
-          maxDepth: 2,
-          userId: userId,
-        },
-      });
+      if (isAuthenticated) {
+        // AUTHENTICATED USER - use GraphSession
+        const graphSession = await tx.graphSession.create({
+          data: {
+            rootQuery: query,
+            title: query.slice(0, 100),
+            nodeCount: 1 + branches.length,
+            maxDepth: 2,
+            userId: userId,
+          },
+        });
 
-      // Create root node
-      const rootNode = await tx.node.create({
-        data: {
-          sessionId: graphSession.id,
-          title: query,
-          content: answer,
-          depth: 1,
-          positionX: 0,
-          positionY: 0,
-          explored: true,
-        },
-      });
+        // Create root node
+        const rootNode = await tx.node.create({
+          data: {
+            sessionId: graphSession.id,
+            title: query,
+            content: answer,
+            depth: 1,
+            positionX: 0,
+            positionY: 0,
+            explored: true,
+          },
+        });
 
-      // Create child nodes for branches
-      // Use centralized layout configuration to prevent node overlap
-      const { horizontalSpacing, verticalSpacing } = LAYOUT_CONFIG.level1;
+        // Create child nodes for branches
+        const { horizontalSpacing, verticalSpacing } = LAYOUT_CONFIG.level1;
 
-      const childNodes = await Promise.all(
-        branches.map((branch: typeof branches[0], index: number) =>
-          tx.node.create({
-            data: {
-              sessionId: graphSession.id,
-              parentId: rootNode.id,
-              title: branch.title,
-              summary: branch.summary,
-              content: branch.summary,
-              depth: 2,
-              positionX: (index - (branches.length - 1) / 2) * horizontalSpacing,
-              positionY: verticalSpacing,
-              explored: false,
-            },
-          })
-        )
-      );
+        const childNodes = await Promise.all(
+          branches.map((branch: typeof branches[0], index: number) =>
+            tx.node.create({
+              data: {
+                sessionId: graphSession.id,
+                parentId: rootNode.id,
+                title: branch.title,
+                summary: branch.summary,
+                content: branch.summary,
+                depth: 2,
+                positionX: (index - (branches.length - 1) / 2) * horizontalSpacing,
+                positionY: verticalSpacing,
+                explored: false,
+              },
+            })
+          )
+        );
 
-      // Create edges
-      await Promise.all(
-        childNodes.map((childNode) =>
-          tx.edge.create({
-            data: {
-              sessionId: graphSession.id,
-              sourceId: rootNode.id,
-              targetId: childNode.id,
-              animated: true,
-            },
-          })
-        )
-      );
+        // Create edges
+        await Promise.all(
+          childNodes.map((childNode) =>
+            tx.edge.create({
+              data: {
+                sessionId: graphSession.id,
+                sourceId: rootNode.id,
+                targetId: childNode.id,
+                animated: true,
+              },
+            })
+          )
+        );
 
-      return { session: graphSession, rootNode, childNodes };
+        return { session: graphSession, rootNode, childNodes, isAnonymous: false };
+      } else {
+        // ANONYMOUS USER - use AnonymousSession
+        const anonymousSession = await tx.anonymousSession.create({
+          data: {
+            rootQuery: query,
+            title: query.slice(0, 100),
+            nodeCount: 1 + branches.length,
+            maxDepth: 2,
+          },
+        });
+
+        // Create root node
+        const rootNode = await tx.anonymousNode.create({
+          data: {
+            sessionId: anonymousSession.id,
+            title: query,
+            content: answer,
+            depth: 1,
+            positionX: 0,
+            positionY: 0,
+            explored: true,
+          },
+        });
+
+        // Create child nodes for branches
+        const { horizontalSpacing, verticalSpacing } = LAYOUT_CONFIG.level1;
+
+        const childNodes = await Promise.all(
+          branches.map((branch: typeof branches[0], index: number) =>
+            tx.anonymousNode.create({
+              data: {
+                sessionId: anonymousSession.id,
+                parentId: rootNode.id,
+                title: branch.title,
+                summary: branch.summary,
+                content: branch.summary,
+                depth: 2,
+                positionX: (index - (branches.length - 1) / 2) * horizontalSpacing,
+                positionY: verticalSpacing,
+                explored: false,
+              },
+            })
+          )
+        );
+
+        // Create edges
+        await Promise.all(
+          childNodes.map((childNode) =>
+            tx.anonymousEdge.create({
+              data: {
+                sessionId: anonymousSession.id,
+                sourceId: rootNode.id,
+                targetId: childNode.id,
+                animated: true,
+              },
+            })
+          )
+        );
+
+        return { session: anonymousSession, rootNode, childNodes, isAnonymous: true };
+      }
     });
 
     // Increment exploration counter for authenticated users
@@ -183,6 +245,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       sessionId: result.session.id,
+      isAnonymous: result.isAnonymous,
       createdAt: result.session.createdAt.toISOString(),
       rootNode: {
         id: result.rootNode.id,

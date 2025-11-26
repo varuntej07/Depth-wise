@@ -24,7 +24,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [limitReason, setLimitReason] = useState<string>('');
   const [userTier, setUserTier] = useState<SubscriptionTier>('FREE');
-  const { setSessionId, setRootQuery, addNodes, addEdges, clearGraph, setError, nodes, rootQuery } =
+  const { setSessionId, setRootQuery, setIsAnonymous, addNodes, addEdges, clearGraph, setError, nodes, rootQuery } =
     useGraphStore();
   const posthog = usePostHog();
 
@@ -159,6 +159,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
 
       setSessionId(data.sessionId);
       setRootQuery(searchQuery);
+      setIsAnonymous(data.isAnonymous || false);
 
       // Root node
       const rootNode: GraphNode = {

@@ -41,7 +41,7 @@ const edgeTypes = {
 };
 
 const KnowledgeCanvas: React.FC = () => {
-  const { nodes: storeNodes, edges: storeEdges, updateNode } = useGraphStore();
+  const { nodes: storeNodes, edges: storeEdges, updateNode, isAnonymous: isAnonymousSession, sessionId: currentSessionId } = useGraphStore();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -50,6 +50,7 @@ const KnowledgeCanvas: React.FC = () => {
   const [userTier, setUserTier] = useState<SubscriptionTier>('FREE');
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const { data: session } = useSession();
+  const [anonymousSessionIdForMigration, setAnonymousSessionIdForMigration] = useState<string | null>(null);
 
   // Find all edges in the path from root to a given node
   const getPathToRoot = useCallback(
@@ -113,6 +114,40 @@ const KnowledgeCanvas: React.FC = () => {
     [setEdges]
   );
 
+  // Handle migration after sign-in
+  useEffect(() => {
+    const migrateAnonymousSession = async () => {
+      if (session?.user && anonymousSessionIdForMigration && isAnonymousSession) {
+        try {
+          const response = await fetch('/api/session/migrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              anonymousSessionId: anonymousSessionIdForMigration,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            // Update the store with the new session ID and mark as not anonymous
+            useGraphStore.getState().setSessionId(data.sessionId);
+            useGraphStore.getState().setIsAnonymous(false);
+            setAnonymousSessionIdForMigration(null);
+
+            // Close the sign-in dialog
+            setShowSignInDialog(false);
+          } else {
+            console.error('Failed to migrate session');
+          }
+        } catch (error) {
+          console.error('Migration error:', error);
+        }
+      }
+    };
+
+    migrateAnonymousSession();
+  }, [session, anonymousSessionIdForMigration, isAnonymousSession]);
+
   // Handle node exploration
   useEffect(() => {
     const handleExploreNode = async (event: Event) => {
@@ -122,11 +157,8 @@ const KnowledgeCanvas: React.FC = () => {
       const node = storeNodes.find((n) => n.id === nodeId);
       if (!node || node.data.explored || node.data.loading) return;
 
-      // Check if user is signed in before allowing exploration
-      if (!session) {
-        setShowSignInDialog(true);
-        return;
-      }
+      // For anonymous sessions, sign-in check happens in the API based on depth
+      // We'll handle the ANONYMOUS_DEPTH_LIMIT error below
 
       // Mark as loading
       updateNode(nodeId, { loading: true, error: undefined });
@@ -163,6 +195,8 @@ const KnowledgeCanvas: React.FC = () => {
 
       try {
         const sessionId = useGraphStore.getState().sessionId;
+        const isAnonymous = useGraphStore.getState().isAnonymous;
+
         const response = await fetch(API_ENDPOINTS.EXPLORE_NODE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -170,13 +204,31 @@ const KnowledgeCanvas: React.FC = () => {
             sessionId,
             parentId: nodeId,
             depth: node.data.depth,
+            isAnonymous,
           }),
         });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
 
-          // Handle depth limit errors
+          // Handle anonymous depth limit - show sign-in dialog
+          if (response.status === 401 && errorData.code === 'ANONYMOUS_DEPTH_LIMIT') {
+            // Remove skeleton nodes
+            const nodeIdsToRemove = skeletonNodes.map((n) => n.id);
+            nodeIdsToRemove.forEach((id) => useGraphStore.getState().removeNode(id));
+
+            // Save the session ID for migration after sign-in
+            setAnonymousSessionIdForMigration(sessionId);
+
+            // Show sign-in dialog
+            setShowSignInDialog(true);
+
+            // Mark parent as not loading
+            updateNode(nodeId, { loading: false });
+            return;
+          }
+
+          // Handle authenticated depth limit errors
           if (response.status === 429 && errorData.code === 'DEPTH_LIMIT_REACHED') {
             // Remove skeleton nodes
             const nodeIdsToRemove = skeletonNodes.map((n) => n.id);
@@ -326,14 +378,23 @@ const KnowledgeCanvas: React.FC = () => {
             if (knowledgeNode.data.explored) return '#06b6d4';
             return '#64748b';
           }}
-          maskColor="rgba(15, 23, 42, 0.8)"
+          nodeStrokeColor={(node) => {
+            const knowledgeNode = node as unknown as GraphNode;
+            if (knowledgeNode.data.loading) return '#60a5fa';
+            if (knowledgeNode.data.explored) return '#22d3ee';
+            return '#94a3b8';
+          }}
+          nodeStrokeWidth={2}
+          maskColor="rgba(15, 23, 42, 0.85)"
           style={{
             backgroundColor: '#1e293b',
-            width: '120px',
-            height: '80px',
+            border: '1px solid rgba(6, 182, 212, 0.3)',
+            borderRadius: '8px',
+            width: '180px',
+            height: '120px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
           }}
           position="bottom-right"
-          className="hidden sm:block"
           pannable
           zoomable
         />

@@ -8,8 +8,9 @@ interface GraphState {
   nodes: GraphNode[];
   edges: GraphEdge[];
 
-  // Share state - tracks if current graph is public
-  isPublic: boolean;
+  // Session state
+  isPublic: boolean; // tracks if current graph is public
+  isAnonymous: boolean; // tracks if this is an anonymous session
 
   // UI State
   isLoading: boolean;
@@ -18,12 +19,13 @@ interface GraphState {
   // Actions
   setSessionId: (id: string) => void;
   setRootQuery: (query: string) => void;
+  setIsAnonymous: (isAnonymous: boolean) => void;
   addNodes: (nodes: GraphNode[]) => void;
   addEdges: (edges: GraphEdge[]) => void;
   updateNode: (id: string, updates: Partial<GraphNode['data']>) => void;
   removeNode: (id: string) => void;
   clearGraph: () => void;
-  loadSession: (sessionId: string, rootQuery: string, nodes: GraphNode[], edges: GraphEdge[], isPublic?: boolean) => void;
+  loadSession: (sessionId: string, rootQuery: string, nodes: GraphNode[], edges: GraphEdge[], isPublic?: boolean, isAnonymous?: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -43,11 +45,13 @@ const useGraphStore = create<GraphState>((set, get) => ({
   nodes: [],
   edges: [],
   isPublic: false, // Graphs are private by default
+  isAnonymous: false, // Defaults to authenticated session
   isLoading: false,
   error: null,
 
   setSessionId: (id) => set({ sessionId: id }),
   setRootQuery: (query) => set({ rootQuery: query }),
+  setIsAnonymous: (isAnonymous) => set({ isAnonymous }),
 
   // Update the share status of the current graph
   setIsPublic: (isPublic) => set({ isPublic }),
@@ -82,17 +86,19 @@ const useGraphStore = create<GraphState>((set, get) => ({
       sessionId: null,
       rootQuery: null,
       isPublic: false, // Reset share status when clearing
+      isAnonymous: false, // Reset anonymous status when clearing
       error: null,
     }),
 
   // Load a session with all its data, optionally including share status
-  loadSession: (sessionId, rootQuery, nodes, edges, isPublic = false) =>
+  loadSession: (sessionId, rootQuery, nodes, edges, isPublic = false, isAnonymous = false) =>
     set({
       sessionId,
       rootQuery,
       nodes,
       edges,
       isPublic, // Load the share status from the session
+      isAnonymous, // Load the anonymous status
       error: null,
     }),
 

@@ -350,9 +350,7 @@ export function ChatSidebar({
               )}
             </div>
           ) : (
-            <div className="px-3">
-              <SignInButton />
-            </div>
+            <SignInButton isCollapsed={isCollapsed} />
           )}
         </div>
       </motion.aside>
@@ -501,9 +499,7 @@ export function ChatSidebar({
                   </button>
                 </div>
               ) : (
-                <div className="px-4">
-                  <SignInButton />
-                </div>
+                <SignInButton isCollapsed={false} />
               )}
             </div>
           </motion.aside>
