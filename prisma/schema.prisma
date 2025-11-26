@@ -170,3 +170,88 @@ model ConversationHistory {
   @@index([sessionId, createdAt])
   @@map("conversation_history")
 }
+
+// Anonymous Session models - for users exploring without signing in
+model AnonymousSession {
+  id        String   @id @default(uuid())
+  rootQuery String   @map("root_query")
+  title     String?
+  nodeCount Int      @default(0) @map("node_count")
+  maxDepth  Int      @default(0) @map("max_depth")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Optional: Track IP or browser fingerprint for analytics
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+
+  nodes   AnonymousNode[]
+  edges   AnonymousEdge[]
+  history AnonymousConversationHistory[]
+
+  @@index([createdAt(sort: Desc)])
+  @@map("anonymous_sessions")
+}
+
+model AnonymousNode {
+  id         String   @id @default(uuid())
+  sessionId  String   @map("session_id")
+  parentId   String?  @map("parent_id")
+
+  title      String
+  content    String?
+  summary    String?
+
+  depth      Int
+  positionX  Float    @map("position_x")
+  positionY  Float    @map("position_y")
+
+  explored   Boolean  @default(false)
+
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session    AnonymousSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  parent     AnonymousNode?    @relation("AnonymousNodeChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children   AnonymousNode[]   @relation("AnonymousNodeChildren")
+
+  edgesAsSource AnonymousEdge[] @relation("AnonymousSourceEdges")
+  edgesAsTarget AnonymousEdge[] @relation("AnonymousTargetEdges")
+
+  @@index([sessionId])
+  @@index([parentId])
+  @@index([sessionId, depth])
+  @@map("anonymous_nodes")
+}
+
+model AnonymousEdge {
+  id        String  @id @default(uuid())
+  sessionId String  @map("session_id")
+  sourceId  String  @map("source_id")
+  targetId  String  @map("target_id")
+
+  animated  Boolean @default(true)
+
+  session   AnonymousSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  source    AnonymousNode    @relation("AnonymousSourceEdges", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    AnonymousNode    @relation("AnonymousTargetEdges", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId])
+  @@index([sessionId])
+  @@map("anonymous_edges")
+}
+
+model AnonymousConversationHistory {
+  id        String   @id @default(uuid())
+  sessionId String   @map("session_id")
+  nodeId    String?  @map("node_id")
+
+  role      String
+  content   String
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session   AnonymousSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("anonymous_conversation_history")
+}
