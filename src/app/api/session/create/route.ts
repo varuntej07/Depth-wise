@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     if (isAuthenticated) {
       user = await prisma.user.findUnique({
-        where: { email: session.user.email },
+        where: { email: session.user.email! },
         select: {
           id: true,
           subscriptionTier: true,
