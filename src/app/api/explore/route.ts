@@ -3,22 +3,74 @@ import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 import { getMaxDepth } from '@/lib/subscription-config';
+import { rateLimit } from '@/lib/ratelimit';
+import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { sessionId, parentId, isAnonymous } = body;
 
+    // Validate sessionId
     if (!sessionId) {
-      return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Session ID required', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
+    if (!isValidUUID(sessionId)) {
+      return NextResponse.json(
+        { error: 'Invalid session ID format', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
     }
 
+    // Validate parentId
     if (!parentId) {
-      return NextResponse.json({ error: 'Parent node ID required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Parent node ID required', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
+    if (!isValidUUID(parentId)) {
+      return NextResponse.json(
+        { error: 'Invalid parent node ID format', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
+
+    // Validate isAnonymous
+    const anonymousResult = sanitizeBoolean(isAnonymous);
+    if (!anonymousResult.isValid) {
+      return NextResponse.json(
+        { error: anonymousResult.error, code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
+    const validatedIsAnonymous = anonymousResult.value!;
+
+    // For rate limiting, get user email if authenticated
+    let userEmail: string | null = null;
+    if (!validatedIsAnonymous && sessionId) {
+      const session = await prisma.graphSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          user: {
+            select: { email: true },
+          },
+        },
+      });
+      userEmail = session?.user?.email || null;
+    }
+
+    // Apply rate limiting
+    const rateLimitResult = await rateLimit(request, 'explore', userEmail);
+    if (!rateLimitResult.success && rateLimitResult.response) {
+      return rateLimitResult.response;
     }
 
     // Handle ANONYMOUS sessions
-    if (isAnonymous) {
+    if (validatedIsAnonymous) {
       // Get anonymous session and parent node
       const session = await prisma.anonymousSession.findUnique({
         where: { id: sessionId },

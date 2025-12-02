@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isValidUUID } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +24,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { anonymousSessionId } = body;
 
+    // Validate anonymousSessionId
     if (!anonymousSessionId) {
-      return NextResponse.json({ error: 'Anonymous session ID required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Anonymous session ID required', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
+    if (!isValidUUID(anonymousSessionId)) {
+      return NextResponse.json(
+        { error: 'Invalid anonymous session ID format', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
     }
 
     // Migrate anonymous session to user's account

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
 
 /**
  * POST /api/session/[id]/share
@@ -28,6 +29,14 @@ export async function POST(
     // Step 1: Await params to get the session ID (Next.js 15 requirement)
     const params = await props.params;
     const sessionId = params.id;
+
+    // Validate sessionId format
+    if (!isValidUUID(sessionId)) {
+      return NextResponse.json(
+        { error: 'Invalid session ID format', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
 
     // Step 2: Find the graph session in the database first
     const graphSession = await prisma.graphSession.findUnique({
@@ -85,22 +94,24 @@ export async function POST(
     const { isPublic } = body;
 
     // Validate that isPublic is a boolean
-    if (typeof isPublic !== 'boolean') {
+    const publicResult = sanitizeBoolean(isPublic);
+    if (!publicResult.isValid) {
       return NextResponse.json(
-        { error: 'isPublic must be a boolean value' },
-        { status: 400 } // 400 = Bad Request
+        { error: publicResult.error, code: 'INVALID_INPUT' },
+        { status: 400 }
       );
     }
+    const validatedIsPublic = publicResult.value!;
 
     // Step 7: Update the session's public status in the database
     const updatedSession = await prisma.graphSession.update({
       where: { id: sessionId },
-      data: { isPublic },
+      data: { isPublic: validatedIsPublic },
     });
 
     // Step 8: Construct the shareable URL if the session is now public
     // This URL can be shared with anyone to view the graph
-    const shareUrl = isPublic
+    const shareUrl = validatedIsPublic
       ? `${request.nextUrl.origin}/share/${sessionId}`
       : null;
 
@@ -109,7 +120,7 @@ export async function POST(
       success: true,
       isPublic: updatedSession.isPublic,
       shareUrl,
-      message: isPublic
+      message: validatedIsPublic
         ? 'Graph is now public and can be shared'
         : 'Graph is now private',
     });

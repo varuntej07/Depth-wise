@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 import { canUserExplore, getSavedGraphsLimit } from '@/lib/subscription-config';
+import { rateLimit } from '@/lib/ratelimit';
+import { sanitizeQuery } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +14,16 @@ export async function POST(request: NextRequest) {
     const isAuthenticated = !!session?.user?.email;
     let userId: string | null = null;
     let user = null;
+
+    // Apply rate limiting
+    const rateLimitResult = await rateLimit(
+      request,
+      'session-create',
+      session?.user?.email
+    );
+    if (!rateLimitResult.success && rateLimitResult.response) {
+      return rateLimitResult.response;
+    }
 
     if (isAuthenticated) {
       user = await prisma.user.findUnique({
@@ -34,9 +46,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { query } = body;
 
-    if (!query || typeof query !== 'string') {
-      return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+    // Sanitize query input
+    const sanitizationResult = sanitizeQuery(query);
+    if (!sanitizationResult.isValid) {
+      return NextResponse.json(
+        {
+          error: sanitizationResult.error || 'Invalid query',
+          code: 'INVALID_INPUT'
+        },
+        { status: 400 }
+      );
     }
+
+    // Use sanitized query
+    const sanitizedQuery = sanitizationResult.sanitized;
 
     // Check exploration limits for authenticated users
     if (user) {
@@ -98,10 +121,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate initial branches using Claude
+    // Generate initial branches using Claude (use sanitized query)
     const { answer, branches } = await generateBranches({
-      rootQuery: query,
-      path: [query],
+      rootQuery: sanitizedQuery,
+      path: [sanitizedQuery],
       depth: 1,
       coveredTopics: [],
     });
@@ -113,8 +136,8 @@ export async function POST(request: NextRequest) {
         // AUTHENTICATED USER - use GraphSession
         const graphSession = await tx.graphSession.create({
           data: {
-            rootQuery: query,
-            title: query.slice(0, 100),
+            rootQuery: sanitizedQuery,
+            title: sanitizedQuery.slice(0, 100),
             nodeCount: 1 + branches.length,
             maxDepth: 2,
             userId: userId,
@@ -125,7 +148,7 @@ export async function POST(request: NextRequest) {
         const rootNode = await tx.node.create({
           data: {
             sessionId: graphSession.id,
-            title: query,
+            title: sanitizedQuery,
             content: answer,
             depth: 1,
             positionX: 0,
@@ -174,8 +197,8 @@ export async function POST(request: NextRequest) {
         // ANONYMOUS USER - use AnonymousSession
         const anonymousSession = await tx.anonymousSession.create({
           data: {
-            rootQuery: query,
-            title: query.slice(0, 100),
+            rootQuery: sanitizedQuery,
+            title: sanitizedQuery.slice(0, 100),
             nodeCount: 1 + branches.length,
             maxDepth: 2,
           },
@@ -185,7 +208,7 @@ export async function POST(request: NextRequest) {
         const rootNode = await tx.anonymousNode.create({
           data: {
             sessionId: anonymousSession.id,
-            title: query,
+            title: sanitizedQuery,
             content: answer,
             depth: 1,
             positionX: 0,
