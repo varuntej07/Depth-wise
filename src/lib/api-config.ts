@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
   SESSION_LIST: `${API_BASE_URL}/api/sessions`,
   SESSION_GET: (id: string) => `${API_BASE_URL}/api/session/${id}`,
   SESSION_SHARE: (id: string) => `${API_BASE_URL}/api/session/${id}/share`,
+  SESSION_MIGRATE: `${API_BASE_URL}/api/session/migrate`,
 
   // Exploration
   EXPLORE_NODE: `${API_BASE_URL}/api/explore`,

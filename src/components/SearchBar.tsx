@@ -161,6 +161,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
       setRootQuery(searchQuery);
       setIsAnonymous(data.isAnonymous || false);
 
+      // Save anonymous session ID to localStorage for potential migration after sign-in
+      if (data.isAnonymous) {
+        localStorage.setItem('pendingAnonymousSessionId', data.sessionId);
+      }
+
       // Root node
       const rootNode: GraphNode = {
         id: data.rootNode.id,

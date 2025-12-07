@@ -9,7 +9,7 @@ interface SignInButtonProps {
 export function SignInButton({ isCollapsed = false }: SignInButtonProps) {
   return (
     <button
-      onClick={() => signIn('google', { callbackUrl: '/' })}
+      onClick={() => signIn('google', { callbackUrl: '/explore' })}
       className={`group relative rounded-lg border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-all overflow-hidden ${
         isCollapsed ? 'p-2.5' : 'px-4 py-2 text-xs sm:text-sm'
       }`}

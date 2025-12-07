@@ -34,6 +34,50 @@ export default function ExplorePage() {
     }
   }, []);
 
+  // Migrate anonymous session when user signs in
+  useEffect(() => {
+    const migrateAnonymousSession = async () => {
+      if (session?.user) {
+        const pendingSessionId = localStorage.getItem('pendingAnonymousSessionId');
+
+        if (pendingSessionId) {
+          try {
+            const response = await fetch(API_ENDPOINTS.SESSION_MIGRATE, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ anonymousSessionId: pendingSessionId }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+
+              // Load the migrated session
+              const sessionResponse = await fetch(API_ENDPOINTS.SESSION_GET(data.sessionId));
+              if (sessionResponse.ok) {
+                const sessionData = await sessionResponse.json();
+                loadSession(
+                  sessionData.sessionId,
+                  sessionData.rootQuery,
+                  sessionData.nodes,
+                  sessionData.edges
+                );
+              }
+
+              // Clear the pending session
+              localStorage.removeItem('pendingAnonymousSessionId');
+            }
+          } catch (error) {
+            console.error('Failed to migrate anonymous session:', error);
+            // Clear the pending session even on error to avoid retry loops
+            localStorage.removeItem('pendingAnonymousSessionId');
+          }
+        }
+      }
+    };
+
+    migrateAnonymousSession();
+  }, [session?.user, loadSession]);
+
   // Fetch chat history when user logs in or when sessionId changes
   useEffect(() => {
     if (session?.user) {
