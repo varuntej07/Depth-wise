@@ -59,17 +59,25 @@ export type RateLimitType = 'session-create' | 'explore';
 export async function rateLimit(
   request: NextRequest,
   type: RateLimitType,
-  userEmail?: string | null
+  userEmail?: string | null,
+  clientId?: string | null
 ): Promise<{ success: boolean; response?: NextResponse }> {
   // Determine if user is authenticated
   const isAuthenticated = !!userEmail;
 
-  // Get IP address for anonymous users
+  // For anonymous users, prefer client-generated ID over IP address
+  // This prevents mobile carrier CGNAT from causing shared rate limits
+  // across thousands of users on the same carrier network
+  const ipAddress =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+
   const identifier = isAuthenticated
     ? userEmail!
-    : request.headers.get('x-forwarded-for') ||
-      request.headers.get('x-real-ip') ||
-      'anonymous';
+    : clientId
+      ? `client:${clientId}`
+      : `ip:${ipAddress}`;
 
   // Select appropriate rate limiter
   let limiter: Ratelimit | null;

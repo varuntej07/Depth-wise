@@ -27,6 +27,7 @@ import { SubscriptionTier } from '@prisma/client';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { SignInDialog } from './SignInDialog';
 import { useSession } from 'next-auth/react';
+import { getClientId } from '@/lib/utils';
 
 const nodeTypes = {
   knowledge: (props: { data: GraphNode['data']; id: string; selected: boolean }) => {
@@ -241,6 +242,7 @@ const KnowledgeCanvasInner: React.FC = () => {
             parentId: nodeId,
             depth: node.data.depth,
             isAnonymous,
+            clientId: getClientId(),
           }),
         });
 

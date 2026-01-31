@@ -9,7 +9,7 @@ import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, parentId, isAnonymous } = body;
+    const { sessionId, parentId, isAnonymous, clientId } = body;
 
     // Validate sessionId
     if (!sessionId) {
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
       userEmail = session?.user?.email || null;
     }
 
-    // Apply rate limiting
-    const rateLimitResult = await rateLimit(request, 'explore', userEmail);
+    // Apply rate limiting with clientId for anonymous users
+    const rateLimitResult = await rateLimit(request, 'explore', userEmail, clientId);
     if (!rateLimitResult.success && rateLimitResult.response) {
       return rateLimitResult.response;
     }

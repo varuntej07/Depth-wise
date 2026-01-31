@@ -15,11 +15,16 @@ export async function POST(request: NextRequest) {
     let userId: string | null = null;
     let user = null;
 
-    // Apply rate limiting
+    // Parse body early to get clientId for rate limiting
+    const body = await request.json();
+    const { query, clientId } = body;
+
+    // Apply rate limiting with clientId for anonymous users
     const rateLimitResult = await rateLimit(
       request,
       'session-create',
-      session?.user?.email
+      session?.user?.email,
+      clientId
     );
     if (!rateLimitResult.success && rateLimitResult.response) {
       return rateLimitResult.response;
@@ -42,9 +47,6 @@ export async function POST(request: NextRequest) {
       });
       userId = user?.id || null;
     }
-
-    const body = await request.json();
-    const { query } = body;
 
     // Sanitize query input
     const sanitizationResult = sanitizeQuery(query);

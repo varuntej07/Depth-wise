@@ -126,3 +126,34 @@ export function sanitizeBoolean(input: unknown): { isValid: boolean; value?: boo
     error: 'Value must be a boolean',
   };
 }
+
+/**
+ * Gets or creates a unique client ID for rate limiting
+ * This allows anonymous users on shared IPs (mobile carriers with CGNAT)
+ * to have their own rate limit bucket
+ */
+export function getClientId(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const storageKey = 'depthwise_client_id';
+  let clientId = localStorage.getItem(storageKey);
+
+  if (!clientId) {
+    // Generate a random ID using crypto API if available, fallback to Math.random
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      clientId = crypto.randomUUID();
+    } else {
+      // Fallback for older browsers
+      clientId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    }
+    localStorage.setItem(storageKey, clientId);
+  }
+
+  return clientId;
+}

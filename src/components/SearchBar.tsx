@@ -13,6 +13,7 @@ import { usePostHog } from 'posthog-js/react';
 import { SubscriptionModal } from './SubscriptionModal';
 import { SubscriptionTier } from '@prisma/client';
 import { API_ENDPOINTS } from '@/lib/api-config';
+import { getClientId } from '@/lib/utils';
 
 interface SearchBarProps {
   isCompact?: boolean;
@@ -102,7 +103,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
       const response = await fetch(API_ENDPOINTS.SESSION_CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery }),
+        body: JSON.stringify({ query: searchQuery, clientId: getClientId() }),
       });
 
       if (!response.ok) {
