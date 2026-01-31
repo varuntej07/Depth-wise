@@ -29,7 +29,7 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose }) => {
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -50 }}
-        className="fixed top-4 right-4 z-50 max-w-md"
+        className="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 z-50 sm:max-w-md"
       >
         <div className="bg-slate-900/95 backdrop-blur-sm border-2 border-red-500/50 rounded-xl p-4 shadow-lg shadow-red-500/20">
           <div className="flex items-start gap-3">

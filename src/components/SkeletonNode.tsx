@@ -22,7 +22,8 @@ const getDepthColor = (depth: number) => {
 
 const SkeletonNode: React.FC<SkeletonNodeProps> = ({ data }) => {
   const depthColors = getDepthColor(data.depth);
-  
+  const isRootNode = data.depth === 1;
+
   return (
     <div className="knowledge-node">
       <Handle
@@ -31,7 +32,11 @@ const SkeletonNode: React.FC<SkeletonNodeProps> = ({ data }) => {
         className="w-3 h-3 !bg-cyan-500 !border-2 !border-slate-900"
       />
       <Card
-        className={`w-[360px] h-[280px] bg-slate-900/90 backdrop-blur-sm border-2 ${depthColors.border} shadow-lg flex flex-col`}
+        className={`${
+          isRootNode
+            ? 'min-w-[320px] w-[320px] sm:min-w-[400px] sm:w-[400px] md:min-w-[500px] md:w-[500px]'
+            : 'min-w-[280px] w-[280px] sm:min-w-[340px] sm:w-[340px] md:min-w-[420px] md:w-[420px]'
+        } min-h-[200px] bg-slate-900/90 backdrop-blur-sm border-2 ${depthColors.border} shadow-lg flex flex-col`}
       >
         <CardHeader className="pb-3 border-b border-slate-800">
           <div className={`h-5 bg-gradient-to-r ${depthColors.shimmer} rounded animate-shimmer w-3/4`}></div>

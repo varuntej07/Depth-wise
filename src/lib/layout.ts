@@ -22,3 +22,23 @@ export const LAYOUT_CONFIG = {
     verticalSpacing: 420,    // Maintains current vertical spacing
   },
 } as const;
+
+/**
+ * Get responsive layout config based on screen width
+ * Mobile devices get tighter spacing so nodes fit on screen
+ */
+export const getResponsiveLayoutConfig = (isMobile: boolean) => {
+  if (isMobile) {
+    return {
+      level1: {
+        horizontalSpacing: 350,  // Tighter spacing for mobile
+        verticalSpacing: 320,    // Reduced vertical spacing
+      },
+      level2Plus: {
+        horizontalSpacing: 350,
+        verticalSpacing: 320,
+      },
+    };
+  }
+  return LAYOUT_CONFIG;
+};

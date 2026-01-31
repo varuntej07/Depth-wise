@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -8,10 +8,12 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   addEdge,
   Connection,
   Node,
   Edge,
+  ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import KnowledgeNode from './KnowledgeNode';
@@ -40,7 +42,7 @@ const edgeTypes = {
   default: KnowledgeEdge,
 };
 
-const KnowledgeCanvas: React.FC = () => {
+const KnowledgeCanvasInner: React.FC = () => {
   const { nodes: storeNodes, edges: storeEdges, updateNode, isAnonymous: isAnonymousSession, sessionId: currentSessionId } = useGraphStore();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -51,6 +53,40 @@ const KnowledgeCanvas: React.FC = () => {
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const { data: session } = useSession();
   const [anonymousSessionIdForMigration, setAnonymousSessionIdForMigration] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const { fitView } = useReactFlow();
+  const initialFitDone = useRef(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Trigger fitView when nodes are first loaded (after skeleton nodes are replaced)
+  useEffect(() => {
+    // Only trigger on initial load when we have real nodes (not skeletons)
+    const hasRealNodes = storeNodes.some(n => !n.data.isSkeleton);
+    const hasNoSkeletons = storeNodes.every(n => !n.data.isSkeleton);
+
+    if (hasRealNodes && hasNoSkeletons && storeNodes.length > 0) {
+      // Delay fitView slightly to ensure nodes are rendered
+      const timer = setTimeout(() => {
+        fitView({
+          padding: isMobile ? 0.1 : 0.2,
+          duration: 300,
+          maxZoom: isMobile ? 0.5 : 1,
+        });
+        initialFitDone.current = true;
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [storeNodes, fitView, isMobile]);
 
   // Find all edges in the path from root to a given node
   const getPathToRoot = useCallback(
@@ -347,12 +383,12 @@ const KnowledgeCanvas: React.FC = () => {
         onNodeMouseLeave={() => setHoveredNodeId(null)}
         fitView
         fitViewOptions={{
-          padding: 0.2,
+          padding: isMobile ? 0.1 : 0.2,
           includeHiddenNodes: false,
-          minZoom: 0.1,
-          maxZoom: 1,
+          minZoom: 0.05,
+          maxZoom: isMobile ? 0.6 : 1,
         }}
-        minZoom={0.1}
+        minZoom={0.05}
         maxZoom={2}
         nodesDraggable={false}
         nodesConnectable={false}
@@ -370,37 +406,50 @@ const KnowledgeCanvas: React.FC = () => {
           size={1}
           style={{ backgroundColor: '#0f172a' }}
         />
-        <Controls showInteractive={false} />
-        <MiniMap
-          nodeColor={(node) => {
-            const knowledgeNode = node as unknown as GraphNode;
-            if (knowledgeNode.data.loading) return '#3b82f6';
-            if (knowledgeNode.data.explored) return '#06b6d4';
-            return '#64748b';
-          }}
-          nodeStrokeColor={(node) => {
-            const knowledgeNode = node as unknown as GraphNode;
-            if (knowledgeNode.data.loading) return '#60a5fa';
-            if (knowledgeNode.data.explored) return '#22d3ee';
-            return '#94a3b8';
-          }}
-          nodeStrokeWidth={2}
-          maskColor="rgba(15, 23, 42, 0.85)"
-          style={{
-            backgroundColor: '#1e293b',
-            border: '1px solid rgba(6, 182, 212, 0.3)',
-            borderRadius: '8px',
-            width: '180px',
-            height: '120px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-          }}
-          position="bottom-right"
-          pannable
-          zoomable
-        />
+        {/* Hide controls on mobile - users can use pinch-to-zoom */}
+        {!isMobile && <Controls showInteractive={false} />}
+        {/* Hide minimap on mobile to save screen space */}
+        {!isMobile && (
+          <MiniMap
+            nodeColor={(node) => {
+              const knowledgeNode = node as unknown as GraphNode;
+              if (knowledgeNode.data.loading) return '#3b82f6';
+              if (knowledgeNode.data.explored) return '#06b6d4';
+              return '#64748b';
+            }}
+            nodeStrokeColor={(node) => {
+              const knowledgeNode = node as unknown as GraphNode;
+              if (knowledgeNode.data.loading) return '#60a5fa';
+              if (knowledgeNode.data.explored) return '#22d3ee';
+              return '#94a3b8';
+            }}
+            nodeStrokeWidth={2}
+            maskColor="rgba(15, 23, 42, 0.85)"
+            style={{
+              backgroundColor: '#1e293b',
+              border: '1px solid rgba(6, 182, 212, 0.3)',
+              borderRadius: '8px',
+              width: '180px',
+              height: '120px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+            }}
+            position="bottom-right"
+            pannable
+            zoomable
+          />
+        )}
       </ReactFlow>
       </div>
     </>
+  );
+};
+
+// Wrap with ReactFlowProvider to enable useReactFlow hook
+const KnowledgeCanvas: React.FC = () => {
+  return (
+    <ReactFlowProvider>
+      <KnowledgeCanvasInner />
+    </ReactFlowProvider>
   );
 };
 
