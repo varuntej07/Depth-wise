@@ -183,7 +183,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               </div>
               {!isReadOnly && (
                 <button
-                  onClick={handleExplore}
+                  onClick={() => handleExplore()}
                   className="w-full text-sm text-red-400 hover:bg-red-500/10 border border-red-500/30 rounded-lg py-2 px-4 font-medium transition-all duration-200 hover:border-red-500/60 flex items-center justify-center gap-2 group"
                 >
                   <RotateCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
