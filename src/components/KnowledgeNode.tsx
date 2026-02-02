@@ -3,7 +3,7 @@
 import React, { memo, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { KnowledgeNodeData } from '@/types/graph';
+import { KnowledgeNodeData, FollowUpType } from '@/types/graph';
 import { Loader2, AlertCircle, RotateCw, Maximize2 } from 'lucide-react';
 import NodeDetailModal from './NodeDetailModal';
 import useGraphStore from '@/store/graphStore';
@@ -35,7 +35,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
   const { isPublic } = useGraphStore();
   const isReadOnly = isPublic;
 
-  const handleExplore = () => {
+  const handleExplore = (exploreType?: FollowUpType) => {
     // Don't allow exploration on read-only (shared) graphs
     if (data.loading || data.explored || isReadOnly) return;
 
@@ -46,10 +46,43 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
       depth: data.depth,
       session_id: data.sessionId,
       is_retry: !!data.error,
+      explore_type: exploreType || 'explore',
     });
 
-    const event = new CustomEvent('explore-node', { detail: { nodeId: id } });
+    const event = new CustomEvent('explore-node', { detail: { nodeId: id, exploreType } });
     window.dispatchEvent(event);
+  };
+
+  // Determine which follow-up buttons to show based on branch type
+  const getFollowUpButtons = () => {
+    const branchType = data.followUpType;
+    const buttons: { type: FollowUpType | undefined; label: string; icon?: string }[] = [];
+
+    // Logic: Show complementary buttons based on what this branch type is
+    // If it's a "how" branch, user might want to know "why"
+    // If it's a "why" branch, user might want to know "how"
+    // Always show examples as an option
+
+    if (branchType === 'how' || branchType === 'what') {
+      buttons.push({ type: 'why', label: 'Why?' });
+    }
+    if (branchType === 'why' || branchType === 'what') {
+      buttons.push({ type: 'how', label: 'How?' });
+    }
+    if (branchType !== 'example') {
+      buttons.push({ type: 'example', label: 'Examples' });
+    }
+
+    // If no specific branch type or limited buttons, show all options
+    if (buttons.length < 2) {
+      return [
+        { type: 'why' as FollowUpType, label: 'Why?' },
+        { type: 'how' as FollowUpType, label: 'How?' },
+        { type: 'example' as FollowUpType, label: 'Examples' },
+      ];
+    }
+
+    return buttons;
   };
 
   const depthColors = getDepthColor(data.depth);
@@ -160,17 +193,32 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
             </div>
           )}
 
-          {/* Normal explore button - Only show on non-read-only graphs */}
+          {/* Follow-up buttons - Only show on non-read-only graphs */}
           {!data.explored && !data.loading && !data.error && !isReadOnly && (
-            <button
-              onClick={handleExplore}
-              className={`w-full text-xs sm:text-sm ${depthColors.text} hover:bg-slate-800/50 border border-${depthColors.border.split('-')[1]}-500/30 rounded-lg py-1.5 sm:py-2 px-3 sm:px-4 font-medium transition-all duration-200 hover:border-${depthColors.border.split('-')[1]}-500/60 flex items-center justify-center gap-2 group`}
-            >
-              <span>Explore Deeper</span>
-              <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </button>
+            <div className="space-y-2">
+              {/* Follow-up type buttons */}
+              <div className="flex flex-wrap gap-1.5">
+                {getFollowUpButtons().map((btn) => (
+                  <button
+                    key={btn.type}
+                    onClick={() => handleExplore(btn.type)}
+                    className={`text-xs ${depthColors.text} hover:bg-slate-800/50 border border-slate-600/50 rounded-md py-1 px-2.5 font-medium transition-all duration-200 hover:border-${depthColors.border.split('-')[1]}-500/60`}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+              {/* Generic explore button */}
+              <button
+                onClick={() => handleExplore()}
+                className={`w-full text-xs sm:text-sm ${depthColors.text} hover:bg-slate-800/50 border border-${depthColors.border.split('-')[1]}-500/30 rounded-lg py-1.5 sm:py-2 px-3 sm:px-4 font-medium transition-all duration-200 hover:border-${depthColors.border.split('-')[1]}-500/60 flex items-center justify-center gap-2 group`}
+              >
+                <span>Explore Deeper</span>
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+            </div>
           )}
 
           {/* Loading state */}

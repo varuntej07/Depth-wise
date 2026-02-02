@@ -122,6 +122,7 @@ model Node {
   positionY  Float    @map("position_y")
 
   explored   Boolean  @default(false)
+  followUpType String? @map("follow_up_type") // why, how, what, example, compare
 
   createdAt  DateTime @default(now()) @map("created_at")
 
@@ -207,6 +208,7 @@ model AnonymousNode {
   positionY  Float    @map("position_y")
 
   explored   Boolean  @default(false)
+  followUpType String? @map("follow_up_type") // why, how, what, example, compare
 
   createdAt  DateTime @default(now()) @map("created_at")
 

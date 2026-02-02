@@ -5,11 +5,18 @@ import { LAYOUT_CONFIG } from '@/lib/layout';
 import { getMaxDepth } from '@/lib/subscription-config';
 import { rateLimit } from '@/lib/ratelimit';
 import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
+import { FollowUpType } from '@/types/graph';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, parentId, isAnonymous, clientId } = body;
+    const { sessionId, parentId, isAnonymous, clientId, exploreType } = body;
+
+    // Validate exploreType if provided
+    const validExploreTypes: FollowUpType[] = ['why', 'how', 'what', 'example', 'compare'];
+    const validatedExploreType = exploreType && validExploreTypes.includes(exploreType)
+      ? exploreType as FollowUpType
+      : undefined;
 
     // Validate sessionId
     if (!sessionId) {
@@ -173,6 +180,7 @@ export async function POST(request: NextRequest) {
         path: pathTitles,
         depth: parentNode.depth,
         coveredTopics,
+        exploreType: validatedExploreType, // Pass user's exploration intent
       });
 
       // Create new nodes and edges in a transaction
@@ -194,6 +202,7 @@ export async function POST(request: NextRequest) {
                 positionX: baseX + index * horizontalSpacing,
                 positionY: parentNode.positionY + verticalSpacing,
                 explored: false,
+                followUpType: branch.followUpType || null, // Store follow-up type
               },
             })
           )
@@ -253,6 +262,7 @@ export async function POST(request: NextRequest) {
           content: node.content,
           depth: node.depth,
           position: { x: node.positionX, y: node.positionY },
+          followUpType: node.followUpType, // Include follow-up type
         })),
         edges: result.newEdges.map((edge) => ({
           id: edge.id,
@@ -374,6 +384,7 @@ export async function POST(request: NextRequest) {
       path: pathTitles,
       depth: parentNode.depth,
       coveredTopics,
+      exploreType: validatedExploreType, // Pass user's exploration intent
     });
 
     // Create new nodes and edges in a transaction
@@ -395,6 +406,7 @@ export async function POST(request: NextRequest) {
               positionX: baseX + index * horizontalSpacing,
               positionY: parentNode.positionY + verticalSpacing,
               explored: false,
+              followUpType: branch.followUpType || null, // Store follow-up type
             },
           })
         )
@@ -454,6 +466,7 @@ export async function POST(request: NextRequest) {
         content: node.content,
         depth: node.depth,
         position: { x: node.positionX, y: node.positionY },
+        followUpType: node.followUpType, // Include follow-up type
       })),
       edges: result.newEdges.map((edge) => ({
         id: edge.id,

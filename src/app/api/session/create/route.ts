@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { generateBranches } from '@/lib/claude';
+import { generateBranches, classifyQuery } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 import { canUserExplore, getSavedGraphsLimit } from '@/lib/subscription-config';
 import { rateLimit } from '@/lib/ratelimit';
@@ -123,12 +123,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate initial branches using Claude (use sanitized query)
+    // Classify the query first to determine intent and branch count
+    const classification = await classifyQuery(sanitizedQuery);
+
+    // Generate initial branches using Claude (use sanitized query with classification)
     const { answer, branches } = await generateBranches({
       rootQuery: sanitizedQuery,
       path: [sanitizedQuery],
       depth: 1,
       coveredTopics: [],
+      classification, // Pass classification for dynamic branching
     });
 
     // Create session with root node and child nodes in a transaction
@@ -175,6 +179,7 @@ export async function POST(request: NextRequest) {
                 positionX: (index - (branches.length - 1) / 2) * horizontalSpacing,
                 positionY: verticalSpacing,
                 explored: false,
+                followUpType: branch.followUpType || null,
               },
             })
           )
@@ -235,6 +240,7 @@ export async function POST(request: NextRequest) {
                 positionX: (index - (branches.length - 1) / 2) * horizontalSpacing,
                 positionY: verticalSpacing,
                 explored: false,
+                followUpType: branch.followUpType || null,
               },
             })
           )
@@ -272,6 +278,7 @@ export async function POST(request: NextRequest) {
       sessionId: result.session.id,
       isAnonymous: result.isAnonymous,
       createdAt: result.session.createdAt.toISOString(),
+      classification,
       rootNode: {
         id: result.rootNode.id,
         title: result.rootNode.title,
@@ -286,6 +293,7 @@ export async function POST(request: NextRequest) {
         content: node.content,
         depth: node.depth,
         position: { x: node.positionX, y: node.positionY },
+        followUpType: node.followUpType,
       })),
     });
   } catch (error) {

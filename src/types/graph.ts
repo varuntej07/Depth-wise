@@ -1,5 +1,16 @@
 import { Node as ReactFlowNode, Edge as ReactFlowEdge } from '@xyflow/react';
 
+// Query intent classification types
+export type QueryIntent = 'factual' | 'conceptual' | 'technical' | 'comparative' | 'exploratory';
+export type QueryComplexity = 'simple' | 'moderate' | 'complex';
+export type FollowUpType = 'why' | 'how' | 'what' | 'example' | 'compare';
+
+export interface QueryClassification {
+  intent: QueryIntent;
+  complexity: QueryComplexity;
+  suggestedBranchCount: number; // 2-5
+}
+
 export interface KnowledgeNodeData {
   title: string;
   content?: string;
@@ -11,6 +22,7 @@ export interface KnowledgeNodeData {
   sessionId: string;
   parentId?: string;
   isSkeleton?: boolean;
+  followUpType?: FollowUpType;
   [key: string]: unknown;
 }
 
@@ -35,4 +47,5 @@ export interface Branch {
   content?: string;
   depth: number;
   position: { x: number; y: number };
+  followUpType?: FollowUpType; // what kind of follow-up this branch represents
 }
