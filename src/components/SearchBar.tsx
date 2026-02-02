@@ -271,11 +271,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
         error: errorMessage,
       });
 
-      // Clear graph first, then set error (clearGraph resets error to null)
+      setError(`${errorMessage}. Please try again.`);
       if (!retryQuery) {
         clearGraph();
       }
-      setError(`${errorMessage}. Please try again.`);
     } finally {
       setIsSearching(false);
     }

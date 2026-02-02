@@ -1,9 +1,22 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { QueryIntent, QueryComplexity, QueryClassification, FollowUpType } from '@/types/graph';
 
+// Validate API key exists at startup
+const apiKey = process.env.ANTHROPIC_API_KEY;
+if (!apiKey) {
+  console.error('[CRITICAL] ANTHROPIC_API_KEY is not set in environment variables');
+}
+
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: apiKey || '',
 });
+
+// Helper to check API key before making calls
+function ensureApiKey(): void {
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not configured. Please set it in your environment variables.');
+  }
+}
 
 interface ExplorationContext {
   rootQuery: string;
@@ -55,6 +68,8 @@ Return ONLY JSON, no markdown.`;
  */
 export async function classifyQuery(query: string): Promise<QueryClassification> {
   try {
+    ensureApiKey();
+
     const message = await anthropic.messages.create({
       model: 'claude-3-5-haiku-20241022',
       max_tokens: 200,
@@ -74,7 +89,9 @@ export async function classifyQuery(query: string): Promise<QueryClassification>
       suggestedBranchCount: Math.min(5, Math.max(2, result.suggestedBranchCount)),
     };
   } catch (error) {
-    console.error('Query classification failed, using defaults:', error);
+    // Log detailed error for debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[Claude classifyQuery] Failed:', errorMessage);
     // Fallback to moderate complexity if classification fails
     return {
       intent: 'conceptual',
@@ -245,6 +262,8 @@ function getExploreTypeGuidance(exploreType: FollowUpType): string {
 export async function generateBranches(
   context: ExplorationContext
 ): Promise<{ answer: string; branches: GeneratedBranch[] }> {
+  ensureApiKey();
+
   const prompt = buildPrompt(context);
 
   const message = await anthropic.messages.create({
@@ -270,8 +289,8 @@ export async function generateBranches(
       answer: result.answer || '',
       branches: result.branches || [],
     };
-  } catch {
-    console.error('Failed to parse Claude response:', content.text);
+  } catch (parseError) {
+    console.error('[Claude generateBranches] Failed to parse response:', content.text.slice(0, 500));
     throw new Error('Failed to parse AI response');
   }
 }
