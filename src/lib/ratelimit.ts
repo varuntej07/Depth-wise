@@ -21,7 +21,7 @@ const redis = isRedisConfigured
 const sessionCreateAnonymous = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(10, '1 h'),
+      limiter: Ratelimit.slidingWindow(20, '1 h'),
       analytics: true,
       prefix: '@ratelimit/session-create-anon',
     })
@@ -87,7 +87,7 @@ export async function rateLimit(
   switch (type) {
     case 'session-create':
       limiter = isAuthenticated ? sessionCreateAuthenticated : sessionCreateAnonymous;
-      limit = isAuthenticated ? 100 : 10;
+      limit = isAuthenticated ? 500 : 100;
       break;
     case 'explore':
       limiter = isAuthenticated ? exploreAuthenticated : exploreAnonymous;

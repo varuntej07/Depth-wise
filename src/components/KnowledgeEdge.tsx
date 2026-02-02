@@ -33,6 +33,12 @@ const KnowledgeEdge: React.FC<KnowledgeEdgeProps> = ({
   data,
   markerEnd,
 }) => {
+  // Validate coordinates before rendering
+  if (!Number.isFinite(sourceX) || !Number.isFinite(sourceY) || 
+      !Number.isFinite(targetX) || !Number.isFinite(targetY)) {
+    return null;
+  }
+
   const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
