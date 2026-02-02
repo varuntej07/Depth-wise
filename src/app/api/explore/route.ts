@@ -6,11 +6,22 @@ import { getMaxDepth } from '@/lib/subscription-config';
 import { rateLimit } from '@/lib/ratelimit';
 import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
 import { FollowUpType } from '@/types/graph';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID().slice(0, 8);
+
   try {
     const body = await request.json();
     const { sessionId, parentId, isAnonymous, clientId, exploreType } = body;
+
+    logger.apiStart('POST /api/explore', {
+      requestId,
+      sessionId: sessionId?.slice(0, 8),
+      parentId: parentId?.slice(0, 8),
+      isAnonymous,
+      exploreType,
+    });
 
     // Validate exploreType if provided
     const validExploreTypes: FollowUpType[] = ['why', 'how', 'what', 'example', 'compare'];
@@ -73,6 +84,7 @@ export async function POST(request: NextRequest) {
     // Apply rate limiting with clientId for anonymous users
     const rateLimitResult = await rateLimit(request, 'explore', userEmail, clientId);
     if (!rateLimitResult.success && rateLimitResult.response) {
+      logger.rateLimit('explore', clientId || userEmail || 'unknown', { requestId, isAnonymous: validatedIsAnonymous });
       return rateLimitResult.response;
     }
 
@@ -475,10 +487,28 @@ export async function POST(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error('Explore API error:', error);
+    logger.apiError('POST /api/explore', error, { requestId });
+
+    // Provide more specific error messages based on error type
+    let errorMessage = 'An unexpected error occurred';
+    let statusCode = 500;
+
+    if (error instanceof Error) {
+      if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+        errorMessage = 'Request timed out. Please try again.';
+        statusCode = 504;
+      } else if (error.message.includes('rate') || error.message.includes('429')) {
+        errorMessage = 'Service is busy. Please try again in a moment.';
+        statusCode = 429;
+      } else if (error.message.includes('API') || error.message.includes('Claude')) {
+        errorMessage = 'AI service temporarily unavailable. Please try again.';
+        statusCode = 503;
+      }
+    }
+
     return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
+      { error: errorMessage, code: 'SERVER_ERROR' },
+      { status: statusCode }
     );
   }
 }

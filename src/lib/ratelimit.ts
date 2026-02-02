@@ -1,6 +1,7 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from './logger';
 
 // Check if Redis is configured
 const isRedisConfigured = !!(
@@ -96,7 +97,7 @@ export async function rateLimit(
 
   // If rate limiting is not configured, allow the request (fail-open)
   if (!limiter) {
-    console.warn('Rate limiting not configured - allowing request without limits');
+    logger.warn('Rate limiting not configured - allowing request without limits', { type, identifier });
     return { success: true };
   }
 
@@ -106,6 +107,15 @@ export async function rateLimit(
 
     if (!success) {
       const resetDate = new Date(reset);
+      // Log the rate limit hit with identifier for debugging
+      logger.warn('Rate limit hit', {
+        type,
+        identifier: identifier.slice(0, 20), // Truncate for privacy
+        identifierType: clientId ? 'clientId' : (isAuthenticated ? 'email' : 'ip'),
+        limit,
+        reset: resetDate.toISOString(),
+      });
+
       return {
         success: false,
         response: NextResponse.json(
@@ -115,6 +125,11 @@ export async function rateLimit(
             limit,
             reset: resetDate.toISOString(),
             isAuthenticated,
+            // Include debug info (identifier type only, not the actual value for privacy)
+            _debug: {
+              identifierType: clientId ? 'clientId' : (isAuthenticated ? 'email' : 'ip'),
+              hadClientId: !!clientId,
+            },
           },
           {
             status: 429,
@@ -131,7 +146,11 @@ export async function rateLimit(
   } catch (error) {
     // Fail-open: if Redis is unavailable, allow the request
     // This prevents the app from being completely broken if Redis goes down
-    console.error('Rate limit check failed, allowing request (fail-open):', error);
+    logger.error('Rate limit check failed, allowing request (fail-open)', {
+      type,
+      identifier,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: true };
   }
 }
