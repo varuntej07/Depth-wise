@@ -17,22 +17,38 @@ const redis = isRedisConfigured
     })
   : null;
 
+// Rate limit configurations - centralized for consistency
+const RATE_LIMITS = {
+  'session-create': {
+    anonymous: 20,      // 20 sessions per hour for anonymous users
+    authenticated: 100, // 100 sessions per hour for authenticated users
+  },
+  explore: {
+    anonymous: 20,      // 20 explorations per hour for anonymous users
+    authenticated: 200, // 200 explorations per hour for authenticated users
+  },
+} as const;
+
 // Rate limiters for session creation (only if Redis is available)
+// IMPORTANT: ephemeralCache disabled to prevent false positives from stale in-memory cache
+// The default ephemeralCache can incorrectly block users across warm serverless instances
 const sessionCreateAnonymous = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(20, '1 h'),
+      limiter: Ratelimit.slidingWindow(RATE_LIMITS['session-create'].anonymous, '1 h'),
       analytics: true,
       prefix: '@ratelimit/session-create-anon',
+      ephemeralCache: false,
     })
   : null;
 
 const sessionCreateAuthenticated = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(100, '1 h'),
+      limiter: Ratelimit.slidingWindow(RATE_LIMITS['session-create'].authenticated, '1 h'),
       analytics: true,
       prefix: '@ratelimit/session-create-auth',
+      ephemeralCache: false,
     })
   : null;
 
@@ -40,18 +56,20 @@ const sessionCreateAuthenticated = redis
 const exploreAnonymous = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(20, '1 h'),
+      limiter: Ratelimit.slidingWindow(RATE_LIMITS.explore.anonymous, '1 h'),
       analytics: true,
       prefix: '@ratelimit/explore-anon',
+      ephemeralCache: false,
     })
   : null;
 
 const exploreAuthenticated = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(200, '1 h'),
+      limiter: Ratelimit.slidingWindow(RATE_LIMITS.explore.authenticated, '1 h'),
       analytics: true,
       prefix: '@ratelimit/explore-auth',
+      ephemeralCache: false,
     })
   : null;
 
@@ -80,54 +98,79 @@ export async function rateLimit(
       ? `client:${clientId}`
       : `ip:${ipAddress}`;
 
-  // Select appropriate rate limiter
+  const identifierType = isAuthenticated ? 'email' : (clientId ? 'clientId' : 'ip');
+
+  // Select appropriate rate limiter and get the correct limit from centralized config
   let limiter: Ratelimit | null;
-  let limit: number;
+  const limit = isAuthenticated
+    ? RATE_LIMITS[type].authenticated
+    : RATE_LIMITS[type].anonymous;
 
   switch (type) {
     case 'session-create':
       limiter = isAuthenticated ? sessionCreateAuthenticated : sessionCreateAnonymous;
-      limit = isAuthenticated ? 500 : 100;
       break;
     case 'explore':
       limiter = isAuthenticated ? exploreAuthenticated : exploreAnonymous;
-      limit = isAuthenticated ? 200 : 20;
       break;
   }
 
   // If rate limiting is not configured, allow the request (fail-open)
   if (!limiter) {
-    logger.warn('Rate limiting not configured - allowing request without limits', { type, identifier });
+    logger.warn('Rate limiting not configured - allowing request without limits', {
+      type,
+      identifierType,
+      isAuthenticated,
+    });
     return { success: true };
   }
 
   try {
-    // Check rate limit
-    const { success, reset } = await limiter.limit(identifier);
+    // Check rate limit - capture all returned values for debugging
+    const { success, reset, remaining, limit: returnedLimit } = await limiter.limit(identifier);
+
+    const resetDate = new Date(reset);
+    const used = limit - remaining;
+
+    // ALWAYS log rate limit check results for debugging (at INFO level)
+    logger.info('Rate limit check', {
+      type,
+      identifierType,
+      isAuthenticated,
+      success,
+      used,
+      remaining,
+      limit: returnedLimit || limit,
+      resetAt: resetDate.toISOString(),
+    });
 
     if (!success) {
-      const resetDate = new Date(reset);
-      // Log the rate limit hit with identifier for debugging
-      logger.warn('Rate limit hit', {
+      // Log at ERROR level when rate limit is exceeded so it shows up prominently
+      logger.error('Rate limit EXCEEDED', {
         type,
-        identifier: identifier.slice(0, 20), // Truncate for privacy
-        identifierType: clientId ? 'clientId' : (isAuthenticated ? 'email' : 'ip'),
-        limit,
-        reset: resetDate.toISOString(),
+        identifierType,
+        isAuthenticated,
+        used,
+        limit: returnedLimit || limit,
+        remaining,
+        resetAt: resetDate.toISOString(),
+        // Include truncated identifier for debugging (first 8 chars only for privacy)
+        identifierPrefix: identifier.slice(0, 8) + '...',
       });
 
       return {
         success: false,
         response: NextResponse.json(
           {
-            error: 'Too many requests. Please try again later.',
+            error: `Rate limit exceeded. You've made ${used} requests in the last hour (limit: ${limit}). Please try again at ${resetDate.toLocaleTimeString()}.`,
             code: 'RATE_LIMIT_EXCEEDED',
             limit,
+            used,
+            remaining,
             reset: resetDate.toISOString(),
             isAuthenticated,
-            // Include debug info (identifier type only, not the actual value for privacy)
             _debug: {
-              identifierType: clientId ? 'clientId' : (isAuthenticated ? 'email' : 'ip'),
+              identifierType,
               hadClientId: !!clientId,
             },
           },
@@ -135,6 +178,7 @@ export async function rateLimit(
             status: 429,
             headers: {
               'X-RateLimit-Limit': limit.toString(),
+              'X-RateLimit-Remaining': remaining.toString(),
               'X-RateLimit-Reset': reset.toString(),
             }
           }
@@ -146,10 +190,12 @@ export async function rateLimit(
   } catch (error) {
     // Fail-open: if Redis is unavailable, allow the request
     // This prevents the app from being completely broken if Redis goes down
-    logger.error('Rate limit check failed, allowing request (fail-open)', {
+    logger.error('Rate limit check FAILED - allowing request (fail-open)', {
       type,
-      identifier,
+      identifierType,
+      isAuthenticated,
       error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join(' | ') : undefined,
     });
     return { success: true };
   }

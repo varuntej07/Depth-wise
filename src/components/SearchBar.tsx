@@ -151,12 +151,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
 
         // Handle rate limit exceeded (too many requests)
         if (response.status === 429 && errorData.code === 'RATE_LIMIT_EXCEEDED') {
-          const resetTime = errorData.reset ? new Date(errorData.reset).toLocaleTimeString() : 'later';
-          // Check if the issue is missing clientId (would fall back to IP)
           const debugInfo = errorData._debug;
           const wasUsingIp = debugInfo?.identifierType === 'ip';
 
-          let rateLimitMessage = `Too many requests. Please try again at ${resetTime}.`;
+          // Use the detailed error message from the backend which includes usage info
+          let rateLimitMessage = errorData.error || 'Too many requests. Please try again later.';
           if (wasUsingIp) {
             rateLimitMessage += ' (Tip: Clear your browser cache and reload the page)';
           }
@@ -168,6 +167,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
             is_authenticated: errorData.isAuthenticated,
             identifier_type: debugInfo?.identifierType,
             had_client_id: debugInfo?.hadClientId,
+            used: errorData.used,
+            limit: errorData.limit,
           });
 
           if (!retryQuery) {
