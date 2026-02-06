@@ -7,6 +7,7 @@ import { rateLimit } from '@/lib/ratelimit';
 import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
 import { FollowUpType } from '@/types/graph';
 import { logger } from '@/lib/logger';
+import type { AnonymousNode, AnonymousEdge, Node, Edge } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           parentId: parentNode.id,
-          branches: existingChildren.map((node) => ({
+          branches: existingChildren.map((node: AnonymousNode) => ({
             id: node.id,
             title: node.title,
             summary: node.summary,
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
             depth: node.depth,
             position: { x: node.positionX, y: node.positionY },
           })),
-          edges: existingEdges.map((edge) => ({
+          edges: existingEdges.map((edge: AnonymousEdge) => ({
             id: edge.id,
             source: edge.sourceId,
             target: edge.targetId,
@@ -173,14 +174,14 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const pathTitles = nodeChain.map((n) => n.title);
+      const pathTitles = nodeChain.map((n: AnonymousNode) => n.title);
 
       // Get sibling nodes for context
       const siblings = await prisma.anonymousNode.findMany({
         where: { parentId: parentNode.parentId || undefined },
       });
 
-      const coveredTopics = siblings.map((s) => s.title);
+      const coveredTopics = siblings.map((s: AnonymousNode) => s.title);
 
       // Generate new branches
       const { answer, branches } = await generateBranches({
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest) {
 
         // Create edges
         const newEdges = await Promise.all(
-          newNodes.map((childNode) =>
+          newNodes.map((childNode: AnonymousNode) =>
             tx.anonymousEdge.create({
               data: {
                 sessionId: session.id,
@@ -267,7 +268,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         parentId: parentNode.id,
         parentContent: answer,
-        branches: result.newNodes.map((node) => ({
+        branches: result.newNodes.map((node: AnonymousNode) => ({
           id: node.id,
           title: node.title,
           summary: node.summary,
@@ -276,7 +277,7 @@ export async function POST(request: NextRequest) {
           position: { x: node.positionX, y: node.positionY },
           followUpType: node.followUpType, // Include follow-up type
         })),
-        edges: result.newEdges.map((edge) => ({
+        edges: result.newEdges.map((edge: AnonymousEdge) => ({
           id: edge.id,
           source: edge.sourceId,
           target: edge.targetId,
@@ -345,7 +346,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         parentId: parentNode.id,
-        branches: existingChildren.map((node) => ({
+        branches: existingChildren.map((node: Node) => ({
           id: node.id,
           title: node.title,
           summary: node.summary,
@@ -353,7 +354,7 @@ export async function POST(request: NextRequest) {
           depth: node.depth,
           position: { x: node.positionX, y: node.positionY },
         })),
-        edges: existingEdges.map((edge) => ({
+        edges: existingEdges.map((edge: Edge) => ({
           id: edge.id,
           source: edge.sourceId,
           target: edge.targetId,
@@ -377,14 +378,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const pathTitles = nodeChain.map((n) => n.title);
+    const pathTitles = nodeChain.map((n: Node) => n.title);
 
     // Get sibling nodes for context
     const siblings = await prisma.node.findMany({
       where: { parentId: parentNode.parentId || undefined },
     });
 
-    const coveredTopics = siblings.map((s) => s.title);
+    const coveredTopics = siblings.map((s: Node) => s.title);
 
     // Generate new branches
     const { answer, branches } = await generateBranches({
@@ -426,7 +427,7 @@ export async function POST(request: NextRequest) {
 
       // Create edges
       const newEdges = await Promise.all(
-        newNodes.map((childNode) =>
+        newNodes.map((childNode: Node) =>
           tx.edge.create({
             data: {
               sessionId: session.id,
@@ -471,7 +472,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       parentId: parentNode.id,
       parentContent: answer,
-      branches: result.newNodes.map((node) => ({
+      branches: result.newNodes.map((node: Node) => ({
         id: node.id,
         title: node.title,
         summary: node.summary,
@@ -480,7 +481,7 @@ export async function POST(request: NextRequest) {
         position: { x: node.positionX, y: node.positionY },
         followUpType: node.followUpType, // Include follow-up type
       })),
-      edges: result.newEdges.map((edge) => ({
+      edges: result.newEdges.map((edge: Edge) => ({
         id: edge.id,
         source: edge.sourceId,
         target: edge.targetId,
