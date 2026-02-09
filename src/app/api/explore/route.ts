@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
-import { getMaxDepth } from '@/lib/subscription-config';
+import { getMaxDepth, canUserExplore } from '@/lib/subscription-config';
 import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
 import { FollowUpType } from '@/types/graph';
 import { logger } from '@/lib/logger';
@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Parent node not found' }, { status: 404 });
     }
 
-    // Check depth limits for authenticated users
+    // Check depth limits and exploration limits for authenticated users
     if (session.user) {
       const maxAllowedDepth = getMaxDepth(session.user.subscriptionTier);
       const nextDepth = parentNode.depth + 1;
@@ -309,6 +309,36 @@ export async function POST(request: NextRequest) {
           },
           { status: 429 }
         );
+      }
+
+      // Check exploration usage limit
+      const user = session.userId ? await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: {
+          id: true,
+          subscriptionTier: true,
+          explorationsUsed: true,
+          explorationsReset: true,
+        },
+      }) : null;
+
+      if (user) {
+        const explorationCheck = canUserExplore({
+          subscriptionTier: user.subscriptionTier,
+          explorationsUsed: user.explorationsUsed,
+          explorationsReset: user.explorationsReset,
+        });
+
+        if (!explorationCheck.allowed) {
+          return NextResponse.json(
+            {
+              error: explorationCheck.reason || 'Exploration limit reached',
+              code: 'LIMIT_REACHED',
+              tier: user.subscriptionTier,
+            },
+            { status: 429 }
+          );
+        }
       }
     }
 
@@ -446,6 +476,16 @@ export async function POST(request: NextRequest) {
 
       return { newNodes, newEdges };
     });
+
+    // Increment exploration counter for authenticated users
+    if (session.userId) {
+      await prisma.user.update({
+        where: { id: session.userId },
+        data: {
+          explorationsUsed: { increment: 1 },
+        },
+      });
+    }
 
     return NextResponse.json({
       parentId: parentNode.id,

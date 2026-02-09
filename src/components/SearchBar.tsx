@@ -251,10 +251,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="fixed top-4 left-1/2 transform -translate-x-1/2 z-20 w-full max-w-2xl px-4 sm:px-6"
+        className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20 w-full max-w-2xl px-4 sm:px-6 pointer-events-none"
       >
         <div className="text-center">
-          <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent truncate">
             {rootQuery || 'Exploring...'}
           </h2>
         </div>

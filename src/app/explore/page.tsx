@@ -21,17 +21,31 @@ interface ChatItem {
 }
 
 export default function ExplorePage() {
-  const { error, setError, nodes, sessionId, clearGraph, loadSession } = useGraphStore();
+  const { error, setError, nodes, sessionId, rootQuery, clearGraph, loadSession } = useGraphStore();
   const { data: session } = useSession();
   const [chatHistory, setChatHistory] = useState<ChatItem[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
-  // Load sidebar state after mount to avoid hydration mismatch
+  // Load sidebar state after mount and handle mobile auto-collapse
   useEffect(() => {
-    const saved = localStorage.getItem('sidebarCollapsed');
-    if (saved !== null) {
-      setSidebarCollapsed(JSON.parse(saved));
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setSidebarCollapsed(true);
+    } else {
+      const saved = localStorage.getItem('sidebarCollapsed');
+      if (saved !== null) {
+        setSidebarCollapsed(JSON.parse(saved));
+      }
     }
+
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarCollapsed(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Migrate anonymous session when user signs in
@@ -165,9 +179,19 @@ export default function ExplorePage() {
         }`}
       >
         {/* Header */}
-        <header className="w-full bg-black border-b border-zinc-800 h-16 flex-shrink-0">
-          <div className="h-full px-4 sm:px-6 flex items-center justify-end">
-            <div className="flex items-center gap-3">
+        <header className="w-full bg-black border-b border-zinc-800 h-14 sm:h-16 flex-shrink-0">
+          <div className="h-full px-3 sm:px-6 flex items-center justify-between">
+            {/* Compact title on mobile when graph exists */}
+            {nodes.length > 0 ? (
+              <div className="flex-1 min-w-0 mr-3">
+                <h2 className="text-sm sm:text-base font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent truncate">
+                  {rootQuery || 'Exploring...'}
+                </h2>
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )}
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {/* Usage Indicator - only show when user is logged in */}
               {session && <UsageIndicator />}
 
@@ -175,10 +199,19 @@ export default function ExplorePage() {
               {session && (
                 <Link
                   href="/pricing"
-                  className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium transition-all hover:bg-zinc-100 active:scale-95 shadow-sm"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium transition-all hover:bg-zinc-100 active:scale-95 shadow-sm"
                 >
                   <Crown className="w-4 h-4" />
                   <span>Upgrade</span>
+                </Link>
+              )}
+              {session && (
+                <Link
+                  href="/pricing"
+                  className="sm:hidden flex items-center justify-center w-8 h-8 bg-white text-black rounded-lg transition-all hover:bg-zinc-100 active:scale-95"
+                  title="Upgrade"
+                >
+                  <Crown className="w-4 h-4" />
                 </Link>
               )}
             </div>
@@ -195,7 +228,6 @@ export default function ExplorePage() {
             </div>
           ) : (
             <>
-              <SearchBar isCompact={true} />
               <KnowledgeCanvas />
               {/* Floating Share Button - appears over canvas */}
               <ShareButton />

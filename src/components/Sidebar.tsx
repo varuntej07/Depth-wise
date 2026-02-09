@@ -299,7 +299,9 @@ export function ChatSidebar({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute bottom-full left-0 right-0 mb-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50"
+                    className={`absolute bottom-full mb-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50 ${
+                      isCollapsed ? 'left-0 min-w-[220px]' : 'left-0 right-0'
+                    }`}
                   >
                     <div className="p-2 space-y-0.5">
                       {menuItems.map((item) => {
@@ -309,9 +311,9 @@ export function ChatSidebar({
                             {item.divider && <div className="h-px bg-zinc-700 my-1.5" />}
                             <button
                               onClick={item.action}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-zinc-800 active:scale-98 transition-all text-left group"
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-zinc-800 active:scale-98 transition-all text-left group whitespace-nowrap"
                             >
-                              <Icon className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors" />
+                              <Icon className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors flex-shrink-0" />
                               <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
                                 {item.label}
                               </span>

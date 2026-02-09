@@ -375,6 +375,9 @@ const KnowledgeCanvasInner: React.FC = () => {
         // Mark parent as explored
         updateNode(nodeId, { loading: false, explored: true });
 
+        // Trigger usage refresh to update UsageIndicator
+        window.dispatchEvent(new CustomEvent('refresh-usage'));
+
         // Update focus to the explored node if in focus mode
         if (useGraphStore.getState().focusMode) {
           useGraphStore.getState().setFocusedNode(nodeId);
