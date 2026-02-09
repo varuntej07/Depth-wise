@@ -13,47 +13,76 @@ interface ErrorAlertProps {
 const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose }) => {
   const { clearGraph } = useGraphStore();
 
-  // Check if it's a session error
   const isSessionError = message.includes('Session expired') || message.includes('Session not found');
 
   const handleStartNewSearch = () => {
     clearGraph();
     onClose();
-    // Scroll to top to focus on search bar
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRetry = () => {
+    onClose();
+    window.dispatchEvent(new CustomEvent('retry-last-action'));
   };
 
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: -50 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -50 }}
-        className="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 z-50 sm:max-w-md"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
       >
-        <div className="bg-slate-900/95 backdrop-blur-sm border-2 border-red-500/50 rounded-xl p-4 shadow-lg shadow-red-500/20">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-red-200 mb-3">{message}</p>
-              {isSessionError && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="relative bg-slate-900 border-2 border-red-500/50 rounded-2xl p-6 shadow-2xl shadow-red-500/20 max-w-md w-full mx-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          {/* Content */}
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 text-red-400" />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Something went wrong</h3>
+              <p className="text-sm text-zinc-400">{message}</p>
+            </div>
+
+            <div className="flex gap-3 w-full">
+              {isSessionError ? (
                 <button
                   onClick={handleStartNewSearch}
-                  className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors border border-cyan-500/30 hover:border-cyan-500/60 px-3 py-1.5 rounded-lg hover:bg-cyan-500/10"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium transition-all active:scale-95"
                 >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>Start New Search</span>
+                  <RefreshCw className="w-4 h-4" />
+                  Start New Search
+                </button>
+              ) : (
+                <button
+                  onClick={handleRetry}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-100 text-black text-sm font-medium transition-all active:scale-95"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Try Again
                 </button>
               )}
             </div>
-            <button
-              onClick={onClose}
-              className="text-red-400 hover:text-red-300 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
-        </div>
+        </motion.div>
       </motion.div>
     </AnimatePresence>
   );

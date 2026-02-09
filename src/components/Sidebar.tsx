@@ -16,6 +16,7 @@ import {
   BookOpen,
   HelpCircle,
   ChevronUp,
+  Trash2,
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { usePostHog } from 'posthog-js/react';
@@ -36,6 +37,7 @@ interface ChatSidebarProps {
   chatHistory?: ChatItem[];
   selectedChatId?: string;
   onSelectChat?: (id: string) => void;
+  onDeleteChat?: (id: string) => void;
 }
 
 export function ChatSidebar({
@@ -45,6 +47,7 @@ export function ChatSidebar({
   chatHistory = [],
   selectedChatId,
   onSelectChat,
+  onDeleteChat,
 }: ChatSidebarProps) {
   const { data: session } = useSession();
   const posthog = usePostHog();
@@ -247,6 +250,7 @@ export function ChatSidebar({
                       });
                       onSelectChat?.(chat.id);
                     }}
+                    onDeleteChat={onDeleteChat}
                   />
                 ))}
               </div>
@@ -275,6 +279,7 @@ export function ChatSidebar({
                       });
                       onSelectChat?.(chat.id);
                     }}
+                    onDeleteChat={onDeleteChat}
                   />
                 ))}
               </div>
@@ -412,6 +417,7 @@ export function ChatSidebar({
                           onSelectChat?.(chat.id);
                           onToggleCollapse();
                         }}
+                        onDeleteChat={onDeleteChat}
                       />
                     ))}
                   </div>
@@ -434,6 +440,7 @@ export function ChatSidebar({
                           onSelectChat?.(chat.id);
                           onToggleCollapse();
                         }}
+                        onDeleteChat={onDeleteChat}
                       />
                     ))}
                   </div>
@@ -514,9 +521,10 @@ interface ChatHistoryItemProps {
   isSelected: boolean;
   isCollapsed: boolean;
   onSelect: () => void;
+  onDeleteChat?: (id: string) => void;
 }
 
-function ChatHistoryItem({ chat, isSelected, isCollapsed, onSelect }: ChatHistoryItemProps) {
+function ChatHistoryItem({ chat, isSelected, isCollapsed, onSelect, onDeleteChat }: ChatHistoryItemProps) {
   const formattedTime = new Date(chat.timestamp).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -545,6 +553,22 @@ function ChatHistoryItem({ chat, isSelected, isCollapsed, onSelect }: ChatHistor
             <p className="text-xs text-slate-500">{formattedTime}</p>
           </div>
           {chat.isPinned && <Star className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+          {onDeleteChat && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteChat(chat.id);
+              }}
+              className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-all flex-shrink-0 ${
+                isSelected
+                  ? 'hover:bg-zinc-200 text-zinc-500 hover:text-red-600'
+                  : 'hover:bg-zinc-800 text-zinc-500 hover:text-red-400'
+              }`}
+              title="Delete chat"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </>
       )}
     </motion.button>

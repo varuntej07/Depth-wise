@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 import { getMaxDepth } from '@/lib/subscription-config';
-import { rateLimit } from '@/lib/ratelimit';
 import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
 import { FollowUpType } from '@/types/graph';
 import { logger } from '@/lib/logger';
@@ -14,7 +13,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { sessionId, parentId, isAnonymous, clientId, exploreType } = body;
+    const { sessionId, parentId, isAnonymous, exploreType } = body;
 
     logger.apiStart('POST /api/explore', {
       requestId,
@@ -67,27 +66,6 @@ export async function POST(request: NextRequest) {
       );
     }
     const validatedIsAnonymous = anonymousResult.value!;
-
-    // For rate limiting, get user email if authenticated
-    let userEmail: string | null = null;
-    if (!validatedIsAnonymous && sessionId) {
-      const session = await prisma.graphSession.findUnique({
-        where: { id: sessionId },
-        include: {
-          user: {
-            select: { email: true },
-          },
-        },
-      });
-      userEmail = session?.user?.email || null;
-    }
-
-    // Apply rate limiting with clientId for anonymous users
-    const rateLimitResult = await rateLimit(request, 'explore', userEmail, clientId);
-    if (!rateLimitResult.success && rateLimitResult.response) {
-      logger.rateLimit('explore', clientId || userEmail || 'unknown', { requestId, isAnonymous: validatedIsAnonymous });
-      return rateLimitResult.response;
-    }
 
     // Handle ANONYMOUS sessions
     if (validatedIsAnonymous) {

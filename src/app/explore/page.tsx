@@ -107,6 +107,30 @@ export default function ExplorePage() {
     clearGraph();
   };
 
+  const handleDeleteChat = async (chatId: string) => {
+    try {
+      const response = await fetch(API_ENDPOINTS.SESSION_DELETE(chatId), {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete session');
+
+      // Re-fetch chat history
+      fetchChatHistory();
+
+      // Dispatch refresh-usage event to update UsageIndicator
+      window.dispatchEvent(new CustomEvent('refresh-usage'));
+
+      // If the deleted session is currently loaded, clear the graph
+      if (sessionId === chatId) {
+        clearGraph();
+      }
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      setError('Failed to delete chat session');
+    }
+  };
+
   const handleSelectChat = async (chatId: string) => {
     try {
       const response = await fetch(API_ENDPOINTS.SESSION_GET(chatId));
@@ -131,6 +155,7 @@ export default function ExplorePage() {
         chatHistory={chatHistory}
         selectedChatId={sessionId || undefined}
         onSelectChat={handleSelectChat}
+        onDeleteChat={handleDeleteChat}
       />
 
       {/* Main Content Area */}

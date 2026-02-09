@@ -3,8 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateBranches, classifyQuery } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
-import { canUserExplore, getSavedGraphsLimit } from '@/lib/subscription-config';
-import { rateLimit } from '@/lib/ratelimit';
+import { canUserExplore } from '@/lib/subscription-config';
 import { sanitizeQuery } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 
@@ -18,7 +17,6 @@ export async function POST(request: NextRequest) {
     let userId: string | null = null;
     let user = null;
 
-    // Parse body early to get clientId for rate limiting
     const body = await request.json();
     const { query, clientId } = body;
 
@@ -29,18 +27,6 @@ export async function POST(request: NextRequest) {
       queryLength: query?.length,
     });
 
-    // Apply rate limiting with clientId for anonymous users
-    const rateLimitResult = await rateLimit(
-      request,
-      'session-create',
-      session?.user?.email,
-      clientId
-    );
-    if (!rateLimitResult.success && rateLimitResult.response) {
-      logger.rateLimit('session-create', clientId || 'unknown', { requestId, isAuthenticated });
-      return rateLimitResult.response;
-    }
-
     if (isAuthenticated) {
       user = await prisma.user.findUnique({
         where: { email: session.user!.email! },
@@ -49,11 +35,6 @@ export async function POST(request: NextRequest) {
           subscriptionTier: true,
           explorationsUsed: true,
           explorationsReset: true,
-          _count: {
-            select: {
-              graphSessions: true,
-            },
-          },
         },
       });
       userId = user?.id || null;
@@ -118,20 +99,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Check saved graphs limit
-      const savedGraphsLimit = getSavedGraphsLimit(user.subscriptionTier);
-      if (savedGraphsLimit !== null && user._count.graphSessions >= savedGraphsLimit) {
-        return NextResponse.json(
-          {
-            error: `You've reached your saved graphs limit of ${savedGraphsLimit}. Delete old graphs or upgrade to save more!`,
-            code: 'SAVED_GRAPHS_LIMIT_REACHED',
-            tier: user.subscriptionTier,
-            currentCount: user._count.graphSessions,
-            limit: savedGraphsLimit,
-          },
-          { status: 429 }
-        );
-      }
     }
 
     // Classify the query first to determine intent and branch count

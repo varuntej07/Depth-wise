@@ -128,57 +128,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
           return;
         }
 
-        // Handle saved graphs limit
-        if (response.status === 429 && errorData.code === 'SAVED_GRAPHS_LIMIT_REACHED') {
-          setLimitReason(errorData.error);
-          setUserTier(errorData.tier || 'FREE');
-          setShowSubscriptionModal(true);
-
-          // Track saved graphs limit hit
-          posthog.capture('saved_graphs_limit_hit', {
-            tier: errorData.tier,
-            current_count: errorData.currentCount,
-            limit: errorData.limit,
-            query: searchQuery,
-          });
-
-          if (!retryQuery) {
-            clearGraph();
-          }
-          setIsSearching(false);
-          return;
-        }
-
-        // Handle rate limit exceeded (too many requests)
-        if (response.status === 429 && errorData.code === 'RATE_LIMIT_EXCEEDED') {
-          const debugInfo = errorData._debug;
-          const wasUsingIp = debugInfo?.identifierType === 'ip';
-
-          // Use the detailed error message from the backend which includes usage info
-          let rateLimitMessage = errorData.error || 'Too many requests. Please try again later.';
-          if (wasUsingIp) {
-            rateLimitMessage += ' (Tip: Clear your browser cache and reload the page)';
-          }
-
-          // Track rate limit hit with debug info
-          posthog.capture('rate_limit_exceeded', {
-            query: searchQuery,
-            reset: errorData.reset,
-            is_authenticated: errorData.isAuthenticated,
-            identifier_type: debugInfo?.identifierType,
-            had_client_id: debugInfo?.hadClientId,
-            used: errorData.used,
-            limit: errorData.limit,
-          });
-
-          if (!retryQuery) {
-            clearGraph();
-          }
-          setError(rateLimitMessage);
-          setIsSearching(false);
-          return;
-        }
-
         throw new Error(errorData.error || 'Failed to create session');
       }
 

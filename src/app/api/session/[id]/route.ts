@@ -88,3 +88,52 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id: sessionId } = await params;
+
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
+    }
+
+    // Verify the session exists and belongs to the user
+    const graphSession = await prisma.graphSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!graphSession) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user || graphSession.userId !== user.id) {
+      return NextResponse.json({ error: 'Unauthorized access to session' }, { status: 403 });
+    }
+
+    // Delete the session (cascade handles nodes/edges/history per schema)
+    await prisma.graphSession.delete({
+      where: { id: sessionId },
+    });
+
+    return NextResponse.json({ success: true, deletedId: sessionId });
+  } catch (error) {
+    console.error('Error deleting session:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete session' },
+      { status: 500 }
+    );
+  }
+}
