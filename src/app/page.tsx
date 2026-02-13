@@ -16,7 +16,7 @@ import {
   Layers,
   ShieldCheck,
 } from 'lucide-react';
-import { motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useReducedMotion, useTransform, type Variants } from 'framer-motion';
 
 type HeroNode = {
   id: string;
@@ -140,7 +140,7 @@ export default function LandingPage() {
     tiltY.set(0);
   };
 
-  const nodeVariants = {
+  const nodeVariants: Variants = {
     hidden: { opacity: 0, scale: 0.6, y: 10 },
     show: (custom: number) => ({
       opacity: 1,
@@ -154,7 +154,7 @@ export default function LandingPage() {
     }),
   };
 
-  const edgeVariants = {
+  const edgeVariants: Variants = {
     hidden: { opacity: 0, pathLength: 0 },
     show: (custom: number) => ({
       opacity: 1,
