@@ -50,17 +50,13 @@ const KnowledgeCanvasInner: React.FC = () => {
     edges: storeEdges,
     updateNode,
     isAnonymous: isAnonymousSession,
-    sessionId: currentSessionId,
     focusMode,
     focusedNodeId,
     focusDepthThreshold,
-    setFocusMode,
     setFocusedNode,
-    exitFocusMode,
     getVisibleNodes,
     getVisibleEdges,
     getMaxDepth,
-    getAncestorPath,
   } = useGraphStore();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -74,6 +70,23 @@ const KnowledgeCanvasInner: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const { fitView } = useReactFlow();
   const initialFitDone = useRef(false);
+  const shouldRenderDesktopTools = !isMobile && nodes.length > 0;
+
+  const getMiniMapNodeColor = useCallback((node: Node) => {
+    const data = (node as Partial<GraphNode>).data as GraphNode['data'] | undefined;
+    if (!data) return '#20342D';
+    if (data.loading) return '#34D399';
+    if (data.explored) return '#10B981';
+    return '#20342D';
+  }, []);
+
+  const getMiniMapNodeStrokeColor = useCallback((node: Node) => {
+    const data = (node as Partial<GraphNode>).data as GraphNode['data'] | undefined;
+    if (!data) return '#D1D5DB';
+    if (data.loading) return '#6EE7B7';
+    if (data.explored) return '#34D399';
+    return '#D1D5DB';
+  }, []);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -456,23 +469,12 @@ const KnowledgeCanvasInner: React.FC = () => {
           size={1}
           style={{ backgroundColor: '#0D1A16' }}
         />
-        {/* Hide controls on mobile - users can use pinch-to-zoom */}
-        {!isMobile && <Controls showInteractive={false} />}
-        {/* Hide minimap on mobile to save screen space */}
-        {!isMobile && (
+        {/* Desktop-only helper tools */}
+        {shouldRenderDesktopTools && <Controls showInteractive={false} />}
+        {shouldRenderDesktopTools && (
           <MiniMap
-            nodeColor={(node) => {
-              const knowledgeNode = node as unknown as GraphNode;
-              if (knowledgeNode.data.loading) return '#34D399';
-              if (knowledgeNode.data.explored) return '#10B981';
-              return '#20342D';
-            }}
-            nodeStrokeColor={(node) => {
-              const knowledgeNode = node as unknown as GraphNode;
-              if (knowledgeNode.data.loading) return '#6EE7B7';
-              if (knowledgeNode.data.explored) return '#34D399';
-              return '#D1D5DB';
-            }}
+            nodeColor={getMiniMapNodeColor}
+            nodeStrokeColor={getMiniMapNodeStrokeColor}
             nodeStrokeWidth={2}
             maskColor="rgba(5, 13, 11, 0.85)"
             style={{

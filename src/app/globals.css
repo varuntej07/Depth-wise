@@ -54,8 +54,8 @@
   --mint-accent-2: #10B981;
   --mint-accent-3: #34D399;
   --mint-accent-gradient: linear-gradient(90deg, #6EE7B7, #10B981, #34D399);
-  --mint-accent-glow: rgba(16, 185, 129, 0.35);
-  --mint-accent-glow-strong: rgba(16, 185, 129, 0.55);
+  --mint-accent-glow: rgba(16, 185, 129, 0.22);
+  --mint-accent-glow-strong: rgba(16, 185, 129, 0.34);
 
   --radius: 0.625rem;
   --background: var(--mint-page);
