@@ -125,7 +125,10 @@ const useGraphStore = create<GraphState>((set, get) => ({
       edges,
       isPublic, // Load the share status from the session
       isAnonymous, // Load the anonymous status
+      isLoading: false,
       error: null,
+      focusMode: false,
+      focusedNodeId: null,
     }),
 
   setLoading: (loading) => set({ isLoading: loading }),

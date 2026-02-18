@@ -15,7 +15,7 @@ import { usePostHog } from 'posthog-js/react';
  *
  * Features:
  * - Fixed positioning over canvas
- * - Pulsing animation when graph is public
+ * - Static public/private status indicator
  * - Smooth hover effects with shadows
  * - Glassmorphism design
  * - Always accessible while viewing graph
@@ -61,16 +61,11 @@ export const ShareButton: React.FC = () => {
               className="relative group"
               title="Share this graph"
             >
-              {/* Pulsing ring effect when public */}
-              {isPublic && (
-                <span className="absolute inset-0 rounded-full bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] animate-ping opacity-75" />
-              )}
-
               {/* Glow effect on hover */}
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300" />
 
               {/* Button container with glassmorphism */}
-              <div className="relative flex items-center gap-2 px-5 py-4 bg-[var(--mint-surface)] backdrop-blur-xl border-2 border-[var(--mint-accent-2)] rounded-full shadow-2xl shadow-[0_0_24px_var(--mint-accent-glow)] transition-all duration-300 group-hover:border-[var(--mint-accent-2)] group-hover:shadow-[0_0_24px_var(--mint-accent-glow)]">
+              <div className="relative flex items-center gap-2 px-5 py-4 bg-[var(--mint-surface)] backdrop-blur-xl border-2 border-[var(--mint-accent-2)] rounded-full shadow-lg shadow-black/40 transition-all duration-300 group-hover:border-[var(--mint-accent-2)] group-hover:shadow-[0_0_20px_var(--mint-accent-glow)]">
                 {/* Share icon */}
                 <Share2 className="w-5 h-5 text-[var(--mint-accent-1)] transition-transform duration-300 group-hover:rotate-12" />
 
@@ -91,17 +86,9 @@ export const ShareButton: React.FC = () => {
 
                 {/* Public indicator badge */}
                 {isPublic && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-900 flex items-center justify-center"
-                  >
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="w-2 h-2 bg-white rounded-full"
-                    />
-                  </motion.div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-900 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full" />
+                  </div>
                 )}
               </div>
             </motion.button>

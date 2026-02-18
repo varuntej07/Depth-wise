@@ -58,6 +58,7 @@ export async function GET(
         explored: node.explored,
         sessionId: graphSession.id,
         parentId: node.parentId || undefined,
+        followUpType: node.followUpType || undefined,
       },
     }));
 
@@ -73,6 +74,8 @@ export async function GET(
       sessionId: graphSession.id,
       rootQuery: graphSession.rootQuery,
       title: graphSession.title,
+      isPublic: graphSession.isPublic,
+      isAnonymous: graphSession.userId === null,
       nodes: formattedNodes,
       edges: formattedEdges,
       nodeCount: graphSession.nodeCount,

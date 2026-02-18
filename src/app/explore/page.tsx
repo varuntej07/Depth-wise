@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import SearchBar from '@/components/SearchBar';
 import KnowledgeCanvas from '@/components/KnowledgeCanvas';
 import ErrorAlert from '@/components/ErrorAlert';
@@ -10,6 +10,7 @@ import { ChatSidebar } from '@/components/Sidebar';
 import { ShareButton } from '@/components/ShareButton';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { UsageIndicator } from '@/components/UsageIndicator';
+import { normalizeLoadedSessionGraph } from '@/lib/graph-normalization';
 import Link from 'next/link';
 import { Compass, Crown, Layers, Network, Sparkles } from 'lucide-react';
 
@@ -18,6 +19,15 @@ interface ChatItem {
   title: string;
   timestamp: Date;
   isPinned?: boolean;
+}
+
+interface SessionGraphResponse {
+  sessionId: string;
+  rootQuery: string;
+  nodes: unknown;
+  edges: unknown;
+  isPublic?: boolean;
+  isAnonymous?: boolean;
 }
 
 const exploreGuides = [
@@ -43,6 +53,27 @@ export default function ExplorePage() {
   const { data: session } = useSession();
   const [chatHistory, setChatHistory] = useState<ChatItem[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  const hydrateSession = useCallback((data: SessionGraphResponse) => {
+    const normalized = normalizeLoadedSessionGraph({
+      sessionId: data.sessionId,
+      nodes: data.nodes,
+      edges: data.edges,
+    });
+
+    if (normalized.nodes.length === 0) {
+      throw new Error('This chat could not be rendered because it has no valid nodes.');
+    }
+
+    loadSession(
+      data.sessionId,
+      data.rootQuery,
+      normalized.nodes,
+      normalized.edges,
+      Boolean(data.isPublic),
+      Boolean(data.isAnonymous)
+    );
+  }, [loadSession]);
 
   // Load sidebar state after mount and handle mobile auto-collapse
   useEffect(() => {
@@ -86,13 +117,8 @@ export default function ExplorePage() {
               // Load the migrated session
               const sessionResponse = await fetch(API_ENDPOINTS.SESSION_GET(data.sessionId));
               if (sessionResponse.ok) {
-                const sessionData = await sessionResponse.json();
-                loadSession(
-                  sessionData.sessionId,
-                  sessionData.rootQuery,
-                  sessionData.nodes,
-                  sessionData.edges
-                );
+                const sessionData = (await sessionResponse.json()) as SessionGraphResponse;
+                hydrateSession(sessionData);
               }
 
               // Clear the pending session
@@ -108,7 +134,7 @@ export default function ExplorePage() {
     };
 
     migrateAnonymousSession();
-  }, [session?.user, loadSession]);
+  }, [session?.user, hydrateSession]);
 
   // Fetch chat history when user logs in or when sessionId changes
   useEffect(() => {
@@ -164,15 +190,20 @@ export default function ExplorePage() {
   };
 
   const handleSelectChat = async (chatId: string) => {
+    if (chatId === sessionId) {
+      return;
+    }
+
     try {
+      setError(null);
       const response = await fetch(API_ENDPOINTS.SESSION_GET(chatId));
       if (!response.ok) throw new Error('Failed to load session');
 
-      const data = await response.json();
-      loadSession(data.sessionId, data.rootQuery, data.nodes, data.edges);
+      const data = (await response.json()) as SessionGraphResponse;
+      hydrateSession(data);
     } catch (error) {
       console.error('Error loading session:', error);
-      setError('Failed to load chat session');
+      setError(error instanceof Error ? error.message : 'Failed to load chat session');
     }
   };
 
