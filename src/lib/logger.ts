@@ -1,9 +1,4 @@
-/**
- * Production-grade logger for API routes
- * Provides structured logging with context for debugging
- */
-
-type LogLevel = 'info' | 'warn' | 'error';
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LogContext {
   [key: string]: unknown;
@@ -13,89 +8,166 @@ interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
+  environment: string;
   context?: LogContext;
 }
 
-function formatLog(entry: LogEntry): string {
-  const base = `[${entry.timestamp}] [${entry.level.toUpperCase()}] ${entry.message}`;
-  if (entry.context && Object.keys(entry.context).length > 0) {
-    return `${base} ${JSON.stringify(entry.context)}`;
+const LOG_LEVEL_RANK: Record<LogLevel, number> = {
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40,
+};
+
+const environment = process.env.NODE_ENV || 'development';
+const configuredLevel = (process.env.LOG_LEVEL || (environment === 'production' ? 'info' : 'debug')).toLowerCase();
+const activeLevel = (['debug', 'info', 'warn', 'error'].includes(configuredLevel) ? configuredLevel : 'info') as LogLevel;
+const MAX_STRING_LENGTH = 800;
+
+function sanitizeValue(value: unknown, depth = 0): unknown {
+  if (depth > 4) {
+    return '[truncated-depth]';
   }
-  return base;
+
+  if (value == null) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    return value.length > MAX_STRING_LENGTH ? `${value.slice(0, MAX_STRING_LENGTH)}...[truncated]` : value;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return value;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 30).map((item) => sanitizeValue(item, depth + 1));
+  }
+
+  if (typeof value === 'object') {
+    const output: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (/api[-_]?key|password|token|authorization|cookie|secret/i.test(key)) {
+        output[key] = '[redacted]';
+      } else {
+        output[key] = sanitizeValue(entry, depth + 1);
+      }
+    }
+    return output;
+  }
+
+  return String(value);
 }
 
-function log(level: LogLevel, message: string, context?: LogContext) {
+function serializeError(error: unknown): LogContext | undefined {
+  if (!error) {
+    return undefined;
+  }
+
+  if (error instanceof Error) {
+    const maybeApiError = error as Error & {
+      status?: number;
+      code?: string | number;
+      headers?: unknown;
+      request_id?: string;
+      _request_id?: string;
+    };
+
+    return sanitizeValue({
+      name: maybeApiError.name,
+      message: maybeApiError.message,
+      status: maybeApiError.status,
+      code: maybeApiError.code,
+      requestId: maybeApiError.request_id || maybeApiError._request_id,
+      stack: maybeApiError.stack?.split('\n').slice(0, 6),
+      headers: maybeApiError.headers,
+    }) as LogContext;
+  }
+
+  return { message: sanitizeValue(error) };
+}
+
+function shouldLog(level: LogLevel): boolean {
+  return LOG_LEVEL_RANK[level] >= LOG_LEVEL_RANK[activeLevel];
+}
+
+function emit(level: LogLevel, message: string, context?: LogContext) {
+  if (!shouldLog(level)) {
+    return;
+  }
+
   const entry: LogEntry = {
     timestamp: new Date().toISOString(),
     level,
     message,
-    context,
+    environment,
+    context: context ? (sanitizeValue(context) as LogContext) : undefined,
   };
 
-  const formatted = formatLog(entry);
+  const line = JSON.stringify(entry);
 
-  switch (level) {
-    case 'error':
-      console.error(formatted);
-      break;
-    case 'warn':
-      console.warn(formatted);
-      break;
-    default:
-      console.log(formatted);
+  if (level === 'error') {
+    console.error(line);
+    return;
   }
+
+  if (level === 'warn') {
+    console.warn(line);
+    return;
+  }
+
+  console.log(line);
+}
+
+function nowMs(): number {
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    return performance.now();
+  }
+  return Date.now();
 }
 
 export const logger = {
-  info: (message: string, context?: LogContext) => log('info', message, context),
-  warn: (message: string, context?: LogContext) => log('warn', message, context),
-  error: (message: string, context?: LogContext) => log('error', message, context),
+  debug: (message: string, context?: LogContext) => emit('debug', message, context),
+  info: (message: string, context?: LogContext) => emit('info', message, context),
+  warn: (message: string, context?: LogContext) => emit('warn', message, context),
+  error: (message: string, context?: LogContext) => emit('error', message, context),
 
-  /**
-   * Log API request start
-   */
+  startTimer: () => nowMs(),
+  durationMs: (startTimeMs: number) => Math.max(0, Math.round((nowMs() - startTimeMs) * 100) / 100),
+
   apiStart: (endpoint: string, context?: LogContext) => {
-    log('info', `API Request: ${endpoint}`, context);
+    emit('info', `api.start:${endpoint}`, context);
   },
 
-  /**
-   * Log API request success
-   */
   apiSuccess: (endpoint: string, context?: LogContext) => {
-    log('info', `API Success: ${endpoint}`, context);
+    emit('info', `api.success:${endpoint}`, context);
   },
 
-  /**
-   * Log API request error with full error details
-   */
   apiError: (endpoint: string, error: unknown, context?: LogContext) => {
-    const errorDetails: LogContext = {
+    emit('error', `api.error:${endpoint}`, {
       ...context,
-      errorName: error instanceof Error ? error.name : 'Unknown',
-      errorMessage: error instanceof Error ? error.message : String(error),
-      errorStack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join(' | ') : undefined,
-    };
-    log('error', `API Error: ${endpoint}`, errorDetails);
+      error: serializeError(error),
+    });
   },
 
-  /**
-   * Log rate limit events
-   */
   rateLimit: (endpoint: string, identifier: string, context?: LogContext) => {
-    log('warn', `Rate limit exceeded: ${endpoint}`, { identifier, ...context });
+    emit('warn', `rate_limit:${endpoint}`, { identifier, ...context });
   },
 
-  /**
-   * Log database operations
-   */
   db: (operation: string, context?: LogContext) => {
-    log('info', `DB: ${operation}`, context);
+    emit('debug', `db:${operation}`, context);
   },
 
-  /**
-   * Log external API calls (Claude, etc.)
-   */
   external: (service: string, operation: string, context?: LogContext) => {
-    log('info', `External API: ${service} - ${operation}`, context);
+    emit('info', `external:${service}:${operation}`, context);
+  },
+
+  aiUsage: (service: string, context?: LogContext) => {
+    emit('info', `ai.usage:${service}`, context);
   },
 };

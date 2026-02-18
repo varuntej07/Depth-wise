@@ -148,6 +148,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
         data: {
           title: data.rootNode.title,
           content: data.rootNode.content,
+          exploreTerms: data.rootNode.exploreTerms || [],
           depth: data.rootNode.depth,
           explored: true,
           loading: false,
@@ -163,6 +164,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
         depth: number;
         position: { x: number; y: number };
         followUpType?: string;
+        exploreTerms?: { label: string; query: string }[];
       }) => ({
         id: branch.id,
         type: 'knowledge',
@@ -177,6 +179,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
           sessionId: data.sessionId,
           parentId: data.rootNode.id,
           followUpType: branch.followUpType,
+          exploreTerms: branch.exploreTerms || [],
         },
       }));
 

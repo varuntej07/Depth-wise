@@ -254,11 +254,11 @@ const KnowledgeCanvasInner: React.FC = () => {
   // Handle node exploration
   useEffect(() => {
     const handleExploreNode = async (event: Event) => {
-      const customEvent = event as CustomEvent<{ nodeId: string; exploreType?: string }>;
-      const { nodeId, exploreType } = customEvent.detail;
+      const customEvent = event as CustomEvent<{ nodeId: string; exploreType?: string; focusTerm?: string }>;
+      const { nodeId, exploreType, focusTerm } = customEvent.detail;
 
       const node = storeNodes.find((n) => n.id === nodeId);
-      if (!node || node.data.explored || node.data.loading) return;
+      if (!node || node.data.loading || (node.data.explored && !focusTerm)) return;
 
       // For anonymous sessions, sign-in check happens in the API based on depth
       // We'll handle the ANONYMOUS_DEPTH_LIMIT error below
@@ -310,6 +310,7 @@ const KnowledgeCanvasInner: React.FC = () => {
             isAnonymous,
             clientId: getClientId(),
             exploreType, // Pass the exploration type (why/how/what/example)
+            focusTerm,
           }),
         });
 
@@ -360,7 +361,10 @@ const KnowledgeCanvasInner: React.FC = () => {
 
         // Update parent node with full content if provided
         if (data.parentContent) {
-          updateNode(nodeId, { content: data.parentContent });
+          updateNode(nodeId, {
+            content: data.parentContent,
+            exploreTerms: data.parentTerms || [],
+          });
         }
 
         // Add new nodes
@@ -372,6 +376,7 @@ const KnowledgeCanvasInner: React.FC = () => {
           depth: number;
           position: { x: number; y: number };
           followUpType?: string;
+          exploreTerms?: { label: string; query: string }[];
         }) => ({
           id: branch.id,
           type: 'knowledge',
@@ -386,6 +391,7 @@ const KnowledgeCanvasInner: React.FC = () => {
             sessionId: sessionId!,
             parentId: nodeId,
             followUpType: branch.followUpType, // Include follow-up type
+            exploreTerms: branch.exploreTerms || [],
           },
         }));
 

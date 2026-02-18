@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/session/[id]/share
@@ -25,7 +26,10 @@ export async function POST(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
+  const requestId = crypto.randomUUID().slice(0, 8);
   try {
+    logger.apiStart('POST /api/session/[id]/share', { requestId });
+
     // Step 1: Await params to get the session ID (Next.js 15 requirement)
     const params = await props.params;
     const sessionId = params.id;
@@ -126,13 +130,14 @@ export async function POST(
     });
 
   } catch (error) {
-    // Log the error for debugging
-    console.error('Share toggle error:', error);
+    logger.apiError('POST /api/session/[id]/share', error, { requestId });
 
     // Return a generic error message to the user
     return NextResponse.json(
       { error: 'Failed to update share status' },
       { status: 500 } // 500 = Internal Server Error
     );
+  } finally {
+    logger.info('api.complete:POST /api/session/[id]/share', { requestId });
   }
 }

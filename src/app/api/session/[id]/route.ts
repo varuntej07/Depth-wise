@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const requestId = crypto.randomUUID().slice(0, 8);
   try {
+    logger.apiStart('GET /api/session/[id]', { requestId });
     const session = await auth();
 
     const { id: sessionId } = await params;
@@ -102,11 +105,13 @@ export async function GET(
       updatedAt: graphSession.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error loading session:', error);
+    logger.apiError('GET /api/session/[id]', error, { requestId });
     return NextResponse.json(
       { error: 'Failed to load session' },
       { status: 500 }
     );
+  } finally {
+    logger.info('api.complete:GET /api/session/[id]', { requestId });
   }
 }
 
@@ -114,7 +119,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const requestId = crypto.randomUUID().slice(0, 8);
   try {
+    logger.apiStart('DELETE /api/session/[id]', { requestId });
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -151,10 +158,12 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, deletedId: sessionId });
   } catch (error) {
-    console.error('Error deleting session:', error);
+    logger.apiError('DELETE /api/session/[id]', error, { requestId });
     return NextResponse.json(
       { error: 'Failed to delete session' },
       { status: 500 }
     );
+  } finally {
+    logger.info('api.complete:DELETE /api/session/[id]', { requestId });
   }
 }

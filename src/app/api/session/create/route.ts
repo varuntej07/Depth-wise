@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { generateBranches, classifyQuery } from '@/lib/claude';
+import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 import { canUserExplore } from '@/lib/subscription-config';
 import { sanitizeQuery } from '@/lib/utils';
@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
+  const requestStart = logger.startTimer();
 
   try {
     // Get authenticated user
@@ -101,20 +102,23 @@ export async function POST(request: NextRequest) {
 
     }
 
-    // Classify the query first to determine intent and branch count
-    logger.external('Claude', 'classifyQuery', { requestId, queryLength: sanitizedQuery.length });
-    const classification = await classifyQuery(sanitizedQuery);
-
-    // Generate initial branches using Claude (use sanitized query with classification)
-    logger.external('Claude', 'generateBranches', { requestId, depth: 1, intent: classification?.intent });
-    const { answer, branches } = await generateBranches({
+    // Single AI call: answer + branches + key terms
+    logger.external('Claude', 'generateBranches', { requestId, depth: 1 });
+    const { answer, branches, keyTerms, usage } = await generateBranches({
       rootQuery: sanitizedQuery,
       path: [sanitizedQuery],
       depth: 1,
       coveredTopics: [],
-      classification, // Pass classification for dynamic branching
     });
-    logger.info('Claude response received', { requestId, branchCount: branches.length, answerLength: answer?.length });
+    logger.info('Claude response received', {
+      requestId,
+      branchCount: branches.length,
+      keyTermCount: keyTerms.length,
+      answerLength: answer?.length,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      estimatedCostUsd: usage.estimatedCostUsd,
+    });
 
     // Create session with root node and child nodes in a transaction
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -259,11 +263,11 @@ export async function POST(request: NextRequest) {
       sessionId: result.session.id,
       isAnonymous: result.isAnonymous,
       createdAt: result.session.createdAt.toISOString(),
-      classification,
       rootNode: {
         id: result.rootNode.id,
         title: result.rootNode.title,
         content: result.rootNode.content,
+        exploreTerms: keyTerms,
         depth: result.rootNode.depth,
         position: { x: result.rootNode.positionX, y: result.rootNode.positionY },
       },
@@ -302,5 +306,10 @@ export async function POST(request: NextRequest) {
       { error: errorMessage, code: 'SERVER_ERROR' },
       { status: statusCode }
     );
+  } finally {
+    logger.info('api.complete:POST /api/session/create', {
+      requestId,
+      durationMs: logger.durationMs(requestStart),
+    });
   }
 }

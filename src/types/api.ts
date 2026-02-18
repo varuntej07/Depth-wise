@@ -1,4 +1,4 @@
-import { Branch, GraphNode, GraphEdge } from './graph';
+import { Branch, GraphNode, GraphEdge, ExploreTerm } from './graph';
 
 export interface CreateSessionRequest {
   query: string;
@@ -7,6 +7,15 @@ export interface CreateSessionRequest {
 export interface CreateSessionResponse {
   sessionId: string;
   createdAt: string;
+  rootNode?: {
+    id: string;
+    title: string;
+    content?: string;
+    depth: number;
+    position: { x: number; y: number };
+    exploreTerms?: ExploreTerm[];
+  };
+  branches?: Array<Branch & { exploreTerms?: ExploreTerm[] }>;
 }
 
 export interface ExploreRequest {
@@ -18,6 +27,8 @@ export interface ExploreRequest {
 
 export interface ExploreResponse {
   parentId?: string;
+  parentContent?: string;
+  parentTerms?: ExploreTerm[];
   branches: Branch[];
   edges: {
     id: string;

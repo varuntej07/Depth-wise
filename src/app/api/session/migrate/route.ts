@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isValidUUID } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID().slice(0, 8);
   try {
+    logger.apiStart('POST /api/session/migrate', { requestId });
+
     // Get authenticated user
     const session = await auth();
 
@@ -114,10 +118,12 @@ export async function POST(request: NextRequest) {
       message: 'Session migrated successfully',
     });
   } catch (error) {
-    console.error('Migration error:', error);
+    logger.apiError('POST /api/session/migrate', error, { requestId });
     return NextResponse.json(
       { error: 'Failed to migrate session' },
       { status: 500 }
     );
+  } finally {
+    logger.info('api.complete:POST /api/session/migrate', { requestId });
   }
 }

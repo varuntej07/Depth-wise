@@ -1,17 +1,27 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { QueryIntent, QueryComplexity, QueryClassification, FollowUpType } from '@/types/graph';
+import { ExploreTerm, FollowUpType } from '@/types/graph';
+import { logger } from '@/lib/logger';
 
-// Validate API key exists at startup
 const apiKey = process.env.ANTHROPIC_API_KEY;
 if (!apiKey) {
-  console.error('[CRITICAL] ANTHROPIC_API_KEY is not set in environment variables');
+  logger.error('ANTHROPIC_API_KEY is not set');
 }
 
 const anthropic = new Anthropic({
   apiKey: apiKey || '',
+  maxRetries: 2,
+  timeout: 45_000,
 });
 
-// Helper to check API key before making calls
+export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001';
+const ENABLE_PROMPT_TOKEN_COUNT = process.env.ENABLE_PROMPT_TOKEN_COUNT === 'true';
+
+const MODEL_PRICING_PER_MILLION: Record<string, { inputUsd: number; outputUsd: number }> = {
+  'claude-haiku-4-5-20251001': { inputUsd: 1, outputUsd: 5 },
+  'claude-sonnet-4-5-20250929': { inputUsd: 3, outputUsd: 15 },
+  'claude-opus-4-1-20250805': { inputUsd: 15, outputUsd: 75 },
+};
+
 function ensureApiKey(): void {
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is not configured. Please set it in your environment variables.');
@@ -27,8 +37,9 @@ interface ExplorationContext {
   path: string[];
   depth: number;
   coveredTopics: string[];
-  classification?: QueryClassification; // pass classification for dynamic branching
-  exploreType?: FollowUpType; // what type of exploration the user requested
+  exploreType?: FollowUpType;
+  focusTerm?: string;
+  branchCount?: number;
 }
 
 interface GeneratedBranch {
@@ -38,260 +49,302 @@ interface GeneratedBranch {
   followUpType: FollowUpType;
 }
 
-// Classification prompt - lightweight, uses haiku for speed/cost
-const CLASSIFICATION_PROMPT = `You are a query classifier. Analyze the user's question and classify it.
-
-Return ONLY valid JSON with this structure:
-{
-  "intent": "factual" | "conceptual" | "technical" | "comparative" | "exploratory",
-  "complexity": "simple" | "moderate" | "complex",
-  "suggestedBranchCount": 2-5
+interface ClaudePayload {
+  answer?: unknown;
+  keyTerms?: unknown;
+  branches?: unknown;
 }
 
-Intent definitions:
-- factual: Simple fact-based questions (Why is sky blue?, What year did X happen?)
-- conceptual: Understanding concepts/ideas (What is Kubernetes?, What is machine learning?)
-- technical: How things work, implementation details (How does OAuth work?, How to implement X?)
-- comparative: Comparing options/alternatives (React vs Vue, SQL vs NoSQL)
-- exploratory: Open-ended research (Tell me about quantum computing, Explain blockchain)
-
-Complexity guide:
-- simple: Direct answer, 2-3 branches sufficient
-- moderate: Multi-faceted, 3-4 branches appropriate
-- complex: Deep topic, 4-5 branches needed
-
-Return ONLY JSON, no markdown.`;
-
-/**
- * Classify a query to determine its intent and complexity.
- * Uses Haiku for speed and cost efficiency.
- */
-export async function classifyQuery(query: string): Promise<QueryClassification> {
-  try {
-    ensureApiKey();
-
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 200,
-      system: CLASSIFICATION_PROMPT,
-      messages: [{ role: 'user', content: `Classify this query: "${query}"` }],
-    });
-
-    const content = message.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type');
-    }
-
-    const result = JSON.parse(content.text);
-    return {
-      intent: result.intent as QueryIntent,
-      complexity: result.complexity as QueryComplexity,
-      suggestedBranchCount: Math.min(5, Math.max(2, result.suggestedBranchCount)),
-    };
-  } catch (error) {
-    // Log detailed error for debugging
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[Claude classifyQuery] Failed:', errorMessage);
-    // Fallback to moderate complexity if classification fails
-    return {
-      intent: 'conceptual',
-      complexity: 'moderate',
-      suggestedBranchCount: 4,
-    };
-  }
+export interface GenerationUsage {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationInputTokens: number;
+  cacheReadInputTokens: number;
+  estimatedCostUsd: number;
+  requestId?: string;
 }
 
-const SYSTEM_PROMPT = `You are a knowledge exploration assistant. Your role is to help users build visual knowledge graphs by generating progressively deeper explanations.
+export interface GenerationResult {
+  answer: string;
+  keyTerms: ExploreTerm[];
+  branches: GeneratedBranch[];
+  usage: GenerationUsage;
+}
 
-Content Structure Rules:
-1. MINIMUM 3-4 sentences per answer
-2. MUST include one concrete example or real-world analogy
-3. Follow this structure:
-   - Definition: What it is
-   - How it works: The mechanism/process (if relevant to the topic)
-   - Why it matters: Practical significance or impact
+const SYSTEM_PROMPT = `You are a knowledge exploration assistant for a visual node graph.
 
-Branch Generation Rules:
-1. Each level should be MORE TECHNICAL than the previous
-2. Branches should be parallel concepts, not sequential steps
-3. Use clear, specific titles (not generic like "Learn More")
-4. Provide brief summaries (1-2 sentences)
-5. Maintain consistency with previous explanations
-6. IMPORTANT: Each branch MUST have a followUpType that indicates what it explores:
-   - "why": Explains motivation, reasoning, or causation
-   - "how": Explains mechanism, process, or implementation
-   - "what": Defines components, types, or variations
-   - "example": Provides real-world cases or applications
-   - "compare": Shows tradeoffs or alternatives
-7. Ensure DIVERSITY in followUpTypes - don't make all branches the same type
+Goals:
+1. Give a clear answer in 3-4 sentences.
+2. Include one concrete example.
+3. Provide 3-5 high-signal terms users can click to explore deeper.
+4. Generate branch nodes that represent different exploration angles.
 
-Output Format (JSON):
+Branch rules:
+- Keep branches parallel, not step-by-step instructions.
+- Use specific titles.
+- Summaries should be 1-2 sentences.
+- Each branch must include followUpType:
+  "why" | "how" | "what" | "example" | "compare"
+- Keep at least 2 different followUpTypes across branches.
+
+Term rules:
+- keyTerms should be concrete nouns/phrases from the answer.
+- Avoid generic terms like "system", "technology", "process".
+- Every keyTerm must include:
+  - label: short chip text
+  - query: a full follow-up question the system can explore directly
+
+Return ONLY valid JSON:
 {
-  "answer": "Comprehensive answer (3-4 sentences minimum, following the structure: Definition -> How it works -> Why it matters, with one concrete example)",
+  "answer": "string",
+  "keyTerms": [
+    { "label": "string", "query": "string" }
+  ],
   "branches": [
     {
-      "title": "Specific Topic Title",
-      "summary": "One sentence preview of what this explores",
-      "depthPreview": "Hint at what deeper level reveals",
+      "title": "string",
+      "summary": "string",
+      "depthPreview": "string",
       "followUpType": "why" | "how" | "what" | "example" | "compare"
     }
   ]
-}
+}`;
 
-Return ONLY valid JSON, no markdown formatting.`;
-
-function buildPrompt(context: ExplorationContext): string {
-  const branchCount = context.classification?.suggestedBranchCount ?? 4;
-  const intentGuidance = getIntentGuidance(context.classification?.intent);
-  const exploreTypeGuidance = context.exploreType
-    ? getExploreTypeGuidance(context.exploreType)
-    : '';
-
-  if (context.depth === 1) {
-    // Root level - initial query
-    return `User's question: "${context.rootQuery}"
-
-${intentGuidance}
-
-Generate a comprehensive explanation following this structure:
-1. DEFINITION: What it is (1 sentence)
-2. HOW IT WORKS: The mechanism or process (1-2 sentences with concrete details)
-3. WHY IT MATTERS: Practical significance (1 sentence)
-4. EXAMPLE: One concrete, real-world example or analogy
-
-MINIMUM 3-4 sentences total.
-
-Then generate exactly ${branchCount} exploration branches covering different aspects.
-
-Each branch MUST have a followUpType ("why", "how", "what", "example", or "compare").
-Ensure diversity - include at least 2 different followUpTypes.
-
-Branches should explore:
-- The user/application layer perspective (followUpType: "what" or "example")
-- The system/infrastructure perspective (followUpType: "how")
-- The underlying mechanisms (followUpType: "how" or "why")
-- Related technologies or concepts (followUpType: "compare" or "example")
-
-Focus on WHAT happens first, technical details come in deeper levels.
-
-Depth progression guide:
-- Level 1-2: Conceptual (for general audience)
-- Level 3-4: Technical (for practitioners)
-- Level 5-6: Implementation (code-level details)
-- Level 7+: Foundational (theory, math, physics)`;
-  }
-
-  // Deeper levels
-  return `User's original question: "${context.rootQuery}"
-
-Current exploration path: ${context.path.join(' → ')}
-
-${
-  context.currentNode
-    ? `Current node: "${context.currentNode.title}"
-Content: "${context.currentNode.content}"`
-    : ''
-}
-
-Current depth level: ${context.depth}
-Target depth: ${context.depth + 1}
-
-Previously covered topics: ${context.coveredTopics.join(', ')}
-
-${exploreTypeGuidance}
-
-Generate a comprehensive answer about "${context.currentNode?.title || 'the topic'}" following this structure:
-1. DEFINITION: What it is
-2. HOW IT WORKS: The mechanism/process (if applicable to this topic)
-3. WHY IT MATTERS: Practical significance or impact
-4. EXAMPLE: One concrete example or analogy
-
-MINIMUM 3-4 sentences total.
-
-Then generate ${branchCount} branches that:
-- Go DEEPER into technical details
-- Cover different aspects of "${context.currentNode?.title || 'the topic'}"
-- Are appropriate for depth level ${context.depth + 1}
-- Do NOT repeat these topics: ${context.coveredTopics.join(', ')}
-- Each branch MUST have a followUpType ("why", "how", "what", "example", or "compare")
-- Ensure diversity in followUpTypes
-
-Each branch should be one level more technical than the parent.`;
-}
-
-/**
- * Get guidance based on query intent to help Claude generate appropriate content
- */
-function getIntentGuidance(intent?: QueryIntent): string {
-  switch (intent) {
-    case 'factual':
-      return 'This is a factual question. Provide a clear, direct answer with supporting details. Focus on accuracy.';
-    case 'conceptual':
-      return 'This is a conceptual question about understanding an idea. Explain the concept clearly with good analogies.';
-    case 'technical':
-      return 'This is a technical question. Provide implementation-focused details and practical guidance.';
-    case 'comparative':
-      return 'This is a comparative question. Highlight key differences, tradeoffs, and when to use each option.';
-    case 'exploratory':
-      return 'This is an open-ended research question. Provide a broad overview with multiple angles to explore.';
-    default:
-      return '';
-  }
-}
-
-/**
- * Get guidance based on user's requested exploration type
- */
 function getExploreTypeGuidance(exploreType: FollowUpType): string {
   switch (exploreType) {
     case 'why':
-      return 'The user wants to understand WHY - focus on motivation, reasoning, causation, and purpose.';
+      return 'User asked for WHY. Emphasize causes, motivation, and rationale.';
     case 'how':
-      return 'The user wants to understand HOW - focus on mechanisms, processes, and implementation details.';
+      return 'User asked for HOW. Emphasize mechanisms and implementation details.';
     case 'what':
-      return 'The user wants to understand WHAT - focus on definitions, components, and variations.';
+      return 'User asked for WHAT. Emphasize definitions, components, and categories.';
     case 'example':
-      return 'The user wants EXAMPLES - focus on real-world cases, applications, and practical scenarios.';
+      return 'User asked for EXAMPLES. Emphasize real-world cases and practical scenarios.';
     case 'compare':
-      return 'The user wants COMPARISONS - focus on tradeoffs, alternatives, and when to use different options.';
+      return 'User asked for COMPARE. Emphasize tradeoffs and alternatives.';
     default:
       return '';
   }
 }
 
-export async function generateBranches(
-  context: ExplorationContext
-): Promise<{ answer: string; branches: GeneratedBranch[] }> {
+function buildPrompt(context: ExplorationContext): string {
+  const branchCount = Math.min(5, Math.max(2, context.branchCount ?? (context.depth === 1 ? 4 : 3)));
+  const exploreTypeGuidance = context.exploreType ? getExploreTypeGuidance(context.exploreType) : '';
+  const focusTermGuidance = context.focusTerm
+    ? `The user clicked this specific term to dig deeper: "${context.focusTerm}". Focus answer and branches around this term.`
+    : '';
+
+  if (context.depth === 1) {
+    return `Root query: "${context.rootQuery}"
+
+${exploreTypeGuidance}
+${focusTermGuidance}
+
+Write a clear answer with:
+1) Definition
+2) How it works
+3) Why it matters
+4) One concrete example
+
+Then generate exactly ${branchCount} branch nodes and 3-5 keyTerms.`;
+  }
+
+  return `Root query: "${context.rootQuery}"
+Current path: ${context.path.join(' -> ')}
+Current node title: "${context.currentNode?.title || 'Unknown topic'}"
+Current node content: "${(context.currentNode?.content || '').slice(0, 1800)}"
+Current depth: ${context.depth}
+Target depth: ${context.depth + 1}
+Already covered sibling topics: ${context.coveredTopics.join(', ') || 'none'}
+
+${exploreTypeGuidance}
+${focusTermGuidance}
+
+Generate one deeper explanation for this node context, then exactly ${branchCount} non-overlapping deeper branches and 3-5 keyTerms from that explanation.
+Avoid repeating covered sibling topics.`;
+}
+
+function parseJsonResponse(raw: string): ClaudePayload {
+  const trimmed = raw.trim();
+
+  if (trimmed.startsWith('```')) {
+    const withoutFenceStart = trimmed.replace(/^```(?:json)?\s*/i, '');
+    const withoutFenceEnd = withoutFenceStart.replace(/\s*```$/, '');
+    return JSON.parse(withoutFenceEnd);
+  }
+
+  return JSON.parse(trimmed);
+}
+
+function normalizeFollowUpType(value: unknown): FollowUpType {
+  if (value === 'why' || value === 'how' || value === 'what' || value === 'example' || value === 'compare') {
+    return value;
+  }
+  return 'how';
+}
+
+function normalizeBranches(input: unknown): GeneratedBranch[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item): GeneratedBranch | null => {
+      if (!item || typeof item !== 'object') return null;
+      const record = item as Record<string, unknown>;
+      const title = typeof record.title === 'string' ? record.title.trim() : '';
+      const summary = typeof record.summary === 'string' ? record.summary.trim() : '';
+
+      if (!title || !summary) {
+        return null;
+      }
+
+      return {
+        title: title.slice(0, 120),
+        summary: summary.slice(0, 400),
+        depthPreview: typeof record.depthPreview === 'string' ? record.depthPreview.slice(0, 180) : undefined,
+        followUpType: normalizeFollowUpType(record.followUpType),
+      };
+    })
+    .filter((item): item is GeneratedBranch => item !== null)
+    .slice(0, 6);
+}
+
+function normalizeTerms(input: unknown): ExploreTerm[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item): ExploreTerm | null => {
+      if (!item || typeof item !== 'object') return null;
+      const record = item as Record<string, unknown>;
+      const label = typeof record.label === 'string' ? record.label.trim() : '';
+      const query = typeof record.query === 'string' ? record.query.trim() : '';
+
+      if (!label || !query) {
+        return null;
+      }
+
+      return {
+        label: label.slice(0, 60),
+        query: query.slice(0, 220),
+      };
+    })
+    .filter((item): item is ExploreTerm => item !== null)
+    .slice(0, 8);
+}
+
+function estimateCostUsd(
+  model: string,
+  usage: { input_tokens?: number; output_tokens?: number }
+): number {
+  const pricing = MODEL_PRICING_PER_MILLION[model];
+  if (!pricing) {
+    return 0;
+  }
+
+  const inputTokens = usage.input_tokens || 0;
+  const outputTokens = usage.output_tokens || 0;
+
+  const total =
+    (inputTokens / 1_000_000) * pricing.inputUsd +
+    (outputTokens / 1_000_000) * pricing.outputUsd;
+
+  return Math.round(total * 1_000_000) / 1_000_000;
+}
+
+export async function generateBranches(context: ExplorationContext): Promise<GenerationResult> {
   ensureApiKey();
 
   const prompt = buildPrompt(context);
+  const timer = logger.startTimer();
+  let promptTokensEstimate: number | undefined;
 
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 3000, // Increased to accommodate longer, more detailed responses
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  });
-
-  const content = message.content[0];
-  if (content.type !== 'text') {
-    throw new Error('Unexpected response type from Claude');
+  if (ENABLE_PROMPT_TOKEN_COUNT) {
+    try {
+      const tokenCount = await anthropic.messages.countTokens({
+        model: CLAUDE_MODEL,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      promptTokensEstimate = tokenCount.input_tokens;
+    } catch (error) {
+      logger.warn('Anthropic token count failed', {
+        model: CLAUDE_MODEL,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   try {
-    const result = JSON.parse(content.text);
-    return {
-      answer: result.answer || '',
-      branches: result.branches || [],
+    const message = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 1800,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    });
+
+    const content = message.content[0];
+    if (!content || content.type !== 'text') {
+      throw new Error('Unexpected response type from Claude');
+    }
+
+    const parsed = parseJsonResponse(content.text);
+    const answer = typeof parsed.answer === 'string' ? parsed.answer.trim() : '';
+    const branches = normalizeBranches(parsed.branches);
+    const keyTerms = normalizeTerms(parsed.keyTerms);
+
+    if (!answer) {
+      throw new Error('Claude returned empty answer');
+    }
+
+    const usage = {
+      model: CLAUDE_MODEL,
+      inputTokens: message.usage.input_tokens || 0,
+      outputTokens: message.usage.output_tokens || 0,
+      cacheCreationInputTokens: message.usage.cache_creation_input_tokens || 0,
+      cacheReadInputTokens: message.usage.cache_read_input_tokens || 0,
+      estimatedCostUsd: estimateCostUsd(CLAUDE_MODEL, message.usage),
+      requestId: message._request_id || undefined,
     };
-  } catch (parseError) {
-    console.error('[Claude generateBranches] Failed to parse response:', content.text.slice(0, 500));
-    throw new Error('Failed to parse AI response');
+
+    logger.aiUsage('anthropic', {
+      model: usage.model,
+      requestId: usage.requestId,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      cacheCreationInputTokens: usage.cacheCreationInputTokens,
+      cacheReadInputTokens: usage.cacheReadInputTokens,
+      estimatedCostUsd: usage.estimatedCostUsd,
+      promptTokensEstimate,
+      durationMs: logger.durationMs(timer),
+      depth: context.depth,
+      focusTerm: context.focusTerm,
+      branchCount: branches.length,
+      keyTermCount: keyTerms.length,
+    });
+
+    return {
+      answer,
+      branches,
+      keyTerms,
+      usage,
+    };
+  } catch (error) {
+    logger.apiError('Claude.generateBranches', error, {
+      model: CLAUDE_MODEL,
+      durationMs: logger.durationMs(timer),
+      depth: context.depth,
+      focusTerm: context.focusTerm,
+    });
+    throw error;
   }
 }
 

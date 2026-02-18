@@ -3,17 +3,18 @@ import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
 import { getMaxDepth, canUserExplore } from '@/lib/subscription-config';
-import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
+import { isValidUUID, sanitizeBoolean, sanitizeQuery } from '@/lib/utils';
 import { FollowUpType } from '@/types/graph';
 import { logger } from '@/lib/logger';
 import type { AnonymousNode, AnonymousEdge, Node, Edge } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
+  const requestStart = logger.startTimer();
 
   try {
     const body = await request.json();
-    const { sessionId, parentId, isAnonymous, exploreType } = body;
+    const { sessionId, parentId, isAnonymous, exploreType, focusTerm } = body;
 
     logger.apiStart('POST /api/explore', {
       requestId,
@@ -21,7 +22,20 @@ export async function POST(request: NextRequest) {
       parentId: parentId?.slice(0, 8),
       isAnonymous,
       exploreType,
+      focusTerm,
     });
+
+    let validatedFocusTerm: string | undefined;
+    if (typeof focusTerm === 'string' && focusTerm.trim().length > 0) {
+      const sanitizedFocusTerm = sanitizeQuery(focusTerm, 120);
+      if (!sanitizedFocusTerm.isValid) {
+        return NextResponse.json(
+          { error: sanitizedFocusTerm.error || 'Invalid focus term', code: 'INVALID_INPUT' },
+          { status: 400 }
+        );
+      }
+      validatedFocusTerm = sanitizedFocusTerm.sanitized;
+    }
 
     // Validate exploreType if provided
     const validExploreTypes: FollowUpType[] = ['why', 'how', 'what', 'example', 'compare'];
@@ -109,7 +123,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if already explored
-      if (parentNode.explored) {
+      if (parentNode.explored && !validatedFocusTerm) {
         const existingChildren = await prisma.anonymousNode.findMany({
           where: { parentId: parentNode.id },
         });
@@ -162,7 +176,7 @@ export async function POST(request: NextRequest) {
       const coveredTopics = siblings.map((s: AnonymousNode) => s.title);
 
       // Generate new branches
-      const { answer, branches } = await generateBranches({
+      const { answer, branches, keyTerms, usage } = await generateBranches({
         rootQuery: session.rootQuery,
         currentNode: {
           title: parentNode.title,
@@ -172,6 +186,15 @@ export async function POST(request: NextRequest) {
         depth: parentNode.depth,
         coveredTopics,
         exploreType: validatedExploreType, // Pass user's exploration intent
+        focusTerm: validatedFocusTerm,
+      });
+      logger.aiUsage('anthropic', {
+        requestId,
+        route: 'POST /api/explore',
+        mode: 'anonymous',
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        estimatedCostUsd: usage.estimatedCostUsd,
       });
 
       // Create new nodes and edges in a transaction
@@ -246,6 +269,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         parentId: parentNode.id,
         parentContent: answer,
+        parentTerms: keyTerms,
         branches: result.newNodes.map((node: AnonymousNode) => ({
           id: node.id,
           title: node.title,
@@ -343,7 +367,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already explored
-    if (parentNode.explored) {
+    if (parentNode.explored && !validatedFocusTerm) {
       const existingChildren = await prisma.node.findMany({
         where: { parentId: parentNode.id },
       });
@@ -396,7 +420,7 @@ export async function POST(request: NextRequest) {
     const coveredTopics = siblings.map((s: Node) => s.title);
 
     // Generate new branches
-    const { answer, branches } = await generateBranches({
+    const { answer, branches, keyTerms, usage } = await generateBranches({
       rootQuery: session.rootQuery,
       currentNode: {
         title: parentNode.title,
@@ -406,6 +430,15 @@ export async function POST(request: NextRequest) {
       depth: parentNode.depth,
       coveredTopics,
       exploreType: validatedExploreType, // Pass user's exploration intent
+      focusTerm: validatedFocusTerm,
+    });
+    logger.aiUsage('anthropic', {
+      requestId,
+      route: 'POST /api/explore',
+      mode: 'authenticated',
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      estimatedCostUsd: usage.estimatedCostUsd,
     });
 
     // Create new nodes and edges in a transaction
@@ -490,6 +523,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       parentId: parentNode.id,
       parentContent: answer,
+      parentTerms: keyTerms,
       branches: result.newNodes.map((node: Node) => ({
         id: node.id,
         title: node.title,
@@ -529,5 +563,10 @@ export async function POST(request: NextRequest) {
       { error: errorMessage, code: 'SERVER_ERROR' },
       { status: statusCode }
     );
+  } finally {
+    logger.info('api.complete:POST /api/explore', {
+      requestId,
+      durationMs: logger.durationMs(requestStart),
+    });
   }
 }

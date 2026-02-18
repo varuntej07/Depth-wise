@@ -35,9 +35,9 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
   const { isPublic } = useGraphStore();
   const isReadOnly = isPublic;
 
-  const handleExplore = (exploreType?: FollowUpType) => {
+  const handleExplore = (exploreType?: FollowUpType, focusTerm?: string) => {
     // Don't allow exploration on read-only (shared) graphs
-    if (data.loading || data.explored || isReadOnly) return;
+    if (data.loading || isReadOnly || (data.explored && !focusTerm)) return;
 
     // Track node exploration
     posthog.capture('node_explored', {
@@ -47,9 +47,10 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
       session_id: data.sessionId,
       is_retry: !!data.error,
       explore_type: exploreType || 'explore',
+      focus_term: focusTerm || null,
     });
 
-    const event = new CustomEvent('explore-node', { detail: { nodeId: id, exploreType } });
+    const event = new CustomEvent('explore-node', { detail: { nodeId: id, exploreType, focusTerm } });
     window.dispatchEvent(event);
   };
 
@@ -171,6 +172,23 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
                   <span>Read more</span>
                 </button>
               )}
+            </div>
+          )}
+
+          {Array.isArray(data.exploreTerms) && data.exploreTerms.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">Dig deeper into terms</p>
+              <div className="flex flex-wrap gap-1.5">
+                {data.exploreTerms.map((term) => (
+                  <button
+                    key={`${id}-${term.label}`}
+                    onClick={() => handleExplore(undefined, term.query)}
+                    className={`text-xs ${depthColors.text} border border-[var(--mint-elevated)] rounded-md py-1 px-2.5 font-medium transition-all duration-200 hover:border-[var(--mint-accent-2)] hover:bg-[var(--mint-elevated)]`}
+                  >
+                    {term.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

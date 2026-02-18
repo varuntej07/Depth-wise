@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
+  const requestId = crypto.randomUUID().slice(0, 8);
   try {
+    logger.apiStart('GET /api/sessions', { requestId });
+
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -49,10 +53,12 @@ export async function GET() {
 
     return NextResponse.json({ sessions: formattedSessions });
   } catch (error) {
-    console.error('Error fetching sessions:', error);
+    logger.apiError('GET /api/sessions', error, { requestId });
     return NextResponse.json(
       { error: 'Failed to fetch sessions' },
       { status: 500 }
     );
+  } finally {
+    logger.info('api.complete:GET /api/sessions', { requestId });
   }
 }

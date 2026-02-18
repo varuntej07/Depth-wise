@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getUsageLimit, getMaxDepth, getSavedGraphsLimit } from '@/lib/subscription-config';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
+  const requestId = crypto.randomUUID().slice(0, 8);
   try {
+    logger.apiStart('GET /api/user/usage', { requestId });
+
     // Get authenticated user
     const session = await auth();
 
@@ -81,7 +85,9 @@ export async function GET() {
       maxDepth,
     });
   } catch (error) {
-    console.error('Usage API error:', error);
+    logger.apiError('GET /api/user/usage', error, { requestId });
     return NextResponse.json({ error: 'Failed to fetch usage data' }, { status: 500 });
+  } finally {
+    logger.info('api.complete:GET /api/user/usage', { requestId });
   }
 }

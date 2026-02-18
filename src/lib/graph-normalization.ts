@@ -1,5 +1,5 @@
 import { LAYOUT_CONFIG } from '@/lib/layout';
-import { GraphEdge, GraphNode, FollowUpType } from '@/types/graph';
+import { GraphEdge, GraphNode, FollowUpType, ExploreTerm } from '@/types/graph';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -61,6 +61,28 @@ function asFollowUpType(value: unknown): FollowUpType | undefined {
   return VALID_FOLLOW_UP_TYPES.has(value as FollowUpType)
     ? (value as FollowUpType)
     : undefined;
+}
+
+function asExploreTerms(value: unknown): ExploreTerm[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const terms: ExploreTerm[] = [];
+
+  for (const item of value) {
+    const record = asRecord(item);
+    if (!record) continue;
+
+    const label = asNonEmptyString(record.label);
+    const query = asNonEmptyString(record.query);
+
+    if (label && query) {
+      terms.push({ label, query });
+    }
+  }
+
+  return terms.length > 0 ? terms.slice(0, 8) : undefined;
 }
 
 function getFallbackPosition(depth: number, index: number, count: number) {
@@ -149,6 +171,7 @@ export function normalizeLoadedSessionGraph({
         sessionId,
         parentId,
         followUpType: asFollowUpType(dataRecord?.followUpType),
+        exploreTerms: asExploreTerms(dataRecord?.exploreTerms),
       },
     });
 

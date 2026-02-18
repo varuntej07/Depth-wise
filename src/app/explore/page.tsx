@@ -210,7 +210,7 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[var(--mint-page)] text-white">
+    <div className="relative flex h-screen w-screen overflow-hidden bg-[var(--mint-page)] text-white">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -238,7 +238,7 @@ export default function ExplorePage() {
       />
 
       <div
-        className={`relative z-10 flex flex-1 flex-col transition-all duration-300 ${
+        className={`relative z-10 flex min-h-0 flex-1 flex-col transition-all duration-300 ${
           sidebarCollapsed ? 'md:ml-16' : 'md:ml-[280px]'
         }`}
       >
@@ -310,7 +310,7 @@ export default function ExplorePage() {
           </div>
         </header>
 
-        <main className="relative flex-1 overflow-hidden p-3 sm:p-5">
+        <main className="relative min-h-0 flex-1 overflow-hidden p-3 sm:p-5">
           {nodes.length === 0 ? (
             <div className="mx-auto grid h-full w-full max-w-7xl gap-5 lg:grid-cols-[1.08fr_0.92fr]">
               <div className="flex items-center">
@@ -355,7 +355,7 @@ export default function ExplorePage() {
               </div>
             </div>
           ) : (
-            <div className="relative h-full overflow-hidden rounded-3xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.85)] shadow-[0_24px_80px_rgba(5,13,11,0.62)]">
+            <div className="relative h-full min-h-0 overflow-hidden rounded-3xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.85)] shadow-[0_24px_80px_rgba(5,13,11,0.62)]">
               <KnowledgeCanvas />
               <ShareButton />
             </div>
