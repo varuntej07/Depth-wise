@@ -10,6 +10,7 @@ const VALID_FOLLOW_UP_TYPES = new Set<FollowUpType>([
   'example',
   'compare',
 ]);
+const MAX_SAFE_COORDINATE = 25000;
 
 function asRecord(value: unknown): UnknownRecord | null {
   if (value && typeof value === 'object') {
@@ -39,6 +40,10 @@ function toFiniteNumber(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function isSaneCoordinate(value: number | null): value is number {
+  return value !== null && Math.abs(value) <= MAX_SAFE_COORDINATE;
 }
 
 function normalizeDepth(value: unknown): number {
@@ -122,8 +127,10 @@ export function normalizeLoadedSessionGraph({
     depthIndices.set(depth, depthIndex + 1);
 
     const fallbackPosition = getFallbackPosition(depth, depthIndex, depthCount);
-    const x = toFiniteNumber(positionRecord?.x) ?? fallbackPosition.x;
-    const y = toFiniteNumber(positionRecord?.y) ?? fallbackPosition.y;
+    const rawX = toFiniteNumber(positionRecord?.x);
+    const rawY = toFiniteNumber(positionRecord?.y);
+    const x = isSaneCoordinate(rawX) ? rawX : fallbackPosition.x;
+    const y = isSaneCoordinate(rawY) ? rawY : fallbackPosition.y;
 
     const title = asNonEmptyString(dataRecord?.title) || 'Untitled node';
     const parentId = asNonEmptyString(dataRecord?.parentId) || undefined;

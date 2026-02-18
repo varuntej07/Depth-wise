@@ -48,6 +48,7 @@ const KnowledgeCanvasInner: React.FC = () => {
   const {
     nodes: storeNodes,
     edges: storeEdges,
+    sessionId,
     updateNode,
     isAnonymous: isAnonymousSession,
     focusMode,
@@ -99,25 +100,41 @@ const KnowledgeCanvasInner: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Trigger fitView when nodes are first loaded (after skeleton nodes are replaced)
+  // Reset fit state when switching sessions so each loaded history graph gets centered once.
   useEffect(() => {
-    // Only trigger on initial load when we have real nodes (not skeletons)
-    const hasRealNodes = storeNodes.some(n => !n.data.isSkeleton);
-    const hasNoSkeletons = storeNodes.every(n => !n.data.isSkeleton);
+    initialFitDone.current = false;
+  }, [sessionId]);
 
-    if (hasRealNodes && hasNoSkeletons && storeNodes.length > 0) {
+  // Trigger fitView after rendered nodes are available (after skeleton nodes are replaced).
+  useEffect(() => {
+    if (initialFitDone.current) {
+      return;
+    }
+
+    // Only trigger on initial load when we have real nodes (not skeletons)
+    const hasRealNodes = nodes.some((n) => {
+      const data = n.data as GraphNode['data'] | undefined;
+      return !data?.isSkeleton;
+    });
+    const hasNoSkeletons = nodes.every((n) => {
+      const data = n.data as GraphNode['data'] | undefined;
+      return !data?.isSkeleton;
+    });
+
+    if (hasRealNodes && hasNoSkeletons && nodes.length > 0) {
       // Delay fitView slightly to ensure nodes are rendered
       const timer = setTimeout(() => {
         fitView({
           padding: isMobile ? 0.1 : 0.2,
           duration: 300,
           maxZoom: isMobile ? 0.5 : 1,
+          minZoom: 0.08,
         });
         initialFitDone.current = true;
-      }, 100);
+      }, 150);
       return () => clearTimeout(timer);
     }
-  }, [storeNodes, fitView, isMobile]);
+  }, [nodes, fitView, isMobile]);
 
   // Find all edges in the path from root to a given node
   const getPathToRoot = useCallback(
@@ -173,7 +190,9 @@ const KnowledgeCanvasInner: React.FC = () => {
   // Sync store with React Flow state (apply focus mode filtering)
   useEffect(() => {
     const visibleNodes = focusMode ? getVisibleNodes() : storeNodes;
-    setNodes(visibleNodes as unknown as Node[]);
+    const nodesToRender =
+      visibleNodes.length === 0 && storeNodes.length > 0 ? storeNodes : visibleNodes;
+    setNodes(nodesToRender as unknown as Node[]);
   }, [storeNodes, focusMode, focusedNodeId, setNodes, getVisibleNodes]);
 
   // Enhanced edges with depth and highlight information (apply focus mode filtering)
