@@ -11,7 +11,7 @@ import { ShareButton } from '@/components/ShareButton';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { UsageIndicator } from '@/components/UsageIndicator';
 import Link from 'next/link';
-import { Crown } from 'lucide-react';
+import { Compass, Crown, Layers, Network, Sparkles } from 'lucide-react';
 
 interface ChatItem {
   id: string;
@@ -19,6 +19,24 @@ interface ChatItem {
   timestamp: Date;
   isPinned?: boolean;
 }
+
+const exploreGuides = [
+  {
+    title: 'Start with one precise question',
+    description: 'Specific prompts create stronger root explanations and cleaner branch quality.',
+    icon: Compass,
+  },
+  {
+    title: 'Expand by intent',
+    description: 'Follow branches by why, how, examples, or tradeoffs to keep depth focused.',
+    icon: Network,
+  },
+  {
+    title: 'Build layered understanding',
+    description: 'Each explored node adds context so your map becomes a reusable knowledge artifact.',
+    icon: Layers,
+  },
+];
 
 export default function ExplorePage() {
   const { error, setError, nodes, sessionId, rootQuery, clearGraph, loadSession } = useGraphStore();
@@ -159,9 +177,23 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="h-screen w-screen flex bg-black relative overflow-hidden">
+    <div className="relative h-screen w-screen overflow-hidden bg-[var(--mint-page)] text-white">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            'radial-gradient(900px 480px at 12% -15%, rgba(110,231,183,0.16), transparent 60%), radial-gradient(860px 520px at 88% 5%, rgba(16,185,129,0.14), transparent 60%), linear-gradient(180deg, #050D0B 0%, #0D1A16 52%, #050D0B 100%)',
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-30"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(209,213,219,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(209,213,219,0.08) 1px, transparent 1px)',
+          backgroundSize: '34px 34px',
+        }}
+      />
 
-      {/* Sidebar */}
       <ChatSidebar
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={toggleSidebar}
@@ -172,34 +204,49 @@ export default function ExplorePage() {
         onDeleteChat={handleDeleteChat}
       />
 
-      {/* Main Content Area */}
       <div
-        className={`flex-1 flex flex-col relative z-10 transition-all duration-300 ${
+        className={`relative z-10 flex flex-1 flex-col transition-all duration-300 ${
           sidebarCollapsed ? 'md:ml-16' : 'md:ml-[280px]'
         }`}
       >
-        {/* Header */}
-        <header className="w-full bg-black border-b border-zinc-800 h-14 sm:h-16 flex-shrink-0">
-          <div className="h-full px-3 sm:px-6 flex items-center justify-between">
-            {/* Compact title on mobile when graph exists */}
-            {nodes.length > 0 ? (
-              <div className="flex-1 min-w-0 mr-3">
-                <h2 className="text-sm sm:text-base font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent truncate">
-                  {rootQuery || 'Exploring...'}
-                </h2>
-              </div>
-            ) : (
-              <div className="flex-1" />
-            )}
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              {/* Usage Indicator - only show when user is logged in */}
+        <header className="h-16 w-full flex-shrink-0 border-b border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.78)] backdrop-blur-xl sm:h-[74px]">
+          <div className="flex h-full items-center justify-between gap-3 px-3 sm:px-6">
+            <div className="min-w-0 flex-1">
+              {nodes.length > 0 ? (
+                <div className="space-y-1">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-white/45">Active exploration</p>
+                  <h2 className="truncate text-sm font-semibold text-[var(--mint-accent-1)] sm:text-base">{rootQuery || 'Exploring...'}</h2>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/55">
+                    <Sparkles className="h-3.5 w-3.5 text-[var(--mint-accent-1)]" />
+                    Depthwise Workspace
+                  </p>
+                  <h1 className="text-sm font-semibold text-white sm:text-base">Explore ideas as connected trees</h1>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3">
+                <Link
+                  href="/home"
+                  className="hidden rounded-lg border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] px-3 py-2 text-xs font-medium text-[var(--mint-text-secondary)] transition hover:border-[var(--mint-accent-2)] hover:text-white sm:inline-flex"
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="hidden rounded-lg border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] px-3 py-2 text-xs font-medium text-[var(--mint-text-secondary)] transition hover:border-[var(--mint-accent-2)] hover:text-white lg:inline-flex"
+                >
+                  Dashboard Preview
+                </Link>
+
               {session && <UsageIndicator />}
 
-              {/* Upgrade Button - only show when user is logged in */}
               {session && (
                 <Link
                   href="/pricing"
-                  className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium transition-all hover:bg-zinc-100 active:scale-95 shadow-sm"
+                  className="hidden items-center gap-2 rounded-lg bg-[image:var(--mint-accent-gradient)] px-4 py-2 text-sm font-medium text-[#04120e] shadow-[0_8px_24px_var(--mint-accent-glow)] transition-all hover:brightness-105 active:scale-95 sm:flex"
                 >
                   <Crown className="w-4 h-4" />
                   <span>Upgrade</span>
@@ -208,7 +255,7 @@ export default function ExplorePage() {
               {session && (
                 <Link
                   href="/pricing"
-                  className="sm:hidden flex items-center justify-center w-8 h-8 bg-white text-black rounded-lg transition-all hover:bg-zinc-100 active:scale-95"
+                  className="sm:hidden flex items-center justify-center w-8 h-8 bg-[image:var(--mint-accent-gradient)] text-[#04120e] rounded-lg transition-all hover:brightness-105 active:scale-95"
                   title="Upgrade"
                 >
                   <Crown className="w-4 h-4" />
@@ -218,24 +265,58 @@ export default function ExplorePage() {
           </div>
         </header>
 
-        {/* Canvas */}
-        <main className="flex-1 relative overflow-hidden">
+        <main className="relative flex-1 overflow-hidden p-3 sm:p-5">
           {nodes.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center max-w-4xl px-4 sm:px-6">
+            <div className="mx-auto grid h-full w-full max-w-7xl gap-5 lg:grid-cols-[1.08fr_0.92fr]">
+              <div className="flex items-center">
                 <SearchBar />
+              </div>
+
+              <div className="rounded-3xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.78)] p-6 backdrop-blur-xl sm:p-8">
+                <p className="text-xs uppercase tracking-[0.24em] text-white/50">How to get better maps</p>
+                <h3 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                  Build depth deliberately.
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-[var(--mint-text-secondary)] sm:text-base">
+                  Depthwise works best when each query sharpens scope and each branch explores one clear angle.
+                </p>
+
+                <div className="mt-6 space-y-3">
+                  {exploreGuides.map((guide) => (
+                    <article
+                      key={guide.title}
+                      className="rounded-2xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.34)] p-4 transition hover:border-[var(--mint-accent-2)]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mint-accent-2)] bg-[rgba(16,185,129,0.16)]">
+                          <guide.icon className="h-4 w-4 text-[var(--mint-accent-1)]" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-white sm:text-base">{guide.title}</h4>
+                          <p className="mt-1 text-xs leading-relaxed text-[var(--mint-text-secondary)] sm:text-sm">{guide.description}</p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-[var(--mint-accent-2)] bg-[rgba(16,185,129,0.16)] p-4">
+                  <p className="text-sm font-semibold text-[var(--mint-accent-1)]">Pro tip</p>
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--mint-text-secondary)] sm:text-sm">
+                    Ask for comparisons and counterexamples early. You will uncover useful branches faster and avoid
+                    shallow trees.
+                  </p>
+                </div>
               </div>
             </div>
           ) : (
-            <>
+            <div className="relative h-full overflow-hidden rounded-3xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.85)] shadow-[0_24px_80px_rgba(5,13,11,0.62)]">
               <KnowledgeCanvas />
-              {/* Floating Share Button - appears over canvas */}
               <ShareButton />
-            </>
+            </div>
           )}
         </main>
 
-        {/* Error Alert */}
         {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
       </div>
     </div>

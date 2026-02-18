@@ -40,7 +40,7 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative bg-slate-900 border-2 border-red-500/50 rounded-2xl p-6 shadow-2xl shadow-red-500/20 max-w-md w-full mx-4"
+          className="relative bg-[var(--mint-surface)] border-2 border-red-500/50 rounded-2xl p-6 shadow-2xl shadow-red-500/20 max-w-md w-full mx-4"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close button */}
@@ -66,7 +66,7 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose }) => {
               {isSessionError ? (
                 <button
                   onClick={handleStartNewSearch}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium transition-all active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[image:var(--mint-accent-gradient)] hover:brightness-105 text-[#04120e] text-sm font-medium transition-all active:scale-95"
                 >
                   <RefreshCw className="w-4 h-4" />
                   Start New Search
@@ -74,7 +74,7 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose }) => {
               ) : (
                 <button
                   onClick={handleRetry}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-100 text-black text-sm font-medium transition-all active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[image:var(--mint-accent-gradient)] hover:brightness-105 text-[#04120e] text-sm font-medium transition-all active:scale-95"
                 >
                   <RefreshCw className="w-4 h-4" />
                   Try Again

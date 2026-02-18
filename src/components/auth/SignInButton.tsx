@@ -10,13 +10,13 @@ export function SignInButton({ isCollapsed = false }: SignInButtonProps) {
   return (
     <button
       onClick={() => signIn('google', { callbackUrl: '/explore' })}
-      className={`group relative rounded-lg border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-all overflow-hidden ${
+      className={`group relative rounded-lg border border-[var(--mint-accent-2)] text-[var(--mint-accent-1)] hover:bg-[rgba(16,185,129,0.16)] transition-all overflow-hidden ${
         isCollapsed ? 'p-2.5' : 'px-4 py-2 text-xs sm:text-sm'
       }`}
       title={isCollapsed ? 'Sign in with Google' : undefined}
     >
       {/* Animated gradient background on hover */}
-      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)] translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
 
       {/* Google Icon */}
       <span className={`relative flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'}`}>

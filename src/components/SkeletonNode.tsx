@@ -11,10 +11,10 @@ interface SkeletonNodeProps {
 
 const getDepthColor = (depth: number) => {
   const colors = [
-    { border: 'border-cyan-500/50', shimmer: 'from-cyan-500/10 via-cyan-500/20 to-cyan-500/10' },
-    { border: 'border-blue-500/50', shimmer: 'from-blue-500/10 via-blue-500/20 to-blue-500/10' },
-    { border: 'border-violet-500/50', shimmer: 'from-violet-500/10 via-violet-500/20 to-violet-500/10' },
-    { border: 'border-pink-500/50', shimmer: 'from-pink-500/10 via-pink-500/20 to-pink-500/10' },
+    { border: 'border-[var(--mint-accent-2)]', shimmer: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]' },
+    { border: 'border-[var(--mint-accent-2)]', shimmer: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]' },
+    { border: 'border-[var(--mint-accent-2)]', shimmer: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]' },
+    { border: 'border-[var(--mint-accent-2)]', shimmer: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]' },
     { border: 'border-amber-500/50', shimmer: 'from-amber-500/10 via-amber-500/20 to-amber-500/10' },
   ];
   return colors[Math.min(depth, colors.length - 1)];
@@ -29,14 +29,14 @@ const SkeletonNode: React.FC<SkeletonNodeProps> = ({ data }) => {
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 !bg-cyan-500 !border-2 !border-slate-900"
+        className="w-3 h-3 !bg-[var(--mint-accent-2)] !border-2 !border-slate-900"
       />
       <Card
         className={`${
           isRootNode
             ? 'min-w-[320px] w-[320px] sm:min-w-[400px] sm:w-[400px] md:min-w-[500px] md:w-[500px]'
             : 'min-w-[280px] w-[280px] sm:min-w-[340px] sm:w-[340px] md:min-w-[420px] md:w-[420px]'
-        } min-h-[200px] bg-slate-900/90 backdrop-blur-sm border-2 ${depthColors.border} shadow-lg flex flex-col`}
+        } min-h-[200px] bg-[var(--mint-surface)] backdrop-blur-sm border-2 ${depthColors.border} shadow-lg flex flex-col`}
       >
         <CardHeader className="pb-3 border-b border-slate-800">
           <div className={`h-5 bg-gradient-to-r ${depthColors.shimmer} rounded animate-shimmer w-3/4`}></div>
@@ -54,7 +54,7 @@ const SkeletonNode: React.FC<SkeletonNodeProps> = ({ data }) => {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 !bg-cyan-500 !border-2 !border-slate-900"
+        className="w-3 h-3 !bg-[var(--mint-accent-2)] !border-2 !border-slate-900"
       />
     </div>
   );

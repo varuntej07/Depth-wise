@@ -17,11 +17,11 @@ interface KnowledgeNodeProps {
 // Get color based on depth
 const getDepthColor = (depth: number) => {
   const colors = [
-    { border: 'border-cyan-500', shadow: 'shadow-cyan-500/30', text: 'text-cyan-400', glow: 'hover:shadow-cyan-500/50' },
-    { border: 'border-blue-500', shadow: 'shadow-blue-500/30', text: 'text-blue-400', glow: 'hover:shadow-blue-500/50' },
-    { border: 'border-violet-500', shadow: 'shadow-violet-500/30', text: 'text-violet-400', glow: 'hover:shadow-violet-500/50' },
-    { border: 'border-pink-500', shadow: 'shadow-pink-500/30', text: 'text-pink-400', glow: 'hover:shadow-pink-500/50' },
-    { border: 'border-amber-500', shadow: 'shadow-amber-500/30', text: 'text-amber-400', glow: 'hover:shadow-amber-500/50' },
+    { border: 'border-[rgba(16,185,129,0.55)]', shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]', text: 'text-[var(--mint-accent-1)]', glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]' },
+    { border: 'border-[rgba(16,185,129,0.55)]', shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]', text: 'text-[var(--mint-accent-1)]', glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]' },
+    { border: 'border-[rgba(16,185,129,0.55)]', shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]', text: 'text-[var(--mint-accent-1)]', glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]' },
+    { border: 'border-[rgba(16,185,129,0.55)]', shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]', text: 'text-[var(--mint-accent-1)]', glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]' },
+    { border: 'border-[rgba(16,185,129,0.55)]', shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]', text: 'text-[var(--mint-accent-1)]', glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]' },
   ];
   return colors[Math.min(depth, colors.length - 1)];
 };
@@ -103,7 +103,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
         <Handle
           type="target"
           position={Position.Top}
-          className="w-3 h-3 !bg-cyan-500 !border-2 !border-slate-900"
+          className="w-3 h-3 !bg-[var(--mint-accent-2)] !border-2 !border-[var(--mint-page)]"
         />
 
         <Card
@@ -111,7 +111,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
             isRootNode
               ? 'min-w-[320px] w-[320px] sm:min-w-[400px] sm:w-[400px] md:min-w-[500px] md:w-[500px]'
               : 'min-w-[280px] w-[280px] sm:min-w-[340px] sm:w-[340px] md:min-w-[420px] md:w-[420px]'
-          } min-h-fit bg-slate-900 backdrop-blur-sm border-2 ${
+          } min-h-fit bg-[var(--mint-surface)] backdrop-blur-sm border-2 ${
             data.error
               ? 'border-red-500 shadow-red-500/30'
               : depthColors.border
@@ -125,7 +125,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               : ''
           } flex flex-col`}
         >
-        <CardHeader className="pb-2 border-b border-slate-800">
+        <CardHeader className="pb-2 border-b border-[var(--mint-elevated)]">
           <div className={`text-xs ${depthColors.text} mb-1 flex items-center justify-center gap-2 font-medium`}>
             <span>Level {data.depth}</span>
             {data.explored && (
@@ -145,7 +145,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
           {/* Content display - full text for <=200 chars, truncated for longer */}
           {contentText && (
             <div className="flex-1 overflow-hidden">
-              <div className={`text-sm sm:text-base text-slate-200 leading-relaxed ${
+              <div className={`text-sm sm:text-base text-[var(--mint-text-secondary)] leading-relaxed ${
                 shouldShowViewDetails ? 'line-clamp-3' : ''
               }`}>
                 {shouldShowViewDetails
@@ -202,7 +202,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
                   <button
                     key={btn.type}
                     onClick={() => handleExplore(btn.type)}
-                    className={`text-xs ${depthColors.text} hover:bg-slate-800/50 border border-slate-600/50 rounded-md py-1 px-2.5 font-medium transition-all duration-200 hover:border-${depthColors.border.split('-')[1]}-500/60`}
+                    className={`text-xs ${depthColors.text} hover:bg-[var(--mint-elevated)] border border-[var(--mint-elevated)] rounded-md py-1 px-2.5 font-medium transition-all duration-200 hover:border-[var(--mint-accent-2)]`}
                   >
                     {btn.label}
                   </button>
@@ -211,7 +211,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               {/* Generic explore button */}
               <button
                 onClick={() => handleExplore()}
-                className={`w-full text-xs sm:text-sm ${depthColors.text} hover:bg-slate-800/50 border border-${depthColors.border.split('-')[1]}-500/30 rounded-lg py-1.5 sm:py-2 px-3 sm:px-4 font-medium transition-all duration-200 hover:border-${depthColors.border.split('-')[1]}-500/60 flex items-center justify-center gap-2 group`}
+                className={`w-full text-xs sm:text-sm ${depthColors.text} hover:bg-[var(--mint-elevated)] border border-[rgba(16,185,129,0.35)] rounded-lg py-1.5 sm:py-2 px-3 sm:px-4 font-medium transition-all duration-200 hover:border-[var(--mint-accent-2)] flex items-center justify-center gap-2 group`}
               >
                 <span>Explore Deeper</span>
                 <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -223,7 +223,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
 
           {/* Loading state */}
           {data.loading && (
-            <div className="flex items-center justify-center py-3 bg-slate-800/50 rounded-lg">
+            <div className="flex items-center justify-center py-3 bg-[var(--mint-elevated)] rounded-lg">
               <Loader2 className={`h-5 w-5 animate-spin ${depthColors.text}`} />
               <span className={`ml-2 text-sm ${depthColors.text}`}>Exploring...</span>
             </div>
@@ -234,7 +234,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
         <Handle
           type="source"
           position={Position.Bottom}
-          className="w-3 h-3 !bg-cyan-500 !border-2 !border-slate-900"
+          className="w-3 h-3 !bg-[var(--mint-accent-2)] !border-2 !border-[var(--mint-page)]"
         />
       </div>
     </>

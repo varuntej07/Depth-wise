@@ -70,33 +70,33 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Glow effect behind modal */}
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-cyan-500/20 to-violet-500/20 blur-2xl -z-10" />
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] blur-2xl -z-10" />
 
               {/* Main Modal Card with Glassmorphism */}
-              <div className="relative bg-slate-900/90 backdrop-blur-2xl border-2 border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+              <div className="relative bg-[var(--mint-surface)] backdrop-blur-2xl border-2 border-white/10 rounded-3xl shadow-2xl overflow-hidden">
                 {/* Gradient top border accent */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-500" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]" />
 
                 {/* Header */}
                 <div className="relative flex items-center justify-between p-6 border-b border-white/5">
                   <div className="flex items-center gap-3">
                     {/* Icon with gradient background */}
-                    <div className="relative p-3 bg-gradient-to-br from-cyan-500/20 to-violet-500/20 rounded-2xl border border-white/10">
-                      <Zap className="w-6 h-6 text-cyan-400" />
+                    <div className="relative p-3 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-2xl border border-white/10">
+                      <Zap className="w-6 h-6 text-[var(--mint-accent-1)]" />
                       {/* Sparkle effect */}
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                         className="absolute -top-1 -right-1"
                       >
-                        <Sparkles className="w-4 h-4 text-violet-400" />
+                        <Sparkles className="w-4 h-4 text-[var(--mint-accent-1)]" />
                       </motion.div>
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+                      <h2 className="text-2xl font-bold bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] bg-clip-text text-transparent">
                         Upgrade to Explore More
                       </h2>
-                      <p className="text-sm text-slate-400 mt-0.5">
+                      <p className="text-sm text-[var(--mint-text-secondary)] mt-0.5">
                         Unlock your full potential
                       </p>
                     </div>
@@ -109,7 +109,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     onClick={onClose}
                     className="p-2 hover:bg-white/5 rounded-xl transition-colors"
                   >
-                    <X className="w-5 h-5 text-slate-400" />
+                    <X className="w-5 h-5 text-[var(--mint-text-secondary)]" />
                   </motion.button>
                 </div>
 
@@ -129,40 +129,40 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                   {/* Current vs Suggested Comparison */}
                   <div className="grid grid-cols-2 gap-4">
                     {/* Current Plan */}
-                    <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                      <p className="text-xs text-slate-400 mb-2">Current Plan</p>
+                    <div className="p-4 bg-[var(--mint-elevated)] rounded-xl border border-[var(--mint-elevated)]">
+                      <p className="text-xs text-[var(--mint-text-secondary)] mb-2">Current Plan</p>
                       <h3 className="text-lg font-bold text-white mb-1">{currentPlan.name}</h3>
-                      <p className="text-sm text-slate-300">
+                      <p className="text-sm text-[var(--mint-text-secondary)]">
                         {typeof currentPlan.explorationsPerMonth === 'number'
                           ? `${currentPlan.explorationsPerMonth} explorations/mo`
                           : 'Unlimited'}
                       </p>
-                      <p className="text-xs text-slate-400 mt-1">{currentPlan.maxDepth} levels deep</p>
+                      <p className="text-xs text-[var(--mint-text-secondary)] mt-1">{currentPlan.maxDepth} levels deep</p>
                     </div>
 
                     {/* Suggested Plan */}
-                    <div className="p-4 bg-gradient-to-br from-cyan-500/20 to-violet-500/20 rounded-xl border-2 border-cyan-500/50 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-violet-500/10" />
+                    <div className="p-4 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-xl border-2 border-[var(--mint-accent-2)] relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]" />
                       <div className="relative">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs text-cyan-300 font-semibold">Recommended</p>
+                          <p className="text-xs text-[var(--mint-accent-1)] font-semibold">Recommended</p>
                           <SuggestedIcon className={`w-4 h-4 ${suggestedPlan.iconColor}`} />
                         </div>
                         <h3 className="text-lg font-bold text-white mb-1">{suggestedPlan.name}</h3>
-                        <p className="text-sm text-cyan-200">
+                        <p className="text-sm text-[var(--mint-accent-1)]">
                           {typeof suggestedPlan.explorationsPerMonth === 'number'
                             ? `${suggestedPlan.explorationsPerMonth} explorations/mo`
                             : 'Unlimited'}
                         </p>
-                        <p className="text-xs text-cyan-300 mt-1">{suggestedPlan.maxDepth} levels deep</p>
+                        <p className="text-xs text-[var(--mint-accent-1)] mt-1">{suggestedPlan.maxDepth} levels deep</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Benefits List */}
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-                      <Crown className="w-4 h-4 text-violet-400" />
+                    <h3 className="text-sm font-semibold text-[var(--mint-text-secondary)] flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-[var(--mint-accent-1)]" />
                       What you&apos;ll get with {suggestedPlan.name}:
                     </h3>
                     <div className="space-y-2">
@@ -170,10 +170,10 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                         const FeatureIcon = feature.icon;
                         return (
                           <div key={feature.id} className="flex items-start gap-2">
-                            <FeatureIcon className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                            <FeatureIcon className="w-4 h-4 text-[var(--mint-accent-1)] mt-0.5 flex-shrink-0" />
                             <div>
                               <p className="text-sm text-slate-200">{feature.name}</p>
-                              <p className="text-xs text-slate-400">{feature.description}</p>
+                              <p className="text-xs text-[var(--mint-text-secondary)]">{feature.description}</p>
                             </div>
                           </div>
                         );
@@ -186,15 +186,15 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="relative p-5 bg-gradient-to-br from-cyan-500/5 to-violet-500/5 rounded-xl border border-white/5"
+                    className="relative p-5 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-xl border border-white/5"
                   >
                     <div className="flex items-baseline justify-center gap-1 mb-2">
-                      <span className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+                      <span className="text-4xl font-bold bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] bg-clip-text text-transparent">
                         ${suggestedPlan.price}
                       </span>
-                      <span className="text-slate-400">/month</span>
+                      <span className="text-[var(--mint-text-secondary)]">/month</span>
                     </div>
-                    <p className="text-xs text-center text-slate-400">
+                    <p className="text-xs text-center text-[var(--mint-text-secondary)]">
                       Cancel anytime • No hidden fees
                     </p>
                   </motion.div>
@@ -206,7 +206,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={onClose}
-                    className="flex-1 px-6 py-2.5 text-sm font-medium text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all cursor-pointer"
+                    className="flex-1 px-6 py-2.5 text-sm font-medium text-[var(--mint-text-secondary)] hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all cursor-pointer"
                   >
                     Maybe Later
                   </motion.button>
@@ -214,7 +214,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleUpgrade}
-                    className="flex-1 px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-cyan-500 to-violet-500 hover:shadow-lg hover:shadow-cyan-500/50 rounded-xl transition-all cursor-pointer"
+                    className="flex-1 px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] hover:shadow-lg hover:shadow-[0_0_24px_var(--mint-accent-glow)] rounded-xl transition-all cursor-pointer"
                   >
                     Upgrade Now
                   </motion.button>

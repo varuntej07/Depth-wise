@@ -58,14 +58,14 @@ export function BottomToolbar({
       icon: Shapes,
       label: 'Shapes',
       onClick: () => console.log('Shapes'),
-      color: 'text-violet-400',
+      color: 'text-[var(--mint-accent-1)]',
     },
     {
       id: 'circle',
       icon: CircleDot,
       label: 'Mark',
       onClick: () => console.log('Mark'),
-      color: 'text-pink-400',
+      color: 'text-[var(--mint-accent-1)]',
     },
     {
       id: 'divider1',
@@ -76,14 +76,14 @@ export function BottomToolbar({
       icon: Type,
       label: 'Text',
       onClick: () => console.log('Text'),
-      color: 'text-blue-400',
+      color: 'text-[var(--mint-accent-1)]',
     },
     {
       id: 'message',
       icon: MessageCircle,
       label: 'Comment',
       onClick: () => console.log('Comment'),
-      color: 'text-cyan-400',
+      color: 'text-[var(--mint-accent-1)]',
     },
     {
       id: 'grid',
@@ -101,28 +101,28 @@ export function BottomToolbar({
       icon: Copy,
       label: 'Copy',
       onClick: onCopy,
-      color: 'text-slate-400',
+      color: 'text-[var(--mint-text-secondary)]',
     },
     {
       id: 'download',
       icon: Download,
       label: 'Download',
       onClick: onDownload,
-      color: 'text-slate-400',
+      color: 'text-[var(--mint-text-secondary)]',
     },
     {
       id: 'share',
       icon: Share2,
       label: 'Share',
       onClick: onShare,
-      color: 'text-slate-400',
+      color: 'text-[var(--mint-text-secondary)]',
     },
     {
       id: 'code',
       icon: Code2,
       label: 'Code',
       onClick: onShowCode,
-      color: 'text-slate-400',
+      color: 'text-[var(--mint-text-secondary)]',
     },
     {
       id: 'divider3',
@@ -133,7 +133,7 @@ export function BottomToolbar({
       icon: isExpanded ? Minimize2 : Maximize2,
       label: isExpanded ? 'Minimize' : 'Expand',
       onClick: isExpanded ? onMinimize : onExpand,
-      color: 'text-slate-400',
+      color: 'text-[var(--mint-text-secondary)]',
     },
   ];
 
@@ -144,13 +144,13 @@ export function BottomToolbar({
       transition={{ delay: 0.3, duration: 0.3 }}
       className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30"
     >
-      <div className="flex items-center gap-1 px-4 py-3 rounded-full bg-slate-900/95 backdrop-blur-md border border-slate-700/50 shadow-xl shadow-slate-900/50">
+      <div className="flex items-center gap-1 px-4 py-3 rounded-full bg-[var(--mint-surface)] backdrop-blur-md border border-[var(--mint-elevated)] shadow-xl shadow-slate-900/50">
         {tools.map((tool) => {
           if (tool.isDivider) {
             return (
               <div
                 key={tool.id}
-                className="w-px h-6 bg-slate-700/30 mx-1"
+                className="w-px h-6 bg-[var(--mint-elevated)] mx-1"
               />
             );
           }
@@ -168,10 +168,10 @@ export function BottomToolbar({
               onMouseEnter={() => setHoveredTool(tool.id)}
               onMouseLeave={() => setHoveredTool(null)}
               onClick={tool.onClick}
-              className="relative p-2 rounded-lg hover:bg-slate-800/50 transition-colors group"
+              className="relative p-2 rounded-lg hover:bg-[var(--mint-elevated)] transition-colors group"
               title={tool.label}
             >
-              <Icon className={`w-5 h-5 ${tool.color || 'text-slate-400'} transition-colors`} />
+              <Icon className={`w-5 h-5 ${tool.color || 'text-[var(--mint-text-secondary)]'} transition-colors`} />
 
               {/* Tooltip */}
               <AnimatePresence>
@@ -181,7 +181,7 @@ export function BottomToolbar({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 8 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 rounded text-xs font-medium bg-slate-800 text-slate-200 whitespace-nowrap pointer-events-none"
+                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 rounded text-xs font-medium bg-[var(--mint-elevated)] text-slate-200 whitespace-nowrap pointer-events-none"
                   >
                     {tool.label}
                   </motion.div>

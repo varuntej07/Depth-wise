@@ -13,11 +13,11 @@ interface KnowledgeEdgeProps extends EdgeProps {
 // Color palette based on depth level
 const getDepthColor = (depth: number = 0): string => {
   const colors = [
-    '#06b6d4', // cyan-500 - depth 0
-    '#3b82f6', // blue-500 - depth 1
-    '#8b5cf6', // violet-500 - depth 2
-    '#ec4899', // pink-500 - depth 3
-    '#f59e0b', // amber-500 - depth 4+
+    '#6EE7B7',
+    '#34D399',
+    '#10B981',
+    '#59D7AA',
+    '#7DE5BE',
   ];
   return colors[Math.min(depth, colors.length - 1)];
 };

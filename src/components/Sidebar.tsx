@@ -1,32 +1,23 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ChevronLeft,
-  ChevronRight,
-  MessageCircle,
-  Star,
-  Plus,
-  LogOut,
-  User,
   LayoutDashboard,
-  Sparkles,
-  Settings,
-  BookOpen,
-  HelpCircle,
-  ChevronUp,
+  MessageCircle,
+  Plus,
+  Search,
   Trash2,
+  X,
 } from 'lucide-react';
-import { useSession, signOut } from 'next-auth/react';
 import { usePostHog } from 'posthog-js/react';
 import { useRouter } from 'next/navigation';
-import { SignInButton } from './auth/SignInButton';
 
 interface ChatItem {
   id: string;
   title: string;
-  timestamp: Date;
+  timestamp: Date | string;
   isPinned?: boolean;
 }
 
@@ -40,6 +31,23 @@ interface ChatSidebarProps {
   onDeleteChat?: (id: string) => void;
 }
 
+function formatChatTimestamp(timestamp: Date | string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const now = new Date();
+  const isSameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isSameDay) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 export function ChatSidebar({
   isCollapsed,
   onToggleCollapse,
@@ -49,12 +57,14 @@ export function ChatSidebar({
   onSelectChat,
   onDeleteChat,
 }: ChatSidebarProps) {
-  const { data: session } = useSession();
   const posthog = usePostHog();
   const router = useRouter();
+
   const [isMobile, setIsMobile] = useState(false);
-  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
+
+  const overlaySearchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -63,455 +73,357 @@ export function ChatSidebar({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Close account menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
-        setIsAccountMenuOpen(false);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isSearchShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k';
+
+      if (isSearchShortcut) {
+        event.preventDefault();
+        setIsSearchOverlayOpen(true);
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        setIsSearchOverlayOpen(false);
       }
     };
 
-    if (isAccountMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!isSearchOverlayOpen) return;
+    const timer = window.setTimeout(() => overlaySearchInputRef.current?.focus(), 10);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      window.clearTimeout(timer);
+      document.body.style.overflow = previousOverflow;
     };
-  }, [isAccountMenuOpen]);
+  }, [isSearchOverlayOpen]);
 
-  const pinnedChats = chatHistory.filter((chat) => chat.isPinned);
-  const regularChats = chatHistory.filter((chat) => !chat.isPinned);
+  const orderedChats = useMemo(() => {
+    const pinned = chatHistory.filter((chat) => chat.isPinned);
+    const regular = chatHistory.filter((chat) => !chat.isPinned);
+    return [...pinned, ...regular];
+  }, [chatHistory]);
 
-  const menuItems = [
-    {
-      icon: LayoutDashboard,
-      label: 'Dashboard',
-      action: () => {
-        posthog.capture('account_menu_dashboard_clicked');
-        router.push('/dashboard');
-        setIsAccountMenuOpen(false);
-      },
-    },
-    {
-      icon: Sparkles,
-      label: 'Upgrade',
-      action: () => {
-        posthog.capture('account_menu_upgrade_clicked');
-        router.push('/pricing');
-        setIsAccountMenuOpen(false);
-      },
-    },
-    {
-      icon: Settings,
-      label: 'Settings',
-      action: () => {
-        posthog.capture('account_menu_settings_clicked');
-        router.push('/settings');
-        setIsAccountMenuOpen(false);
-      },
-    },
-    {
-      icon: BookOpen,
-      label: 'Learn more',
-      action: () => {
-        posthog.capture('account_menu_learn_more_clicked');
-        router.push('/learn-more');
-        setIsAccountMenuOpen(false);
-      },
-    },
-    {
-      icon: HelpCircle,
-      label: 'Get Help',
-      action: () => {
-        posthog.capture('account_menu_get_help_clicked');
-        router.push('/help');
-        setIsAccountMenuOpen(false);
-      },
-    },
-    {
-      icon: LogOut,
-      label: 'Sign out',
-      action: () => {
-        posthog.capture('account_menu_sign_out_clicked');
-        signOut();
-        setIsAccountMenuOpen(false);
-      },
-      divider: true,
-    },
-  ];
+  const filteredChats = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    if (!normalized) return orderedChats;
+
+    return orderedChats.filter((chat) => chat.title.toLowerCase().includes(normalized));
+  }, [orderedChats, searchQuery]);
+
+  const openSearchOverlay = () => setIsSearchOverlayOpen(true);
+  const closeSearchOverlay = () => setIsSearchOverlayOpen(false);
+
+  const handleNewChatClick = () => {
+    posthog.capture('new_chat_clicked');
+    onNewChat();
+
+    if (isMobile && !isCollapsed) {
+      onToggleCollapse();
+    }
+  };
+
+  const handleDashboardClick = () => {
+    posthog.capture('sidebar_dashboard_clicked');
+    router.push('/dashboard');
+
+    if (isMobile && !isCollapsed) {
+      onToggleCollapse();
+    }
+  };
+
+  const handleSelectChat = (chat: ChatItem) => {
+    posthog.capture('session_selected', {
+      session_id: chat.id,
+      from_pinned: Boolean(chat.isPinned),
+      source: isSearchOverlayOpen ? 'search_overlay' : 'sidebar',
+    });
+
+    onSelectChat?.(chat.id);
+    setIsSearchOverlayOpen(false);
+
+    if (isMobile && !isCollapsed) {
+      onToggleCollapse();
+    }
+  };
 
   return (
     <>
-      {/* Mobile Menu Button */}
       <button
+        type="button"
         onClick={onToggleCollapse}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white text-black hover:bg-zinc-100 active:scale-95 transition-all shadow-lg"
+        className="fixed left-4 top-4 z-50 rounded-lg border border-transparent bg-[image:var(--mint-accent-gradient)] text-[#04120e] p-2 shadow-[0_8px_24px_var(--mint-accent-glow)] transition hover:brightness-105 md:hidden"
         aria-label="Toggle sidebar"
       >
-        <MessageCircle className="w-5 h-5" />
+        <MessageCircle className="h-5 w-5" />
       </button>
 
-      {/* Mobile Overlay */}
       <AnimatePresence>
         {!isCollapsed && isMobile && (
-          <motion.div
+          <motion.button
+            type="button"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+            className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm md:hidden"
             onClick={onToggleCollapse}
+            aria-label="Close sidebar"
           />
         )}
       </AnimatePresence>
 
-      {/* Desktop Persistent Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ width: isCollapsed ? '64px' : '280px' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="hidden md:flex fixed left-0 top-0 bottom-0 bg-black border-r border-zinc-800 z-40 flex-col"
+        animate={{ width: isCollapsed ? 64 : 280 }}
+        transition={{ type: 'spring', damping: 24, stiffness: 210 }}
+        onClick={isCollapsed ? onToggleCollapse : undefined}
+        className="fixed bottom-0 left-0 top-0 z-40 hidden border-r border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.95)] backdrop-blur md:flex"
       >
-        {/* Header with Toggle */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-zinc-800">
-          {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center gap-2"
+        {isCollapsed ? (
+          <div className="flex h-full w-full flex-col items-center gap-3 py-4">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleNewChatClick();
+              }}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] text-white/85 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.55)]"
+              title="New Chat"
+              aria-label="New Chat"
             >
-              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-black" />
+              <Plus className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                openSearchOverlay();
+              }}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] text-white/85 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.55)]"
+              title="Search Chats"
+              aria-label="Search Chats"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleDashboardClick();
+              }}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] text-white/85 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.55)]"
+              title="Dashboard"
+              aria-label="Dashboard"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex h-full w-full flex-col">
+            <div className="flex h-16 items-center justify-between border-b border-[var(--mint-elevated)] px-4">
+              <div className="flex items-center gap-2">
+                <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--mint-accent-2)] bg-[rgba(16,185,129,0.16)] text-[var(--mint-accent-1)]">
+                  <MessageCircle className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold tracking-tight text-white">Depthwise</p>
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-white/45">Explore</p>
+                </div>
               </div>
-              <span className="text-sm font-bold text-white">
-                Explorations
-              </span>
-            </motion.div>
-          )}
-          {isCollapsed && (
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center mx-auto">
-              <MessageCircle className="w-4 h-4 text-black" />
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.3)] text-white/80 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.5)]"
+                aria-label="Collapse sidebar"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
             </div>
-          )}
-        </div>
 
-        {/* Collapse Toggle Button */}
-        <button
-          onClick={onToggleCollapse}
-          className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 active:scale-90 flex items-center justify-center transition-all z-50"
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
-          ) : (
-            <ChevronLeft className="w-3.5 h-3.5 text-zinc-400" />
-          )}
-        </button>
-
-        {/* New Chat Button */}
-        <div className="p-3">
-          <button
-            onClick={() => {
-              posthog.capture('new_chat_clicked');
-              onNewChat();
-            }}
-            className={`w-full flex items-center justify-center gap-2 p-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 active:scale-95 transition-all ${
-              isCollapsed ? 'px-2' : 'px-4'
-            }`}
-            title={isCollapsed ? 'New chat' : undefined}
-          >
-            <Plus className="w-4 h-4" />
-            {!isCollapsed && <span className="text-sm font-medium">New Chat</span>}
-          </button>
-        </div>
-
-        {/* Chat History Sections */}
-        <nav className="flex-1 overflow-y-auto px-3 space-y-6">
-          {/* Pinned Section */}
-          {pinnedChats.length > 0 && (
-            <div>
-              {!isCollapsed && (
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2">
-                  Pinned
-                </h3>
-              )}
-              <div className="space-y-1">
-                {pinnedChats.map((chat) => (
-                  <ChatHistoryItem
-                    key={chat.id}
-                    chat={chat}
-                    isSelected={selectedChatId === chat.id}
-                    isCollapsed={isCollapsed}
-                    onSelect={() => {
-                      posthog.capture('session_selected', {
-                        session_id: chat.id,
-                        from_pinned: true,
-                      });
-                      onSelectChat?.(chat.id);
-                    }}
-                    onDeleteChat={onDeleteChat}
-                  />
-                ))}
+            <div className="space-y-3 border-b border-[var(--mint-elevated)] p-4">
+              <button
+                type="button"
+                onClick={handleNewChatClick}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--mint-accent-gradient)] px-4 py-2.5 text-sm font-semibold text-[#04120e] transition hover:brightness-105"
+              >
+                <Plus className="h-4 w-4" />
+                New Chat
+              </button>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search chats"
+                  className="w-full rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.3)] py-2.5 pl-9 pr-3 text-sm text-white placeholder:text-[var(--mint-text-secondary)] outline-none transition focus:border-[var(--mint-accent-2)] focus:ring-2 focus:ring-[var(--mint-accent-glow)]"
+                />
               </div>
             </div>
-          )}
 
-          {/* Chats Section */}
-          {regularChats.length > 0 && (
-            <div>
-              {!isCollapsed && (
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2">
-                  Chats
-                </h3>
-              )}
-              <div className="space-y-1">
-                {regularChats.map((chat) => (
-                  <ChatHistoryItem
-                    key={chat.id}
-                    chat={chat}
-                    isSelected={selectedChatId === chat.id}
-                    isCollapsed={isCollapsed}
-                    onSelect={() => {
-                      posthog.capture('session_selected', {
-                        session_id: chat.id,
-                        from_pinned: false,
-                      });
-                      onSelectChat?.(chat.id);
-                    }}
-                    onDeleteChat={onDeleteChat}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </nav>
-
-        {/* Account Menu Section */}
-        <div className="p-3 border-t border-zinc-800" ref={accountMenuRef}>
-          {session ? (
-            <div className="relative">
-              {/* Account Menu Dropdown */}
-              <AnimatePresence>
-                {isAccountMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className={`absolute bottom-full mb-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50 ${
-                      isCollapsed ? 'left-0 min-w-[220px]' : 'left-0 right-0'
-                    }`}
-                  >
-                    <div className="p-2 space-y-0.5">
-                      {menuItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <div key={item.label}>
-                            {item.divider && <div className="h-px bg-zinc-700 my-1.5" />}
-                            <button
-                              onClick={item.action}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-zinc-800 active:scale-98 transition-all text-left group whitespace-nowrap"
-                            >
-                              <Icon className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors flex-shrink-0" />
-                              <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
-                                {item.label}
-                              </span>
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Account Button */}
-              {!isCollapsed ? (
-                <button
-                  onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-zinc-900 active:scale-98 transition-all group"
-                >
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-black" />
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium text-white truncate">
-                      {session.user?.name || session.user?.email?.split('@')[0]}
-                    </p>
-                  </div>
-                  <ChevronUp
-                    className={`w-4 h-4 text-zinc-400 transition-transform ${
-                      isAccountMenuOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
+            <div className="flex-1 overflow-y-auto p-3">
+              {filteredChats.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.28)] p-4 text-center text-xs text-white/55">
+                  No chats found.
+                </div>
               ) : (
-                <button
-                  onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-                  className="w-full p-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-95 flex items-center justify-center transition-all"
-                  title="Account menu"
-                >
-                  <User className="w-4 h-4 text-zinc-400" />
-                </button>
+                <div className="space-y-2">
+                  {filteredChats.map((chat) => (
+                    <ChatHistoryItem
+                      key={chat.id}
+                      chat={chat}
+                      isSelected={selectedChatId === chat.id}
+                      onSelect={() => handleSelectChat(chat)}
+                      onDeleteChat={onDeleteChat}
+                    />
+                  ))}
+                </div>
               )}
             </div>
-          ) : (
-            <SignInButton isCollapsed={isCollapsed} />
-          )}
-        </div>
+          </div>
+        )}
       </motion.aside>
 
-      {/* Mobile Sidebar */}
       <AnimatePresence>
         {!isCollapsed && isMobile && (
           <motion.aside
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-black border-r border-zinc-800 z-50 flex flex-col overflow-y-auto"
+            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+            className="fixed bottom-0 left-0 top-0 z-50 flex w-[280px] flex-col border-r border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.97)] backdrop-blur md:hidden"
           >
-            {/* Header */}
-            <div className="h-16 flex items-center justify-between px-4 border-b border-zinc-800">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-                  <MessageCircle className="w-4 h-4 text-black" />
-                </div>
-                <span className="text-sm font-bold text-white">
-                  Explorations
-                </span>
+            <div className="flex h-16 items-center justify-between border-b border-[var(--mint-elevated)] px-4">
+              <div>
+                <p className="text-sm font-semibold tracking-tight text-white">Depthwise</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-white/45">Explore</p>
               </div>
               <button
+                type="button"
                 onClick={onToggleCollapse}
-                className="p-2 rounded-lg hover:bg-zinc-900 active:scale-95 transition-all"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.3)] text-white/80 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.5)]"
+                aria-label="Close sidebar"
               >
-                <ChevronLeft className="w-5 h-5 text-zinc-400" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
             </div>
 
-            {/* New Chat Button */}
-            <div className="p-3">
+            <div className="space-y-3 border-b border-[var(--mint-elevated)] p-4">
               <button
-                onClick={onNewChat}
-                className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 active:scale-95 transition-all"
+                type="button"
+                onClick={handleNewChatClick}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--mint-accent-gradient)] px-4 py-2.5 text-sm font-semibold text-[#04120e] transition hover:brightness-105"
               >
-                <Plus className="w-4 h-4" />
-                <span className="text-sm font-medium">New Chat</span>
+                <Plus className="h-4 w-4" />
+                New Chat
               </button>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search chats"
+                  className="w-full rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.3)] py-2.5 pl-9 pr-3 text-sm text-white placeholder:text-[var(--mint-text-secondary)] outline-none transition focus:border-[var(--mint-accent-2)] focus:ring-2 focus:ring-[var(--mint-accent-glow)]"
+                />
+              </div>
             </div>
 
-            {/* Chat History */}
-            <nav className="flex-1 overflow-y-auto px-3 space-y-6">
-              {pinnedChats.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2">
-                    Pinned
-                  </h3>
-                  <div className="space-y-1">
-                    {pinnedChats.map((chat) => (
-                      <ChatHistoryItem
-                        key={chat.id}
-                        chat={chat}
-                        isSelected={selectedChatId === chat.id}
-                        isCollapsed={false}
-                        onSelect={() => {
-                          onSelectChat?.(chat.id);
-                          onToggleCollapse();
-                        }}
-                        onDeleteChat={onDeleteChat}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {regularChats.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2">
-                    Chats
-                  </h3>
-                  <div className="space-y-1">
-                    {regularChats.map((chat) => (
-                      <ChatHistoryItem
-                        key={chat.id}
-                        chat={chat}
-                        isSelected={selectedChatId === chat.id}
-                        isCollapsed={false}
-                        onSelect={() => {
-                          onSelectChat?.(chat.id);
-                          onToggleCollapse();
-                        }}
-                        onDeleteChat={onDeleteChat}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </nav>
-
-            {/* Account Menu Section - Mobile */}
-            <div className="p-3 border-t border-zinc-800">
-              {session ? (
-                <div className="relative">
-                  {/* Account Menu Dropdown - Mobile */}
-                  <AnimatePresence>
-                    {isAccountMenuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute bottom-full left-0 right-0 mb-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-50"
-                      >
-                        <div className="p-2 space-y-0.5">
-                          {menuItems.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                              <div key={item.label}>
-                                {item.divider && <div className="h-px bg-zinc-700 my-1.5" />}
-                                <button
-                                  onClick={item.action}
-                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-zinc-800 active:scale-98 transition-all text-left group"
-                                >
-                                  <Icon className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors" />
-                                  <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
-                                    {item.label}
-                                  </span>
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Account Button - Mobile */}
-                  <button
-                    onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-                    className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-zinc-900 active:scale-98 transition-all group"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-black" />
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="text-sm font-medium text-white truncate">
-                        {session.user?.name || session.user?.email?.split('@')[0]}
-                      </p>
-                    </div>
-                    <ChevronUp
-                      className={`w-4 h-4 text-zinc-400 transition-transform ${
-                        isAccountMenuOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
+            <div className="flex-1 overflow-y-auto p-3">
+              {filteredChats.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.28)] p-4 text-center text-xs text-white/55">
+                  No chats found.
                 </div>
               ) : (
-                <SignInButton isCollapsed={false} />
+                <div className="space-y-2">
+                  {filteredChats.map((chat) => (
+                    <ChatHistoryItem
+                      key={chat.id}
+                      chat={chat}
+                      isSelected={selectedChatId === chat.id}
+                      onSelect={() => handleSelectChat(chat)}
+                      onDeleteChat={onDeleteChat}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           </motion.aside>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isSearchOverlayOpen && (
+          <>
+            <motion.button
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeSearchOverlay}
+              className="fixed inset-0 z-[70] bg-black/55 backdrop-blur-[2px]"
+              aria-label="Close search"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -14, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="fixed left-1/2 top-20 z-[80] w-[min(680px,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.96)] p-4 shadow-[0_28px_80px_rgba(2,6,18,0.65)]"
+            >
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
+                <input
+                  ref={overlaySearchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search chats (Cmd/Ctrl+K)"
+                  className="w-full rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.3)] py-2.5 pl-9 pr-10 text-sm text-white placeholder:text-[var(--mint-text-secondary)] outline-none transition focus:border-[var(--mint-accent-2)] focus:ring-2 focus:ring-[var(--mint-accent-glow)]"
+                />
+                <button
+                  type="button"
+                  onClick={closeSearchOverlay}
+                  className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.3)] text-white/70 transition hover:border-[var(--mint-accent-2)] hover:text-white"
+                  aria-label="Close search overlay"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <div className="mt-3 max-h-[52vh] overflow-y-auto">
+                {filteredChats.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.28)] p-4 text-center text-xs text-white/55">
+                    No chats found.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {filteredChats.map((chat) => (
+                      <button
+                        key={`overlay-${chat.id}`}
+                        type="button"
+                        onClick={() => handleSelectChat(chat)}
+                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left transition ${
+                          selectedChatId === chat.id
+                            ? 'border-[var(--mint-accent-2)] bg-[rgba(16,185,129,0.16)] text-[var(--mint-accent-1)]'
+                            : 'border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.28)] text-white/80 hover:border-[var(--mint-elevated)] hover:bg-[rgba(32,52,45,0.4)]'
+                        }`}
+                      >
+                        <span className="truncate text-sm font-medium">{chat.title}</span>
+                        <span className="ml-3 flex-shrink-0 text-[11px] text-white/50">{formatChatTimestamp(chat.timestamp)}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
@@ -521,58 +433,40 @@ export function ChatSidebar({
 interface ChatHistoryItemProps {
   chat: ChatItem;
   isSelected: boolean;
-  isCollapsed: boolean;
   onSelect: () => void;
   onDeleteChat?: (id: string) => void;
 }
 
-function ChatHistoryItem({ chat, isSelected, isCollapsed, onSelect, onDeleteChat }: ChatHistoryItemProps) {
-  const formattedTime = new Date(chat.timestamp).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-
+function ChatHistoryItem({ chat, isSelected, onSelect, onDeleteChat }: ChatHistoryItemProps) {
   return (
-    <motion.button
-      onClick={onSelect}
-      whileHover={{ x: isCollapsed ? 0 : 4 }}
-      className={`
-        w-full flex items-center gap-3 p-2.5 rounded-lg transition-all group relative
-        ${
+    <div className="group relative">
+      <button
+        type="button"
+        onClick={onSelect}
+        className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
           isSelected
-            ? 'bg-white text-black'
-            : 'text-zinc-400 hover:bg-zinc-900 hover:text-white active:scale-98'
-        }
-        ${isCollapsed ? 'justify-center' : ''}
-      `}
-      title={isCollapsed ? chat.title : undefined}
-    >
-      <MessageCircle className="w-4 h-4 flex-shrink-0" />
-      {!isCollapsed && (
-        <>
-          <div className="flex-1 min-w-0 text-left">
-            <p className="text-sm font-medium truncate">{chat.title}</p>
-            <p className="text-xs text-slate-500">{formattedTime}</p>
-          </div>
-          {chat.isPinned && <Star className="w-3 h-3 text-amber-400 flex-shrink-0" />}
-          {onDeleteChat && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteChat(chat.id);
-              }}
-              className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-all flex-shrink-0 ${
-                isSelected
-                  ? 'hover:bg-zinc-200 text-zinc-500 hover:text-red-600'
-                  : 'hover:bg-zinc-800 text-zinc-500 hover:text-red-400'
-              }`}
-              title="Delete chat"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </>
+            ? 'border-[var(--mint-accent-2)] bg-[rgba(16,185,129,0.16)] text-[var(--mint-accent-1)]'
+            : 'border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.28)] text-white/80 hover:border-[var(--mint-elevated)] hover:bg-[rgba(32,52,45,0.4)]'
+        }`}
+      >
+        <p className="truncate text-sm font-medium">{chat.title}</p>
+        <p className="mt-1 text-[11px] text-white/50">{formatChatTimestamp(chat.timestamp)}</p>
+      </button>
+
+      {onDeleteChat && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDeleteChat(chat.id);
+          }}
+          className="absolute right-2 top-2.5 inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent bg-transparent text-white/45 opacity-0 transition hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-300 group-hover:opacity-100"
+          title="Delete chat"
+          aria-label="Delete chat"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       )}
-    </motion.button>
+    </div>
   );
 }

@@ -44,21 +44,21 @@ export function UserMenu() {
           console.log('Avatar clicked, isOpen:', isOpen, 'will become:', !isOpen);
           setIsOpen(!isOpen);
         }}
-        className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-cyan-500/30 hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all group cursor-pointer"
+        className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-[var(--mint-accent-2)] hover:border-[var(--mint-accent-2)] hover:bg-[rgba(16,185,129,0.16)] transition-all group cursor-pointer"
       >
         {/* Avatar */}
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-violet-500 rounded-full opacity-0 group-hover:opacity-100 blur transition-opacity"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-full opacity-0 group-hover:opacity-100 blur transition-opacity"></div>
           {session.user.image ? (
             <Image
               src={session.user.image}
               alt={session.user.name || 'User'}
               width={32}
               height={32}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full relative border-2 border-cyan-500/50"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full relative border-2 border-[var(--mint-accent-2)]"
             />
           ) : (
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center relative border-2 border-cyan-500/50">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] flex items-center justify-center relative border-2 border-[var(--mint-accent-2)]">
               <span className="text-white text-xs sm:text-sm font-semibold">
                 {session.user.name?.[0]?.toUpperCase() || 'U'}
               </span>
@@ -67,13 +67,13 @@ export function UserMenu() {
         </div>
 
         {/* Name (hidden on mobile) */}
-        <span className="hidden sm:block text-cyan-400 text-sm font-medium">
+        <span className="hidden sm:block text-[var(--mint-accent-1)] text-sm font-medium">
           {session.user.name?.split(' ')[0] || 'User'}
         </span>
 
         {/* Chevron */}
         <svg
-          className={`w-4 h-4 text-cyan-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-[var(--mint-accent-1)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -84,9 +84,9 @@ export function UserMenu() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 sm:w-64 rounded-xl bg-slate-900 border-2 border-cyan-500/50 shadow-2xl shadow-cyan-500/30 overflow-hidden z-[9999]">
+        <div className="absolute right-0 mt-2 w-56 sm:w-64 rounded-xl bg-[var(--mint-surface)] border-2 border-[var(--mint-accent-2)] shadow-2xl shadow-[0_0_24px_var(--mint-accent-glow)] overflow-hidden z-[9999]">
           {/* User Info Section */}
-          <div className="p-3 sm:p-4 border-b border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-violet-500/5">
+          <div className="p-3 sm:p-4 border-b border-[var(--mint-accent-2)] bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]">
             <div className="flex items-center gap-3">
               {session.user.image ? (
                 <Image
@@ -94,10 +94,10 @@ export function UserMenu() {
                   alt={session.user.name || 'User'}
                   width={48}
                   height={48}
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-cyan-500/50"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[var(--mint-accent-2)]"
                 />
               ) : (
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 flex items-center justify-center border-2 border-cyan-500/50">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] flex items-center justify-center border-2 border-[var(--mint-accent-2)]">
                   <span className="text-white text-lg font-semibold">
                     {session.user.name?.[0]?.toUpperCase() || 'U'}
                   </span>
@@ -107,7 +107,7 @@ export function UserMenu() {
                 <p className="text-white font-semibold text-sm truncate">
                   {session.user.name || 'User'}
                 </p>
-                <p className="text-slate-400 text-xs truncate">
+                <p className="text-[var(--mint-text-secondary)] text-xs truncate">
                   {session.user.email}
                 </p>
               </div>
@@ -118,23 +118,22 @@ export function UserMenu() {
           <div className="py-1">
             <button
               type="button"
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center gap-2 cursor-pointer"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-[var(--mint-text-secondary)] hover:bg-[rgba(16,185,129,0.16)] hover:text-[var(--mint-accent-1)] transition-colors flex items-center gap-2 cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                console.log('Dashboard button clicked');
-                router.push('/dashboard');
+                router.push('/account');
                 setIsOpen(false);
               }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              Dashboard
+              Account
             </button>
 
             <button
               type="button"
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center gap-2 font-medium cursor-pointer"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-[var(--mint-accent-1)] hover:bg-[rgba(16,185,129,0.16)] hover:text-[var(--mint-accent-1)] transition-colors flex items-center gap-2 font-medium cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 console.log('Upgrade button clicked');
@@ -150,13 +149,13 @@ export function UserMenu() {
           </div>
 
           {/* Sign Out Section */}
-          <div className="border-t border-cyan-500/20">
+          <div className="border-t border-[var(--mint-accent-2)]">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 console.log('Sign out button clicked');
-                signOut({ callbackUrl: '/' });
+                signOut({ callbackUrl: '/home' });
               }}
               className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2 cursor-pointer"
             >

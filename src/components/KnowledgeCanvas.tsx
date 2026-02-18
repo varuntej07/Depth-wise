@@ -451,10 +451,10 @@ const KnowledgeCanvasInner: React.FC = () => {
         preventScrolling={true}
       >
         <Background
-          color="#06b6d4"
+          color="#34D399"
           gap={20}
           size={1}
-          style={{ backgroundColor: '#0f172a' }}
+          style={{ backgroundColor: '#0D1A16' }}
         />
         {/* Hide controls on mobile - users can use pinch-to-zoom */}
         {!isMobile && <Controls showInteractive={false} />}
@@ -463,21 +463,21 @@ const KnowledgeCanvasInner: React.FC = () => {
           <MiniMap
             nodeColor={(node) => {
               const knowledgeNode = node as unknown as GraphNode;
-              if (knowledgeNode.data.loading) return '#3b82f6';
-              if (knowledgeNode.data.explored) return '#06b6d4';
-              return '#64748b';
+              if (knowledgeNode.data.loading) return '#34D399';
+              if (knowledgeNode.data.explored) return '#10B981';
+              return '#20342D';
             }}
             nodeStrokeColor={(node) => {
               const knowledgeNode = node as unknown as GraphNode;
-              if (knowledgeNode.data.loading) return '#60a5fa';
-              if (knowledgeNode.data.explored) return '#22d3ee';
-              return '#94a3b8';
+              if (knowledgeNode.data.loading) return '#6EE7B7';
+              if (knowledgeNode.data.explored) return '#34D399';
+              return '#D1D5DB';
             }}
             nodeStrokeWidth={2}
-            maskColor="rgba(15, 23, 42, 0.85)"
+            maskColor="rgba(5, 13, 11, 0.85)"
             style={{
-              backgroundColor: '#1e293b',
-              border: '1px solid rgba(6, 182, 212, 0.3)',
+              backgroundColor: '#0D1A16',
+              border: '1px solid rgba(16, 185, 129, 0.35)',
               borderRadius: '8px',
               width: '180px',
               height: '120px',

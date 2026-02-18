@@ -153,39 +153,39 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                     animate={{ scale: 2, opacity: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.6 }}
-                    className="absolute inset-0 rounded-3xl bg-gradient-to-r from-cyan-500 to-violet-500 pointer-events-none"
+                    className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] pointer-events-none"
                   />
                 )}
               </AnimatePresence>
 
               {/* Glow effect behind modal */}
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-cyan-500/20 to-violet-500/20 blur-2xl -z-10" />
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] blur-2xl -z-10" />
 
               {/* Main Modal Card with Glassmorphism */}
-              <div className="relative bg-slate-900/90 backdrop-blur-2xl border-2 border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+              <div className="relative bg-[var(--mint-surface)] backdrop-blur-2xl border-2 border-white/10 rounded-3xl shadow-2xl overflow-hidden">
                 {/* Gradient top border accent */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-500" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]" />
 
                 {/* Header */}
                 <div className="relative flex items-center justify-between p-6 border-b border-white/5">
                   <div className="flex items-center gap-3">
                     {/* Icon with gradient background */}
-                    <div className="relative p-3 bg-gradient-to-br from-cyan-500/20 to-violet-500/20 rounded-2xl border border-white/10">
-                      <Share2 className="w-6 h-6 text-cyan-400" />
+                    <div className="relative p-3 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-2xl border border-white/10">
+                      <Share2 className="w-6 h-6 text-[var(--mint-accent-1)]" />
                       {/* Sparkle effect */}
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                         className="absolute -top-1 -right-1"
                       >
-                        <Sparkles className="w-4 h-4 text-violet-400" />
+                        <Sparkles className="w-4 h-4 text-[var(--mint-accent-1)]" />
                       </motion.div>
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+                      <h2 className="text-2xl font-bold bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] bg-clip-text text-transparent">
                         Share Your Graph
                       </h2>
-                      <p className="text-sm text-slate-400 mt-0.5">
+                      <p className="text-sm text-[var(--mint-text-secondary)] mt-0.5">
                         Make your knowledge visible to the world
                       </p>
                     </div>
@@ -198,7 +198,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                     onClick={onClose}
                     className="p-2 hover:bg-white/5 rounded-xl transition-colors"
                   >
-                    <X className="w-5 h-5 text-slate-400" />
+                    <X className="w-5 h-5 text-[var(--mint-text-secondary)]" />
                   </motion.button>
                 </div>
 
@@ -215,7 +215,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                         backgroundPosition: ['0% 0%', '100% 100%'],
                       }}
                       transition={{ duration: 3, repeat: Infinity, repeatType: 'reverse' }}
-                      className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-violet-500/5 opacity-50"
+                      className="absolute inset-0 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] opacity-50"
                       style={{ backgroundSize: '200% 200%' }}
                     />
 
@@ -229,13 +229,13 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                           className={`p-3 rounded-xl ${
                             isPublic
                               ? 'bg-green-500/20 border-2 border-green-500/30'
-                              : 'bg-slate-800/50 border-2 border-slate-700/30'
+                              : 'bg-[var(--mint-elevated)] border-2 border-[var(--mint-elevated)]'
                           }`}
                         >
                           {isPublic ? (
                             <Globe className="w-6 h-6 text-green-400" />
                           ) : (
-                            <Lock className="w-6 h-6 text-slate-400" />
+                            <Lock className="w-6 h-6 text-[var(--mint-text-secondary)]" />
                           )}
                         </motion.div>
 
@@ -249,7 +249,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                           >
                             {isPublic ? 'Public Graph' : 'Private Graph'}
                           </motion.p>
-                          <p className="text-sm text-slate-400">
+                          <p className="text-sm text-[var(--mint-text-secondary)]">
                             {isPublic
                               ? 'Anyone with the link can view'
                               : 'Only you can see this graph'}
@@ -264,8 +264,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                         disabled={isLoading}
                         className={`relative inline-flex h-9 w-16 items-center rounded-full transition-all duration-300 ${
                           isPublic
-                            ? 'bg-gradient-to-r from-cyan-500 to-violet-500 shadow-lg shadow-cyan-500/50'
-                            : 'bg-slate-700'
+                            ? 'bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] shadow-lg shadow-[0_0_24px_var(--mint-accent-glow)]'
+                            : 'bg-[var(--mint-elevated)]'
                         } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                       >
                         {/* Toggle knob */}
@@ -292,7 +292,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                                 {isPublic ? (
                                   <Check className="w-4 h-4 text-green-500" />
                                 ) : (
-                                  <Lock className="w-4 h-4 text-slate-400" />
+                                  <Lock className="w-4 h-4 text-[var(--mint-text-secondary)]" />
                                 )}
                               </motion.div>
                             )}
@@ -312,20 +312,20 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                         transition={{ duration: 0.3 }}
                         className="space-y-3"
                       >
-                        <label className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-violet-400" />
+                        <label className="text-sm font-semibold text-[var(--mint-text-secondary)] flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-[var(--mint-accent-1)]" />
                           Your Shareable Link
                         </label>
 
                         {/* Link Display with Copy Button */}
                         <div className="relative group">
                           {/* Background glow on hover */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 rounded-xl opacity-0 group-hover:opacity-100 blur transition-opacity" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-xl opacity-0 group-hover:opacity-100 blur transition-opacity" />
 
-                          <div className="relative flex items-center gap-2 p-3 bg-slate-800/50 backdrop-blur-sm border border-white/10 rounded-xl">
+                          <div className="relative flex items-center gap-2 p-3 bg-[var(--mint-elevated)] backdrop-blur-sm border border-white/10 rounded-xl">
                             {/* URL Display - with proper overflow handling */}
-                            <div className="flex-1 min-w-0 px-3 py-2 bg-slate-900/50 rounded-lg">
-                              <p className="text-xs sm:text-sm text-cyan-400 font-mono break-all">
+                            <div className="flex-1 min-w-0 px-3 py-2 bg-[var(--mint-surface)] rounded-lg">
+                              <p className="text-xs sm:text-sm text-[var(--mint-accent-1)] font-mono break-all">
                                 {shareUrl}
                               </p>
                             </div>
@@ -338,7 +338,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                               className={`flex-shrink-0 p-3 rounded-lg font-semibold transition-all ${
                                 copied
                                   ? 'bg-green-500 text-white'
-                                  : 'bg-gradient-to-r from-cyan-500 to-violet-500 text-white hover:shadow-lg hover:shadow-cyan-500/50'
+                                  : 'bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] text-white hover:shadow-lg hover:shadow-[0_0_24px_var(--mint-accent-glow)]'
                               }`}
                               title={copied ? 'Copied!' : 'Copy link'}
                             >
@@ -388,9 +388,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="relative p-4 bg-gradient-to-br from-cyan-500/5 to-violet-500/5 rounded-xl border border-white/5"
+                    className="relative p-4 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-xl border border-white/5"
                   >
-                    <p className="text-xs text-slate-400 leading-relaxed">
+                    <p className="text-xs text-[var(--mint-text-secondary)] leading-relaxed">
                       {isPublic ? (
                         <>
                           <span className="text-green-400 font-semibold">🌍 Public:</span> Your
@@ -399,7 +399,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                         </>
                       ) : (
                         <>
-                          <span className="text-slate-300 font-semibold">🔒 Private:</span> Your
+                          <span className="text-[var(--mint-text-secondary)] font-semibold">🔒 Private:</span> Your
                           graph is private and only visible to you. Toggle public to share with
                           others.
                         </>
@@ -414,7 +414,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={onClose}
-                    className="px-6 py-2.5 text-sm font-medium text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+                    className="px-6 py-2.5 text-sm font-medium text-[var(--mint-text-secondary)] hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all"
                   >
                     Done
                   </motion.button>
