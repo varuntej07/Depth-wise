@@ -15,6 +15,8 @@ model User {
   image         String?
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+  lastSeenAt    DateTime? @map("last_seen_at")
 
   // Subscription fields
   subscriptionTier   SubscriptionTier @default(FREE) @map("subscription_tier")
@@ -25,10 +27,16 @@ model User {
   // Usage tracking
   explorationsUsed   Int      @default(0) @map("explorations_used")
   explorationsReset  DateTime @default(now()) @map("explorations_reset")
+  explorationsTotal  Int      @default(0) @map("explorations_total")
+  totalInputTokens   Int      @default(0) @map("total_input_tokens")
+  totalOutputTokens  Int      @default(0) @map("total_output_tokens")
+  totalTokensUsed    Int      @default(0) @map("total_tokens_used")
+  totalEstimatedCostUsd Decimal @default(0) @db.Decimal(12, 6) @map("total_estimated_cost_usd")
 
   accounts      Account[]       @relation()
   authSessions  Session[]       @relation("AuthSessions")
   graphSessions GraphSession[]  @relation("GraphSessions")
+  usageEvents   UsageEvent[]
 
   @@map("users")
 }
@@ -95,6 +103,13 @@ model GraphSession {
   isPublic  Boolean  @default(false) @map("is_public")
   nodeCount Int      @default(0) @map("node_count")
   maxDepth  Int      @default(0) @map("max_depth")
+  clientId  String?  @map("client_id")
+  ipAddress String?  @map("ip_address")
+  ipHash    String?  @map("ip_hash")
+  country   String?
+  region    String?
+  city      String?
+  userAgent String?  @map("user_agent")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -102,9 +117,11 @@ model GraphSession {
   nodes   Node[]
   edges   Edge[]
   history ConversationHistory[]
+  usageEvents UsageEvent[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([isPublic, createdAt(sort: Desc)])
+  @@index([clientId])
   @@map("sessions")
 }
 
@@ -179,18 +196,26 @@ model AnonymousSession {
   title     String?
   nodeCount Int      @default(0) @map("node_count")
   maxDepth  Int      @default(0) @map("max_depth")
+  clientId  String?  @map("client_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  lastActivityAt DateTime @default(now()) @map("last_activity_at")
 
   // Optional: Track IP or browser fingerprint for analytics
   ipAddress String?  @map("ip_address")
+  ipHash    String?  @map("ip_hash")
+  country   String?
+  region    String?
+  city      String?
   userAgent String?  @map("user_agent")
 
   nodes   AnonymousNode[]
   edges   AnonymousEdge[]
   history AnonymousConversationHistory[]
+  usageEvents UsageEvent[]
 
   @@index([createdAt(sort: Desc)])
+  @@index([clientId])
   @@map("anonymous_sessions")
 }
 
@@ -256,4 +281,42 @@ model AnonymousConversationHistory {
 
   @@index([sessionId, createdAt])
   @@map("anonymous_conversation_history")
+}
+
+model UsageEvent {
+  id                 String   @id @default(uuid())
+  eventName          String   @map("event_name")
+  userId             String?  @map("user_id")
+  graphSessionId     String?  @map("graph_session_id")
+  anonymousSessionId String?  @map("anonymous_session_id")
+  requestId          String?  @map("request_id")
+  clientId           String?  @map("client_id")
+  route              String?
+  success            Boolean?
+  statusCode         Int?     @map("status_code")
+  latencyMs          Float?   @map("latency_ms")
+  model              String?
+  inputTokens        Int      @default(0) @map("input_tokens")
+  outputTokens       Int      @default(0) @map("output_tokens")
+  totalTokens        Int      @default(0) @map("total_tokens")
+  estimatedCostUsd   Decimal  @default(0) @db.Decimal(12, 6) @map("estimated_cost_usd")
+  ipAddress          String?  @map("ip_address")
+  ipHash             String?  @map("ip_hash")
+  country            String?
+  region             String?
+  city               String?
+  userAgent          String?  @map("user_agent")
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  graphSession     GraphSession?     @relation(fields: [graphSessionId], references: [id], onDelete: SetNull)
+  anonymousSession AnonymousSession? @relation(fields: [anonymousSessionId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([eventName, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([graphSessionId, createdAt(sort: Desc)])
+  @@index([anonymousSessionId, createdAt(sort: Desc)])
+  @@map("usage_events")
 }

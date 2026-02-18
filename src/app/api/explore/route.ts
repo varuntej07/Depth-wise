@@ -6,7 +6,35 @@ import { getMaxDepth, canUserExplore } from '@/lib/subscription-config';
 import { isValidUUID, sanitizeBoolean, sanitizeQuery } from '@/lib/utils';
 import { FollowUpType } from '@/types/graph';
 import { logger } from '@/lib/logger';
-import type { AnonymousNode, AnonymousEdge, Node, Edge } from '@prisma/client';
+import { getRequestContext } from '@/lib/request-context';
+import { buildUserUsageUpdate, recordUsageEventSafe, touchUserLastSeenSafe } from '@/lib/usage-tracking';
+import type { AnonymousNode, AnonymousEdge, Node, Edge, SubscriptionTier } from '@prisma/client';
+
+interface AnonymousSessionTelemetry {
+  id: string;
+  rootQuery: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  clientId: string | null;
+  ipHash: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+}
+
+interface GraphSessionTelemetry {
+  id: string;
+  userId: string | null;
+  rootQuery: string;
+  clientId: string | null;
+  ipAddress: string | null;
+  ipHash: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  userAgent: string | null;
+  user: { subscriptionTier: SubscriptionTier } | null;
+}
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -14,12 +42,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { sessionId, parentId, isAnonymous, exploreType, focusTerm } = body;
+    const { sessionId, parentId, isAnonymous, exploreType, focusTerm, clientId } = body;
+    const requestContext = getRequestContext(request, clientId);
 
     logger.apiStart('POST /api/explore', {
       requestId,
       sessionId: sessionId?.slice(0, 8),
       parentId: parentId?.slice(0, 8),
+      clientId: requestContext.clientId?.slice(0, 8),
       isAnonymous,
       exploreType,
       focusTerm,
@@ -84,9 +114,9 @@ export async function POST(request: NextRequest) {
     // Handle ANONYMOUS sessions
     if (validatedIsAnonymous) {
       // Get anonymous session and parent node
-      const session = await prisma.anonymousSession.findUnique({
+      const session = (await prisma.anonymousSession.findUnique({
         where: { id: sessionId },
-      });
+      })) as unknown as AnonymousSessionTelemetry | null;
 
       if (!session) {
         return NextResponse.json(
@@ -110,6 +140,38 @@ export async function POST(request: NextRequest) {
       // When trying to go to depth 3, require sign-in
       const nextDepth = parentNode.depth + 1;
       if (nextDepth > 2) {
+        await prisma.anonymousSession.update({
+          where: { id: session.id },
+          data: {
+            lastActivityAt: new Date(),
+            clientId: session.clientId || requestContext.clientId,
+            ipAddress: session.ipAddress || requestContext.ipAddress,
+            ipHash: session.ipHash || requestContext.ipHash,
+            country: session.country || requestContext.country,
+            region: session.region || requestContext.region,
+            city: session.city || requestContext.city,
+            userAgent: session.userAgent || requestContext.userAgent,
+          } as unknown as Record<string, unknown>,
+        });
+
+        await recordUsageEventSafe(
+          prisma,
+          {
+            eventName: 'anonymous_depth_limit_reached',
+            anonymousSessionId: session.id,
+            requestId,
+            clientId: requestContext.clientId,
+            route: 'POST /api/explore',
+            success: false,
+            statusCode: 401,
+            metadata: {
+              parentDepth: parentNode.depth,
+              requestedDepth: nextDepth,
+              maxDepth: 2,
+            },
+          },
+          requestContext
+        );
         return NextResponse.json(
           {
             error: 'Sign in to continue exploring deeper!',
@@ -130,6 +192,38 @@ export async function POST(request: NextRequest) {
 
         const existingEdges = await prisma.anonymousEdge.findMany({
           where: { sourceId: parentNode.id },
+        });
+
+        await recordUsageEventSafe(
+          prisma,
+          {
+            eventName: 'node_explore_cache_hit_anonymous',
+            anonymousSessionId: session.id,
+            requestId,
+            clientId: requestContext.clientId,
+            route: 'POST /api/explore',
+            success: true,
+            statusCode: 200,
+            metadata: {
+              parentId: parentNode.id,
+              parentDepth: parentNode.depth,
+              branchCount: existingChildren.length,
+            },
+          },
+          requestContext
+        );
+        await prisma.anonymousSession.update({
+          where: { id: session.id },
+          data: {
+            lastActivityAt: new Date(),
+            clientId: session.clientId || requestContext.clientId,
+            ipAddress: session.ipAddress || requestContext.ipAddress,
+            ipHash: session.ipHash || requestContext.ipHash,
+            country: session.country || requestContext.country,
+            region: session.region || requestContext.region,
+            city: session.city || requestContext.city,
+            userAgent: session.userAgent || requestContext.userAgent,
+          } as unknown as Record<string, unknown>,
         });
 
         return NextResponse.json({
@@ -260,12 +354,45 @@ export async function POST(request: NextRequest) {
           data: {
             nodeCount,
             maxDepth: maxDepthNode?.depth || 0,
-          },
+            lastActivityAt: new Date(),
+            clientId: session.clientId || requestContext.clientId,
+            ipAddress: session.ipAddress || requestContext.ipAddress,
+            ipHash: session.ipHash || requestContext.ipHash,
+            country: session.country || requestContext.country,
+            region: session.region || requestContext.region,
+            city: session.city || requestContext.city,
+            userAgent: session.userAgent || requestContext.userAgent,
+          } as unknown as Record<string, unknown>,
         });
 
         return { newNodes, newEdges };
       });
 
+      await recordUsageEventSafe(
+        prisma,
+        {
+          eventName: 'node_explored_anonymous',
+          anonymousSessionId: session.id,
+          requestId,
+          clientId: requestContext.clientId,
+          route: 'POST /api/explore',
+          success: true,
+          statusCode: 200,
+          latencyMs: logger.durationMs(requestStart),
+          model: usage.model,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          estimatedCostUsd: usage.estimatedCostUsd,
+          metadata: {
+            parentId: parentNode.id,
+            parentDepth: parentNode.depth,
+            branchCount: result.newNodes.length,
+            focusTerm: validatedFocusTerm ?? null,
+            exploreType: validatedExploreType ?? null,
+          },
+        },
+        requestContext
+      );
       return NextResponse.json({
         parentId: parentNode.id,
         parentContent: answer,
@@ -288,7 +415,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle AUTHENTICATED USER sessions
-    const session = await prisma.graphSession.findUnique({
+    const session = (await prisma.graphSession.findUnique({
       where: { id: sessionId },
       include: {
         user: {
@@ -297,7 +424,7 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-    });
+    })) as unknown as GraphSessionTelemetry | null;
 
     if (!session) {
       return NextResponse.json(
@@ -323,6 +450,27 @@ export async function POST(request: NextRequest) {
       const nextDepth = parentNode.depth + 1;
 
       if (nextDepth > maxAllowedDepth) {
+        await recordUsageEventSafe(
+          prisma,
+          {
+            eventName: 'depth_limit_reached',
+            userId: session.userId,
+            graphSessionId: session.id,
+            requestId,
+            clientId: requestContext.clientId,
+            route: 'POST /api/explore',
+            success: false,
+            statusCode: 429,
+            metadata: {
+              tier: session.user.subscriptionTier,
+              currentDepth: parentNode.depth,
+              requestedDepth: nextDepth,
+              maxDepth: maxAllowedDepth,
+            },
+          },
+          requestContext
+        );
+
         return NextResponse.json(
           {
             error: `You've reached your maximum depth of ${maxAllowedDepth} levels. Upgrade to explore deeper!`,
@@ -354,6 +502,27 @@ export async function POST(request: NextRequest) {
         });
 
         if (!explorationCheck.allowed) {
+          await recordUsageEventSafe(
+            prisma,
+            {
+              eventName: 'exploration_limit_reached',
+              userId: user.id,
+              graphSessionId: session.id,
+              requestId,
+              clientId: requestContext.clientId,
+              route: 'POST /api/explore',
+              success: false,
+              statusCode: 429,
+              metadata: {
+                tier: user.subscriptionTier,
+                reason: explorationCheck.reason || null,
+                phase: 'node_explore',
+              },
+            },
+            requestContext
+          );
+          await touchUserLastSeenSafe(prisma, user.id, { route: 'POST /api/explore', requestId });
+
           return NextResponse.json(
             {
               error: explorationCheck.reason || 'Exploration limit reached',
@@ -375,6 +544,26 @@ export async function POST(request: NextRequest) {
       const existingEdges = await prisma.edge.findMany({
         where: { sourceId: parentNode.id },
       });
+
+      await recordUsageEventSafe(
+        prisma,
+        {
+          eventName: 'node_explore_cache_hit',
+          userId: session.userId,
+          graphSessionId: session.id,
+          requestId,
+          clientId: requestContext.clientId,
+          route: 'POST /api/explore',
+          success: true,
+          statusCode: 200,
+          metadata: {
+            parentId: parentNode.id,
+            parentDepth: parentNode.depth,
+            branchCount: existingChildren.length,
+          },
+        },
+        requestContext
+      );
 
       return NextResponse.json({
         parentId: parentNode.id,
@@ -504,7 +693,14 @@ export async function POST(request: NextRequest) {
         data: {
           nodeCount,
           maxDepth: maxDepthNode?.depth || 0,
-        },
+          clientId: session.clientId || requestContext.clientId,
+          ipAddress: session.ipAddress || requestContext.ipAddress,
+          ipHash: session.ipHash || requestContext.ipHash,
+          country: session.country || requestContext.country,
+          region: session.region || requestContext.region,
+          city: session.city || requestContext.city,
+          userAgent: session.userAgent || requestContext.userAgent,
+        } as unknown as Record<string, unknown>,
       });
 
       return { newNodes, newEdges };
@@ -514,11 +710,41 @@ export async function POST(request: NextRequest) {
     if (session.userId) {
       await prisma.user.update({
         where: { id: session.userId },
-        data: {
-          explorationsUsed: { increment: 1 },
-        },
+        data: buildUserUsageUpdate({
+          incrementExplorations: true,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          estimatedCostUsd: usage.estimatedCostUsd,
+        }),
       });
     }
+
+    await recordUsageEventSafe(
+      prisma,
+      {
+        eventName: 'node_explored',
+        userId: session.userId,
+        graphSessionId: session.id,
+        requestId,
+        clientId: requestContext.clientId,
+        route: 'POST /api/explore',
+        success: true,
+        statusCode: 200,
+        latencyMs: logger.durationMs(requestStart),
+        model: usage.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        estimatedCostUsd: usage.estimatedCostUsd,
+        metadata: {
+          parentId: parentNode.id,
+          parentDepth: parentNode.depth,
+          branchCount: result.newNodes.length,
+          focusTerm: validatedFocusTerm ?? null,
+          exploreType: validatedExploreType ?? null,
+        },
+      },
+      requestContext
+    );
 
     return NextResponse.json({
       parentId: parentNode.id,

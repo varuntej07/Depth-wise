@@ -3,6 +3,39 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isValidUUID } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { getRequestContext } from '@/lib/request-context';
+import { recordUsageEventSafe, touchUserLastSeenSafe } from '@/lib/usage-tracking';
+
+interface AnonymousSessionForMigration {
+  id: string;
+  rootQuery: string;
+  title: string | null;
+  nodeCount: number;
+  maxDepth: number;
+  clientId: string | null;
+  ipAddress: string | null;
+  ipHash: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  userAgent: string | null;
+  nodes: Array<{
+    id: string;
+    parentId: string | null;
+    title: string;
+    content: string | null;
+    summary: string | null;
+    depth: number;
+    positionX: number;
+    positionY: number;
+    explored: boolean;
+  }>;
+  edges: Array<{
+    sourceId: string;
+    targetId: string;
+    animated: boolean;
+  }>;
+}
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -27,6 +60,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { anonymousSessionId } = body;
+    const requestContext = getRequestContext(request);
 
     // Validate anonymousSessionId
     if (!anonymousSessionId) {
@@ -45,13 +79,13 @@ export async function POST(request: NextRequest) {
     // Migrate anonymous session to user's account
     const result = await prisma.$transaction(async (tx) => {
       // Get anonymous session with all related data
-      const anonymousSession = await tx.anonymousSession.findUnique({
+      const anonymousSession = (await tx.anonymousSession.findUnique({
         where: { id: anonymousSessionId },
         include: {
           nodes: true,
           edges: true,
         },
-      });
+      })) as unknown as AnonymousSessionForMigration | null;
 
       if (!anonymousSession) {
         throw new Error('Anonymous session not found');
@@ -65,14 +99,23 @@ export async function POST(request: NextRequest) {
           nodeCount: anonymousSession.nodeCount,
           maxDepth: anonymousSession.maxDepth,
           userId: user.id,
-        },
+          clientId: anonymousSession.clientId || requestContext.clientId,
+          ipAddress: anonymousSession.ipAddress || requestContext.ipAddress,
+          ipHash: anonymousSession.ipHash || requestContext.ipHash,
+          country: anonymousSession.country || requestContext.country,
+          region: anonymousSession.region || requestContext.region,
+          city: anonymousSession.city || requestContext.city,
+          userAgent: anonymousSession.userAgent || requestContext.userAgent,
+        } as unknown as never,
       });
 
       // Create a mapping of old node IDs to new node IDs
       const nodeIdMap: Record<string, string> = {};
 
       // Migrate nodes (need to do this in order of depth to handle parent relationships)
-      const sortedNodes = anonymousSession.nodes.sort((a, b) => a.depth - b.depth);
+      const sortedNodes = anonymousSession.nodes.sort(
+        (a: { depth: number }, b: { depth: number }) => a.depth - b.depth
+      );
 
       for (const anonNode of sortedNodes) {
         const newNode = await tx.node.create({
@@ -111,6 +154,26 @@ export async function POST(request: NextRequest) {
 
       return { graphSession, nodeIdMap };
     });
+
+    await touchUserLastSeenSafe(prisma, user.id, { route: 'POST /api/session/migrate', requestId });
+    await recordUsageEventSafe(
+      prisma,
+      {
+        eventName: 'session_migrated',
+        userId: user.id,
+        graphSessionId: result.graphSession.id,
+        anonymousSessionId,
+        requestId,
+        route: 'POST /api/session/migrate',
+        success: true,
+        statusCode: 200,
+        metadata: {
+          nodeCount: result.graphSession.nodeCount,
+          maxDepth: result.graphSession.maxDepth,
+        },
+      },
+      requestContext
+    );
 
     return NextResponse.json({
       success: true,

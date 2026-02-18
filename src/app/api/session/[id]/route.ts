@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { getRequestContext } from '@/lib/request-context';
+import { recordUsageEventSafe, touchUserLastSeenSafe } from '@/lib/usage-tracking';
 
 export async function GET(
   request: NextRequest,
@@ -10,6 +12,7 @@ export async function GET(
   const requestId = crypto.randomUUID().slice(0, 8);
   try {
     logger.apiStart('GET /api/session/[id]', { requestId });
+    const requestContext = getRequestContext(request);
     const session = await auth();
 
     const { id: sessionId } = await params;
@@ -40,6 +43,7 @@ export async function GET(
     // - Non-owner can only load if graph is public (read-only on client).
     // This aligns sidebar/session loading behavior with shared-link behavior.
     let isOwner = false;
+    let authenticatedUserId: string | null = null;
     const hasAuthenticatedEmail = Boolean(session?.user?.email);
 
     if (hasAuthenticatedEmail) {
@@ -47,6 +51,11 @@ export async function GET(
         where: { email: session!.user!.email! },
         select: { id: true },
       });
+
+      if (user) {
+        authenticatedUserId = user.id;
+        await touchUserLastSeenSafe(prisma, user.id, { route: 'GET /api/session/[id]', requestId });
+      }
 
       isOwner = Boolean(user && graphSession.userId === user.id);
     }
@@ -90,6 +99,27 @@ export async function GET(
       animated: edge.animated,
     }));
 
+    await recordUsageEventSafe(
+      prisma,
+      {
+        eventName: 'session_viewed',
+        userId: authenticatedUserId,
+        graphSessionId: graphSession.id,
+        requestId,
+        route: 'GET /api/session/[id]',
+        success: true,
+        statusCode: 200,
+        metadata: {
+          isOwner,
+          isPublic: graphSession.isPublic,
+          isReadOnly: !isOwner,
+          nodeCount: graphSession.nodeCount,
+          maxDepth: graphSession.maxDepth,
+        },
+      },
+      requestContext
+    );
+
     return NextResponse.json({
       sessionId: graphSession.id,
       rootQuery: graphSession.rootQuery,
@@ -122,6 +152,7 @@ export async function DELETE(
   const requestId = crypto.randomUUID().slice(0, 8);
   try {
     logger.apiStart('DELETE /api/session/[id]', { requestId });
+    const requestContext = getRequestContext(request);
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -151,10 +182,26 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized access to session' }, { status: 403 });
     }
 
+    await touchUserLastSeenSafe(prisma, user.id, { route: 'DELETE /api/session/[id]', requestId });
+
     // Delete the session (cascade handles nodes/edges/history per schema)
     await prisma.graphSession.delete({
       where: { id: sessionId },
     });
+
+    await recordUsageEventSafe(
+      prisma,
+      {
+        eventName: 'session_deleted',
+        userId: user.id,
+        graphSessionId: sessionId,
+        requestId,
+        route: 'DELETE /api/session/[id]',
+        success: true,
+        statusCode: 200,
+      },
+      requestContext
+    );
 
     return NextResponse.json({ success: true, deletedId: sessionId });
   } catch (error) {

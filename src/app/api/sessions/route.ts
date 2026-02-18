@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
+import { touchUserLastSeenSafe } from '@/lib/usage-tracking';
 
 export async function GET() {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -22,6 +23,8 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    await touchUserLastSeenSafe(prisma, user.id, { route: 'GET /api/sessions', requestId });
 
     // Fetch all GraphSessions for this user, ordered by most recent first
     const sessions = await prisma.graphSession.findMany({
