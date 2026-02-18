@@ -4,10 +4,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ChevronLeft,
+  Crown,
+  HelpCircle,
+  Home,
   LayoutDashboard,
+  Menu,
   MessageCircle,
   Plus,
   Search,
+  Settings,
   Trash2,
   X,
 } from 'lucide-react';
@@ -63,6 +68,7 @@ export function ChatSidebar({
   const [isMobile, setIsMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
+  const [isQuickNavOpen, setIsQuickNavOpen] = useState(false);
 
   const overlaySearchInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,6 +91,7 @@ export function ChatSidebar({
 
       if (event.key === 'Escape') {
         setIsSearchOverlayOpen(false);
+        setIsQuickNavOpen(false);
       }
     };
 
@@ -117,8 +124,27 @@ export function ChatSidebar({
     return orderedChats.filter((chat) => chat.title.toLowerCase().includes(normalized));
   }, [orderedChats, searchQuery]);
 
-  const openSearchOverlay = () => setIsSearchOverlayOpen(true);
+  const quickNavItems = useMemo(
+    () => [
+      { href: '/home', label: 'Home', icon: Home },
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/pricing', label: 'Pricing', icon: Crown },
+      { href: '/help', label: 'Help', icon: HelpCircle },
+      { href: '/settings', label: 'Settings', icon: Settings },
+    ],
+    []
+  );
+
+  const openSearchOverlay = () => {
+    setIsQuickNavOpen(false);
+    setIsSearchOverlayOpen(true);
+  };
   const closeSearchOverlay = () => setIsSearchOverlayOpen(false);
+  const openQuickNav = () => {
+    setIsSearchOverlayOpen(false);
+    setIsQuickNavOpen(true);
+  };
+  const closeQuickNav = () => setIsQuickNavOpen(false);
 
   const handleNewChatClick = () => {
     posthog.capture('new_chat_clicked');
@@ -153,6 +179,16 @@ export function ChatSidebar({
     }
   };
 
+  const handleQuickNavigate = (href: string) => {
+    posthog.capture('sidebar_quick_nav_clicked', { destination: href });
+    router.push(href);
+    closeQuickNav();
+
+    if (isMobile && !isCollapsed) {
+      onToggleCollapse();
+    }
+  };
+
   return (
     <>
       <button
@@ -162,6 +198,15 @@ export function ChatSidebar({
         aria-label="Toggle sidebar"
       >
         <MessageCircle className="h-5 w-5" />
+      </button>
+
+      <button
+        type="button"
+        onClick={openQuickNav}
+        className="fixed bottom-4 left-4 z-50 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.92)] text-white/85 shadow-[0_8px_24px_rgba(2,6,18,0.45)] transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.55)] md:hidden"
+        aria-label="Open pages menu"
+      >
+        <Menu className="h-4 w-4" />
       </button>
 
       <AnimatePresence>
@@ -222,6 +267,18 @@ export function ChatSidebar({
               aria-label="Dashboard"
             >
               <LayoutDashboard className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                openQuickNav();
+              }}
+              className="mt-auto inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] text-white/85 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.55)]"
+              title="Pages Menu"
+              aria-label="Pages Menu"
+            >
+              <Menu className="h-4 w-4" />
             </button>
           </div>
         ) : (
@@ -285,6 +342,17 @@ export function ChatSidebar({
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="border-t border-[var(--mint-elevated)] p-3">
+              <button
+                type="button"
+                onClick={openQuickNav}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] px-3 py-2.5 text-sm font-medium text-white/80 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.5)]"
+              >
+                <Menu className="h-4 w-4" />
+                Pages
+              </button>
             </div>
           </div>
         )}
@@ -354,7 +422,66 @@ export function ChatSidebar({
                 </div>
               )}
             </div>
+
+            <div className="border-t border-[var(--mint-elevated)] p-3">
+              <button
+                type="button"
+                onClick={openQuickNav}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] px-3 py-2.5 text-sm font-medium text-white/80 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.5)]"
+              >
+                <Menu className="h-4 w-4" />
+                Pages
+              </button>
+            </div>
           </motion.aside>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isQuickNavOpen && (
+          <>
+            <motion.button
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeQuickNav}
+              className="fixed inset-0 z-[72] bg-black/55 backdrop-blur-[2px]"
+              aria-label="Close pages menu"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
+              className="fixed bottom-4 left-4 z-[82] w-[min(320px,calc(100vw-2rem))] rounded-2xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.97)] p-3 shadow-[0_24px_72px_rgba(2,6,18,0.7)]"
+            >
+              <div className="mb-2 flex items-center justify-between px-1">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-white/55">Pages</p>
+                <button
+                  type="button"
+                  onClick={closeQuickNav}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.3)] text-white/70 transition hover:border-[var(--mint-accent-2)] hover:text-white"
+                  aria-label="Close pages menu"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                {quickNavItems.map((item) => (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() => handleQuickNavigate(item.href)}
+                    className="inline-flex w-full items-center gap-2.5 rounded-lg border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.3)] px-3 py-2 text-sm text-white/85 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.48)]"
+                  >
+                    <item.icon className="h-4 w-4 text-[var(--mint-accent-1)]" />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 

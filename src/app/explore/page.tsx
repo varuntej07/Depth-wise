@@ -13,6 +13,8 @@ import { UsageIndicator } from '@/components/UsageIndicator';
 import { normalizeLoadedSessionGraph } from '@/lib/graph-normalization';
 import Link from 'next/link';
 import { Compass, Crown, Layers, Network, Sparkles } from 'lucide-react';
+import { SignInButton } from '@/components/auth/SignInButton';
+import { UserMenu } from '@/components/auth/UserMenu';
 
 interface ChatItem {
   id: string;
@@ -274,6 +276,17 @@ export default function ExplorePage() {
 
               {session && <UsageIndicator />}
 
+              {!session && (
+                <>
+                  <div className="hidden sm:block">
+                    <SignInButton />
+                  </div>
+                  <div className="sm:hidden">
+                    <SignInButton isCollapsed={true} />
+                  </div>
+                </>
+              )}
+
               {session && (
                 <Link
                   href="/pricing"
@@ -292,6 +305,7 @@ export default function ExplorePage() {
                   <Crown className="w-4 h-4" />
                 </Link>
               )}
+              {session && <UserMenu />}
             </div>
           </div>
         </header>
