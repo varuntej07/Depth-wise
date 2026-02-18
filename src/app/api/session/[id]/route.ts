@@ -9,10 +9,6 @@ export async function GET(
   try {
     const session = await auth();
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id: sessionId } = await params;
 
     if (!sessionId) {
@@ -36,13 +32,34 @@ export async function GET(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Verify the session belongs to the authenticated user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
+    // Access policy:
+    // - Owner can always load.
+    // - Non-owner can only load if graph is public (read-only on client).
+    // This aligns sidebar/session loading behavior with shared-link behavior.
+    let isOwner = false;
+    const hasAuthenticatedEmail = Boolean(session?.user?.email);
 
-    if (!user || graphSession.userId !== user.id) {
-      return NextResponse.json({ error: 'Unauthorized access to session' }, { status: 403 });
+    if (hasAuthenticatedEmail) {
+      const user = await prisma.user.findUnique({
+        where: { email: session!.user!.email! },
+        select: { id: true },
+      });
+
+      isOwner = Boolean(user && graphSession.userId === user.id);
+    }
+
+    if (!isOwner && !graphSession.isPublic) {
+      // Avoid leaking the existence of private sessions to unauthenticated callers.
+      if (!hasAuthenticatedEmail) {
+        return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      }
+
+      return NextResponse.json(
+        {
+          error: 'Unauthorized access to session',
+        },
+        { status: 403 }
+      );
     }
 
     // Format nodes for React Flow
@@ -76,6 +93,7 @@ export async function GET(
       title: graphSession.title,
       isPublic: graphSession.isPublic,
       isAnonymous: graphSession.userId === null,
+      isReadOnly: !isOwner,
       nodes: formattedNodes,
       edges: formattedEdges,
       nodeCount: graphSession.nodeCount,
