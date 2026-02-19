@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Loader2 } from 'lucide-react';
@@ -14,33 +14,86 @@ import { SubscriptionModal } from './SubscriptionModal';
 import { SubscriptionTier } from '@prisma/client';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { getClientId } from '@/lib/utils';
+import { DEFAULT_SUGGESTIONS, type SuggestionItem } from '@/lib/suggestion-defaults';
+import { useSession } from 'next-auth/react';
 
 interface SearchBarProps {
   isCompact?: boolean;
 }
 
+interface SuggestionsApiResponse {
+  suggestions?: SuggestionItem[];
+  shouldRefresh?: boolean;
+}
+
+type QuerySource = 'typed' | 'suggestion';
+
 const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
   const [query, setQuery] = useState('');
+  const [querySource, setQuerySource] = useState<QuerySource>('typed');
   const [isSearching, setIsSearching] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [limitReason, setLimitReason] = useState<string>('');
   const [userTier, setUserTier] = useState<SubscriptionTier>('FREE');
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>(DEFAULT_SUGGESTIONS);
   const { setSessionId, setRootQuery, setIsAnonymous, addNodes, addEdges, clearGraph, setError, nodes, rootQuery } =
     useGraphStore();
   const posthog = usePostHog();
+  const { data: session } = useSession();
 
   const hasExistingGraph = nodes.length > 0;
 
-  const handleSearch = async (e: React.FormEvent, retryQuery?: string) => {
+  useEffect(() => {
+    let active = true;
+    const clientId = getClientId();
+    const queryParams = new URLSearchParams();
+
+    if (clientId) {
+      queryParams.set('clientId', clientId);
+    }
+
+    const fetchUrl = queryParams.size > 0 ? `${API_ENDPOINTS.SUGGESTIONS}?${queryParams.toString()}` : API_ENDPOINTS.SUGGESTIONS;
+
+    const fetchSuggestions = async () => {
+      try {
+        const response = await fetch(fetchUrl);
+        if (response.ok) {
+          const data = (await response.json()) as SuggestionsApiResponse;
+          if (active && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+            setSuggestions(data.suggestions.slice(0, 4));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch suggestions:', error);
+      } finally {
+        // Fire-and-forget refresh so current visit stays fast and next visit gets fresh suggestions.
+        void fetch(API_ENDPOINTS.SUGGESTIONS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientId }),
+        });
+      }
+    };
+
+    void fetchSuggestions();
+
+    return () => {
+      active = false;
+    };
+  }, [session?.user?.email]);
+
+  const handleSearch = async (e: React.FormEvent, retryQuery?: string, sourceOverride?: QuerySource) => {
     e.preventDefault();
 
     const searchQuery = retryQuery || query.trim();
     if (!searchQuery || isSearching) return;
+    const source: QuerySource = sourceOverride || querySource;
 
     posthog.capture('search_initiated', {
       query: searchQuery,
       query_length: searchQuery.length,
       is_retry: !!retryQuery,
+      source,
     });
 
     setIsSearching(true);
@@ -101,7 +154,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
       const response = await fetch(API_ENDPOINTS.SESSION_CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery, clientId: getClientId() }),
+        body: JSON.stringify({ query: searchQuery, clientId: getClientId(), source }),
       });
 
       if (!response.ok) {
@@ -204,6 +257,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
 
       if (!retryQuery) {
         setQuery('');
+        setQuerySource('typed');
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -229,10 +283,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
     });
 
     setQuery(suggestionQuery);
-    setTimeout(() => {
-      const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-      handleSearch(fakeEvent);
-    }, 0);
+    setQuerySource('suggestion');
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    void handleSearch(fakeEvent, suggestionQuery, 'suggestion');
   };
 
   if (isCompact && hasExistingGraph) {
@@ -298,7 +351,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
                 type="text"
                 placeholder="Try: Why do transformers work so well for language?"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setQuerySource('typed');
+                }}
                 disabled={isSearching}
                 className="h-12 rounded-2xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.9)] pl-12 pr-4 text-sm text-white placeholder:text-[var(--mint-text-secondary)] focus:border-[var(--mint-accent-2)] focus:shadow-[0_0_0_3px_rgba(16,185,129,0.2)] focus-visible:ring-0 sm:h-14 sm:text-base"
               />
@@ -335,7 +391,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.3 }}
           >
-            <SuggestionsGrid onSelectSuggestion={handleSuggestionClick} displayCount={4} />
+            <SuggestionsGrid onSelectSuggestion={handleSuggestionClick} displayCount={4} suggestions={suggestions} />
           </motion.div>
         </div>
       </motion.div>

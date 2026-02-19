@@ -247,33 +247,34 @@ export default function ExplorePage() {
             <div className="min-w-0 flex-1">
               {nodes.length > 0 ? (
                 <div className="space-y-1">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-white/45">Active exploration</p>
+                  <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em]">
+                    <Link
+                      href="/home"
+                      className="rounded-md border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.32)] px-2 py-0.5 text-[10px] font-semibold tracking-[0.16em] text-[var(--mint-accent-1)] transition hover:border-[var(--mint-accent-2)] hover:text-white"
+                    >
+                      Depthwise
+                    </Link>
+                    <span className="text-white/45">Active exploration</span>
+                  </p>
                   <h2 className="truncate text-sm font-semibold text-[var(--mint-accent-1)] sm:text-base">{rootQuery || 'Exploring...'}</h2>
                 </div>
               ) : (
                 <div className="space-y-1">
                   <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/55">
                     <Sparkles className="h-3.5 w-3.5 text-[var(--mint-accent-1)]" />
-                    Depthwise Workspace
+                    <Link
+                      href="/home"
+                      className="rounded-md border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.32)] px-2 py-0.5 text-[10px] font-semibold tracking-[0.16em] text-[var(--mint-accent-1)] transition hover:border-[var(--mint-accent-2)] hover:text-white"
+                    >
+                      Depthwise
+                    </Link>
+                    <span>Workspace</span>
                   </p>
                   <h1 className="text-sm font-semibold text-white sm:text-base">Explore ideas as connected trees</h1>
                 </div>
               )}
             </div>
             <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3">
-                <Link
-                  href="/home"
-                  className="hidden rounded-lg border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] px-3 py-2 text-xs font-medium text-[var(--mint-text-secondary)] transition hover:border-[var(--mint-accent-2)] hover:text-white sm:inline-flex"
-                >
-                  Home
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="hidden rounded-lg border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] px-3 py-2 text-xs font-medium text-[var(--mint-text-secondary)] transition hover:border-[var(--mint-accent-2)] hover:text-white lg:inline-flex"
-                >
-                  Dashboard Preview
-                </Link>
-
               {session && <UsageIndicator />}
 
               {!session && (

@@ -37,6 +37,8 @@ model User {
   authSessions  Session[]       @relation("AuthSessions")
   graphSessions GraphSession[]  @relation("GraphSessions")
   usageEvents   UsageEvent[]
+  questionEvents QuestionEvent[]
+  suggestionCaches SuggestionCache[]
 
   @@map("users")
 }
@@ -118,6 +120,7 @@ model GraphSession {
   edges   Edge[]
   history ConversationHistory[]
   usageEvents UsageEvent[]
+  questionEvents QuestionEvent[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([isPublic, createdAt(sort: Desc)])
@@ -213,6 +216,7 @@ model AnonymousSession {
   edges   AnonymousEdge[]
   history AnonymousConversationHistory[]
   usageEvents UsageEvent[]
+  questionEvents QuestionEvent[]
 
   @@index([createdAt(sort: Desc)])
   @@index([clientId])
@@ -319,4 +323,64 @@ model UsageEvent {
   @@index([graphSessionId, createdAt(sort: Desc)])
   @@index([anonymousSessionId, createdAt(sort: Desc)])
   @@map("usage_events")
+}
+
+enum QuestionSource {
+  TYPED
+  SUGGESTION
+}
+
+enum SuggestionAudienceType {
+  USER
+  CLIENT
+}
+
+model QuestionEvent {
+  id                 String   @id @default(uuid())
+  questionText       String   @map("question_text")
+  normalizedText     String   @map("normalized_text")
+  source             QuestionSource @default(TYPED)
+  userId             String?  @map("user_id")
+  graphSessionId     String?  @map("graph_session_id")
+  anonymousSessionId String?  @map("anonymous_session_id")
+  clientId           String?  @map("client_id")
+  country            String?
+  region             String?
+  userAgent          String?  @map("user_agent")
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  graphSession     GraphSession?     @relation(fields: [graphSessionId], references: [id], onDelete: SetNull)
+  anonymousSession AnonymousSession? @relation(fields: [anonymousSessionId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([clientId, createdAt(sort: Desc)])
+  @@index([graphSessionId, createdAt(sort: Desc)])
+  @@index([anonymousSessionId, createdAt(sort: Desc)])
+  @@index([normalizedText])
+  @@map("question_events")
+}
+
+model SuggestionCache {
+  id           String               @id @default(uuid())
+  audienceType SuggestionAudienceType @map("audience_type")
+  audienceKey  String               @map("audience_key")
+  userId       String?              @map("user_id")
+  suggestions  Json
+  source       String?
+  model        String?
+  generatedAt  DateTime             @default(now()) @map("generated_at")
+  nextRefreshAt DateTime            @map("next_refresh_at")
+  lastStatus   String?              @map("last_status")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([audienceType, audienceKey])
+  @@index([nextRefreshAt])
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("suggestion_caches")
 }

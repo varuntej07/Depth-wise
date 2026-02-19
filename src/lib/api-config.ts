@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
 
   // Exploration
   EXPLORE_NODE: `${API_BASE_URL}/api/explore`,
+  SUGGESTIONS: `${API_BASE_URL}/api/suggestions`,
 
   // User & Usage
   USER_USAGE: `${API_BASE_URL}/api/user/usage`,

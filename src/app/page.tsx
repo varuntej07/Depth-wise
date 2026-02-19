@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, type MouseEvent } from 'react';
 import { SignInButton } from '@/components/auth/SignInButton';
 import { UserMenu } from '@/components/auth/UserMenu';
 import Link from 'next/link';
@@ -16,45 +16,31 @@ import {
   Layers,
   ShieldCheck,
 } from 'lucide-react';
-import { motion, useMotionValue, useReducedMotion, useTransform, type Variants } from 'framer-motion';
+import { motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
 
-type HeroNode = {
+type HeroSkeletonNode = {
   id: string;
   x: number;
   y: number;
-  z: number;
-  size: number;
   depth: number;
-  glow: string;
+  sequence: number;
+  parentId?: string;
 };
 
-type HeroEdge = {
-  from: string;
-  to: string;
-  opacity: number;
+type HeroSkeletonEdge = {
+  id: string;
+  from: HeroSkeletonNode;
+  to: HeroSkeletonNode;
 };
 
-const heroNodes: HeroNode[] = [
-  { id: 'root', x: 50, y: 16, z: 120, size: 22, depth: 0, glow: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]' },
-  { id: 'l1', x: 34, y: 36, z: 100, size: 16, depth: 1, glow: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]' },
-  { id: 'r1', x: 66, y: 36, z: 100, size: 16, depth: 1, glow: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]' },
-  { id: 'l2', x: 24, y: 56, z: 80, size: 14, depth: 2, glow: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]' },
-  { id: 'l3', x: 44, y: 54, z: 80, size: 12, depth: 2, glow: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]' },
-  { id: 'r2', x: 56, y: 54, z: 80, size: 12, depth: 2, glow: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]' },
-  { id: 'r3', x: 76, y: 56, z: 80, size: 14, depth: 2, glow: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]' },
-  { id: 'l4', x: 16, y: 76, z: 60, size: 10, depth: 3, glow: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]' },
-  { id: 'r4', x: 84, y: 76, z: 60, size: 10, depth: 3, glow: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]' },
-];
-
-const heroEdges: HeroEdge[] = [
-  { from: 'root', to: 'l1', opacity: 0.7 },
-  { from: 'root', to: 'r1', opacity: 0.7 },
-  { from: 'l1', to: 'l2', opacity: 0.5 },
-  { from: 'l1', to: 'l3', opacity: 0.5 },
-  { from: 'r1', to: 'r2', opacity: 0.5 },
-  { from: 'r1', to: 'r3', opacity: 0.5 },
-  { from: 'l2', to: 'l4', opacity: 0.35 },
-  { from: 'r3', to: 'r4', opacity: 0.35 },
+const heroSkeletonNodes: HeroSkeletonNode[] = [
+  { id: 'root', x: 50, y: 20, depth: 0, sequence: 0 },
+  { id: 'l1', x: 33, y: 50, depth: 1, sequence: 1, parentId: 'root' },
+  { id: 'r1', x: 67, y: 50, depth: 1, sequence: 2, parentId: 'root' },
+  { id: 'l2', x: 18, y: 79, depth: 2, sequence: 3, parentId: 'l1' },
+  { id: 'l3', x: 40, y: 79, depth: 2, sequence: 4, parentId: 'l1' },
+  { id: 'r2', x: 60, y: 79, depth: 2, sequence: 5, parentId: 'r1' },
+  { id: 'r3', x: 82, y: 79, depth: 2, sequence: 6, parentId: 'r1' },
 ];
 
 const featureCards = [
@@ -80,7 +66,57 @@ const featureCards = [
   },
 ];
 
-const nodeById = new Map(heroNodes.map((node) => [node.id, node]));
+const heroSkeletonNodeById = new Map(heroSkeletonNodes.map((node) => [node.id, node]));
+const heroSkeletonEdges: HeroSkeletonEdge[] = heroSkeletonNodes
+  .filter((node) => node.parentId)
+  .flatMap((node) => {
+    const fromNode = heroSkeletonNodeById.get(node.parentId as string);
+    if (!fromNode) {
+      return [];
+    }
+
+    return [
+      {
+        id: `${fromNode.id}-${node.id}`,
+        from: fromNode,
+        to: node,
+      },
+    ];
+  });
+
+const treeLoopStepSeconds = 0.22;
+const treePhaseSeconds = 2.7;
+const treeRepeatDelaySeconds = 1.25;
+
+function getSkeletonNodeSizeClass(depth: number): string {
+  if (depth === 0) {
+    return 'w-[138px] h-[92px] sm:w-[152px] sm:h-[100px]';
+  }
+
+  if (depth === 1) {
+    return 'w-[118px] h-[78px] sm:w-[128px] sm:h-[84px]';
+  }
+
+  return 'w-[104px] h-[70px] sm:w-[112px] sm:h-[76px]';
+}
+
+function getNodeHalfHeight(depth: number): number {
+  if (depth === 0) return 12.2;
+  if (depth === 1) return 10.4;
+  return 9.4;
+}
+
+function buildEdgePath(from: HeroSkeletonNode, to: HeroSkeletonNode): string {
+  const fromHalfHeight = getNodeHalfHeight(from.depth);
+  const toHalfHeight = getNodeHalfHeight(to.depth);
+  const fromX = from.x;
+  const fromY = from.y + fromHalfHeight;
+  const toX = to.x;
+  const toY = to.y - toHalfHeight;
+  const midY = (fromY + toY) / 2;
+
+  return `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`;
+}
 
 const premiumHighlights = [
   {
@@ -110,7 +146,6 @@ export default function LandingPage() {
   const tiltY = useMotionValue(0);
   const rotateX = useTransform(tiltY, [-0.5, 0.5], [10, -10]);
   const rotateY = useTransform(tiltX, [-0.5, 0.5], [-12, 12]);
-  const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -138,33 +173,6 @@ export default function LandingPage() {
   const handlePointerLeave = () => {
     tiltX.set(0);
     tiltY.set(0);
-  };
-
-  const nodeVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.6, y: 10 },
-    show: (custom: number) => ({
-      opacity: 1,
-      scale: 1,
-      y: 0,
-      transition: {
-        delay: custom,
-        duration: 0.6,
-        ease: 'easeOut',
-      },
-    }),
-  };
-
-  const edgeVariants: Variants = {
-    hidden: { opacity: 0, pathLength: 0 },
-    show: (custom: number) => ({
-      opacity: 1,
-      pathLength: 1,
-      transition: {
-        delay: custom,
-        duration: 0.6,
-        ease: 'easeOut',
-      },
-    }),
   };
 
   return (
@@ -220,7 +228,7 @@ export default function LandingPage() {
 
         {/* Hero Section */}
         <section className="pt-20 sm:pt-28 pb-20 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto grid lg:grid-cols-[1.1fr_0.9fr] gap-12 lg:gap-16 items-center">
+          <div className="max-w-7xl mx-auto grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-12 items-center">
             <div className="space-y-8">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] px-4 py-2 text-xs uppercase tracking-[0.2em] text-[var(--mint-text-secondary)]">
                 <span className="h-2 w-2 rounded-full bg-[var(--mint-accent-2)] shadow-[0_0_12px_rgba(16,185,129,0.6)]" />
@@ -269,15 +277,10 @@ export default function LandingPage() {
             <motion.div
               className="relative"
               onMouseMove={handlePointerMove}
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => {
-                setIsHovering(false);
-                handlePointerLeave();
-              }}
+              onMouseLeave={handlePointerLeave}
             >
-              <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-[rgba(16,185,129,0.18)] via-[rgba(32,52,45,0.3)] to-transparent border border-[var(--mint-elevated)]" aria-hidden />
               <motion.div
-                className="relative rounded-[32px] bg-[rgba(13,26,22,0.72)] border border-[var(--mint-elevated)] p-8 sm:p-10 overflow-hidden"
+                className="relative rounded-[32px] bg-[rgba(13,26,22,0.72)] border border-[var(--mint-elevated)] p-6 sm:p-7 overflow-hidden"
                 style={{
                   perspective: '1200px',
                 }}
@@ -291,118 +294,93 @@ export default function LandingPage() {
                   }}
                   transition={{ type: 'spring', stiffness: 140, damping: 20 }}
                 >
-                  <motion.div
-                    className="absolute inset-0 rounded-3xl border border-[var(--mint-elevated)] bg-[radial-gradient(circle_at_30%_20%,rgba(110,231,183,0.2),transparent_60%),radial-gradient(circle_at_70%_70%,rgba(16,185,129,0.2),transparent_55%)]"
-                    animate={
-                      shouldReduceMotion
-                        ? undefined
-                        : {
-                            rotateZ: [0, 2, 0],
-                            scale: [1, 1.01, 1],
-                          }
-                    }
-                    transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-                  />
+                  <div className="absolute inset-0 rounded-3xl border border-[var(--mint-elevated)] bg-[radial-gradient(circle_at_26%_20%,rgba(110,231,183,0.16),transparent_60%),radial-gradient(circle_at_74%_78%,rgba(16,185,129,0.15),transparent_55%)]" />
 
-                  <motion.svg
-                    className="absolute inset-0 h-full w-full"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    initial="hidden"
-                    animate="show"
-                  >
-                    <defs>
-                      <linearGradient id="branchGlow" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="rgba(110,231,183,0.65)" />
-                        <stop offset="100%" stopColor="rgba(16,185,129,0.35)" />
-                      </linearGradient>
-                    </defs>
-                    {heroEdges.map((edge) => {
-                      const fromNode = nodeById.get(edge.from);
-                      const toNode = nodeById.get(edge.to);
-                      if (!fromNode || !toNode) return null;
-                      const edgeDelay = shouldReduceMotion ? 0 : (toNode.depth + 0.5) * 0.18;
+                  <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    {heroSkeletonEdges.map((edge) => {
+                      const edgeDelay = shouldReduceMotion ? 0 : Math.max(0, edge.to.sequence * treeLoopStepSeconds - 0.06);
+                      const edgePath = buildEdgePath(edge.from, edge.to);
+
                       return (
-                        <motion.line
-                          key={`${edge.from}-${edge.to}`}
-                          x1={fromNode.x}
-                          y1={fromNode.y}
-                          x2={toNode.x}
-                          y2={toNode.y}
-                          stroke="url(#branchGlow)"
-                          strokeWidth="0.7"
-                          strokeOpacity={edge.opacity}
-                          variants={edgeVariants}
-                          custom={edgeDelay}
+                        <motion.path
+                          key={edge.id}
+                          d={edgePath}
+                          stroke="rgba(110,231,183,0.65)"
+                          strokeWidth="0.62"
+                          strokeLinecap="round"
+                          fill="none"
+                          initial={{ opacity: 0, pathLength: 0 }}
+                          animate={
+                            shouldReduceMotion
+                              ? { opacity: 0.55, pathLength: 1 }
+                              : { opacity: [0, 0.68, 0.68, 0], pathLength: [0, 1, 1, 0] }
+                          }
+                          transition={
+                            shouldReduceMotion
+                              ? undefined
+                              : {
+                                  duration: treePhaseSeconds,
+                                  times: [0, 0.3, 0.78, 1],
+                                  delay: edgeDelay,
+                                  repeat: Infinity,
+                                  repeatDelay: treeRepeatDelaySeconds,
+                                  ease: 'easeInOut',
+                                }
+                          }
                         />
                       );
                     })}
-                  </motion.svg>
+                  </svg>
 
-                  {heroNodes.map((node, index) => (
-                    <motion.div
-                      key={node.id}
-                      className="absolute"
-                      style={{
-                        top: `${node.y}%`,
-                        left: `${node.x}%`,
-                        transform: `translate(-50%, -50%) translateZ(${node.z}px)`,
-                      }}
-                      variants={nodeVariants}
-                      initial="hidden"
-                      animate="show"
-                      custom={shouldReduceMotion ? 0 : node.depth * 0.18}
-                      transition={
-                        shouldReduceMotion
-                          ? undefined
-                          : {
-                              delay: node.depth * 0.18,
-                              duration: 0.6,
-                              ease: 'easeOut',
-                            }
-                      }
-                    >
+                  {heroSkeletonNodes.map((node) => {
+                    const nodeDelay = shouldReduceMotion ? 0 : node.sequence * treeLoopStepSeconds;
+                    const sizeClass = getSkeletonNodeSizeClass(node.depth);
+                    return (
                       <motion.div
-                        className="relative"
-                        style={{ height: node.size, width: node.size }}
-                        animate={
-                          shouldReduceMotion
-                            ? undefined
-                            : {
-                                y: [0, -6, 0],
-                                opacity: [0.8, 1, 0.8],
-                              }
-                        }
-                        transition={{ duration: 5 + index, repeat: Infinity, ease: 'easeInOut' }}
+                        key={node.id}
+                        className="absolute"
+                        style={{
+                          top: `${node.y}%`,
+                          left: `${node.x}%`,
+                          transform: 'translate(-50%, -50%)',
+                        }}
                       >
-                        <div
-                          className={`absolute inset-0 rounded-full bg-gradient-to-br ${node.glow} blur`}
-                          aria-hidden
-                        />
-                        <div className="absolute inset-0 rounded-full bg-white/80 shadow-[0_0_18px_rgba(255,255,255,0.4)]" />
+                        <motion.div
+                          className={`${sizeClass} rounded-xl border border-[var(--mint-accent-2)]/55 bg-[rgba(13,26,22,0.92)] p-2.5 shadow-[0_10px_24px_rgba(5,13,11,0.58)]`}
+                          initial={{ opacity: 0, scale: 0.93, y: 6 }}
+                          animate={
+                            shouldReduceMotion
+                              ? { opacity: 0.95, scale: 1, y: 0 }
+                              : {
+                                  opacity: [0.12, 0.96, 0.96, 0.2],
+                                  scale: [0.93, 1, 1, 0.96],
+                                  y: [6, 0, 0, 4],
+                                }
+                          }
+                          transition={
+                            shouldReduceMotion
+                              ? undefined
+                              : {
+                                  duration: treePhaseSeconds,
+                                  times: [0, 0.28, 0.76, 1],
+                                  delay: nodeDelay,
+                                  repeat: Infinity,
+                                  repeatDelay: treeRepeatDelaySeconds,
+                                  ease: 'easeInOut',
+                                }
+                          }
+                        >
+                          <div className="h-3 w-[62%] rounded bg-gradient-to-r from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)] animate-shimmer" />
+                          <div className="mt-2 h-px w-full bg-[var(--mint-elevated)]/85" />
+                          <div className="mt-2 space-y-1.5">
+                            <div className="h-2 w-full rounded bg-gradient-to-r from-[var(--mint-accent-1)]/70 via-[var(--mint-accent-2)]/60 to-[var(--mint-accent-3)]/70 animate-shimmer" />
+                            <div className="h-2 w-[86%] rounded bg-gradient-to-r from-[var(--mint-accent-1)]/70 via-[var(--mint-accent-2)]/60 to-[var(--mint-accent-3)]/70 animate-shimmer" />
+                            <div className="h-2 w-[70%] rounded bg-gradient-to-r from-[var(--mint-accent-1)]/70 via-[var(--mint-accent-2)]/60 to-[var(--mint-accent-3)]/70 animate-shimmer" />
+                          </div>
+                        </motion.div>
                       </motion.div>
-                    </motion.div>
-                  ))}
-
-                  <div className="absolute inset-x-6 bottom-6 rounded-2xl bg-[rgba(32,52,45,0.35)] border border-[var(--mint-elevated)] backdrop-blur px-5 py-4">
-                    <div className="flex items-center justify-between text-xs text-white/60">
-                      <span>Depth tree</span>
-                      <span>{isHovering && !shouldReduceMotion ? 'Branch focus' : 'Ambient focus'}</span>
-                    </div>
-                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[rgba(32,52,45,0.55)]">
-                      <motion.div
-                        className="h-full w-2/3 rounded-full bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]"
-                        animate={
-                          shouldReduceMotion
-                            ? undefined
-                            : {
-                                x: ['-20%', '0%', '-20%'],
-                              }
-                        }
-                        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    </div>
-                  </div>
+                    );
+                  })}
                 </motion.div>
               </motion.div>
             </motion.div>

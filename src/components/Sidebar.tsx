@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ChevronLeft,
+  ChevronRight,
   Crown,
   HelpCircle,
   Home,
@@ -232,6 +233,18 @@ export function ChatSidebar({
       >
         {isCollapsed ? (
           <div className="flex h-full w-full flex-col items-center gap-3 py-4">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleCollapse();
+              }}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--mint-accent-2)] bg-[rgba(16,185,129,0.16)] text-[var(--mint-accent-1)] transition hover:bg-[rgba(16,185,129,0.22)]"
+              title="Expand Sidebar"
+              aria-label="Expand Sidebar"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={(event) => {

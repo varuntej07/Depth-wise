@@ -8,6 +8,7 @@ import { sanitizeQuery } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { getRequestContext } from "@/lib/request-context";
 import { buildUserUsageUpdate, recordUsageEventSafe, touchUserLastSeenSafe } from "@/lib/usage-tracking";
+import { normalizeQuestionForStorage } from "@/lib/suggestions";
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -21,14 +22,16 @@ export async function POST(request: NextRequest) {
     let user = null;
 
     const body = await request.json();
-    const { query, clientId } = body;
+    const { query, clientId, source } = body;
     const requestContext = getRequestContext(request, clientId);
+    const querySource = source === "suggestion" ? "SUGGESTION" : "TYPED";
 
     logger.apiStart("POST /api/session/create", {
       requestId,
       isAuthenticated,
       clientId: requestContext.clientId?.slice(0, 8),
       queryLength: query?.length,
+      source: querySource,
     });
 
     if (isAuthenticated) {
@@ -294,6 +297,45 @@ export async function POST(request: NextRequest) {
           outputTokens: usage.outputTokens,
           estimatedCostUsd: usage.estimatedCostUsd,
         }),
+      });
+    }
+
+    const normalizedQuestionText = normalizeQuestionForStorage(sanitizedQuery);
+
+    try {
+      if (normalizedQuestionText) {
+        await prisma.questionEvent.create({
+          data: {
+            questionText: sanitizedQuery,
+            normalizedText: normalizedQuestionText,
+            source: querySource,
+            userId: user?.id ?? null,
+            graphSessionId: result.isAnonymous ? null : result.session.id,
+            anonymousSessionId: result.isAnonymous ? result.session.id : null,
+            clientId: requestContext.clientId,
+            country: requestContext.country,
+            region: requestContext.region,
+            userAgent: requestContext.userAgent,
+            metadata: {
+              isAuthenticated,
+              source: querySource,
+            },
+          },
+        });
+      } else {
+        logger.warn("question_event_write_skipped", {
+          requestId,
+          userId: user?.id ?? null,
+          isAnonymous: result.isAnonymous,
+          reason: "empty_normalized_text",
+        });
+      }
+    } catch (error) {
+      logger.warn("question_event_write_failed", {
+        requestId,
+        userId: user?.id ?? null,
+        isAnonymous: result.isAnonymous,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
 

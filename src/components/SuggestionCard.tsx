@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
+import { DEFAULT_SUGGESTIONS, type SuggestionItem } from '@/lib/suggestion-defaults';
 
 interface SuggestionCardProps {
   title: string;
@@ -9,25 +10,6 @@ interface SuggestionCardProps {
   onClick: () => void;
   index?: number;
 }
-
-const SUGGESTION_EXAMPLES = [
-  {
-    title: 'How does quantum computing work?',
-    description: 'Explore the fundamentals of quantum mechanics and computation',
-  },
-  {
-    title: 'What is artificial intelligence?',
-    description: 'Understand machine learning, neural networks, and AI systems',
-  },
-  {
-    title: 'How do black holes form?',
-    description: 'Dive into astrophysics and gravitational phenomena',
-  },
-  {
-    title: 'What is blockchain technology?',
-    description: 'Learn about distributed systems and cryptocurrency',
-  },
-];
 
 export function SuggestionCard({ title, description, onClick, index = 0 }: SuggestionCardProps) {
   return (
@@ -60,14 +42,15 @@ export function SuggestionCard({ title, description, onClick, index = 0 }: Sugge
 interface SuggestionsGridProps {
   onSelectSuggestion: (query: string) => void;
   displayCount?: number;
+  suggestions?: SuggestionItem[];
 }
 
-export function SuggestionsGrid({ onSelectSuggestion, displayCount = 2 }: SuggestionsGridProps) {
-  const suggestions = SUGGESTION_EXAMPLES.slice(0, displayCount);
+export function SuggestionsGrid({ onSelectSuggestion, displayCount = 2, suggestions }: SuggestionsGridProps) {
+  const suggestionsToRender = (suggestions && suggestions.length > 0 ? suggestions : DEFAULT_SUGGESTIONS).slice(0, displayCount);
 
   return (
     <div className="w-full max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {suggestions.map((suggestion, index) => (
+      {suggestionsToRender.map((suggestion, index) => (
         <SuggestionCard
           key={suggestion.title}
           title={suggestion.title}
@@ -81,5 +64,5 @@ export function SuggestionsGrid({ onSelectSuggestion, displayCount = 2 }: Sugges
 }
 
 export function getSuggestionExamples() {
-  return SUGGESTION_EXAMPLES;
+  return DEFAULT_SUGGESTIONS;
 }

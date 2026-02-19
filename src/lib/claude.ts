@@ -14,6 +14,8 @@ const anthropic = new Anthropic({
 });
 
 export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001';
+export const CLAUDE_SUGGESTION_MODEL =
+  process.env.CLAUDE_SUGGESTION_MODEL || process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001';
 const ENABLE_PROMPT_TOKEN_COUNT = process.env.ENABLE_PROMPT_TOKEN_COUNT === 'true';
 
 const MODEL_PRICING_PER_MILLION: Record<string, { inputUsd: number; outputUsd: number }> = {
@@ -49,10 +51,16 @@ interface GeneratedBranch {
   followUpType: FollowUpType;
 }
 
+export interface GeneratedSuggestion {
+  title: string;
+  description: string;
+}
+
 interface ClaudePayload {
   answer?: unknown;
   keyTerms?: unknown;
   branches?: unknown;
+  suggestions?: unknown;
 }
 
 export interface GenerationUsage {
@@ -69,6 +77,11 @@ export interface GenerationResult {
   answer: string;
   keyTerms: ExploreTerm[];
   branches: GeneratedBranch[];
+  usage: GenerationUsage;
+}
+
+export interface SuggestionGenerationResult {
+  suggestions: GeneratedSuggestion[];
   usage: GenerationUsage;
 }
 
@@ -107,6 +120,26 @@ Return ONLY valid JSON:
       "summary": "string",
       "depthPreview": "string",
       "followUpType": "why" | "how" | "what" | "example" | "compare"
+    }
+  ]
+}`;
+
+const SUGGESTION_SYSTEM_PROMPT = `You generate suggested questions for a curiosity app.
+
+Rules:
+- Return exactly the requested number of suggestions.
+- Each title must be a clear, answerable question under 100 characters.
+- Keep topics diverse while still matching the user's interests.
+- Avoid repeating user history verbatim.
+- Descriptions should be short (8-18 words).
+- No sensitive or unsafe prompts.
+
+Return ONLY valid JSON:
+{
+  "suggestions": [
+    {
+      "title": "string",
+      "description": "string"
     }
   ]
 }`;
@@ -165,7 +198,7 @@ Generate one deeper explanation for this node context, then exactly ${branchCoun
 Avoid repeating covered sibling topics.`;
 }
 
-function parseJsonResponse(raw: string): ClaudePayload {
+function parseJsonResponse(raw: string): unknown {
   const trimmed = raw.trim();
 
   if (trimmed.startsWith('```')) {
@@ -236,6 +269,58 @@ function normalizeTerms(input: unknown): ExploreTerm[] {
     .slice(0, 8);
 }
 
+function normalizeSuggestionEntries(input: unknown, expectedCount: number): GeneratedSuggestion[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const dedupe = new Set<string>();
+
+  return input
+    .map((item): GeneratedSuggestion | null => {
+      if (!item || typeof item !== 'object') return null;
+      const record = item as Record<string, unknown>;
+      const title = typeof record.title === 'string' ? record.title.trim() : '';
+      const description = typeof record.description === 'string' ? record.description.trim() : '';
+
+      if (!title || !description) {
+        return null;
+      }
+
+      const dedupeKey = title.toLowerCase();
+      if (dedupe.has(dedupeKey)) {
+        return null;
+      }
+      dedupe.add(dedupeKey);
+
+      return {
+        title: title.slice(0, 120),
+        description: description.slice(0, 180),
+      };
+    })
+    .filter((item): item is GeneratedSuggestion => item !== null)
+    .slice(0, Math.max(1, expectedCount));
+}
+
+function buildSuggestionPrompt(context: {
+  personalQuestions: string[];
+  trendingQuestions: string[];
+  suggestionCount: number;
+}): string {
+  const personal = context.personalQuestions.length > 0 ? context.personalQuestions.join('\n- ') : 'none';
+  const trending = context.trendingQuestions.length > 0 ? context.trendingQuestions.join('\n- ') : 'none';
+
+  return `Generate exactly ${context.suggestionCount} new suggestion questions.
+
+Personal history (highest priority):
+- ${personal}
+
+Platform trends (secondary signal):
+- ${trending}
+
+Output must be JSON only.`;
+}
+
 function estimateCostUsd(
   model: string,
   usage: { input_tokens?: number; output_tokens?: number }
@@ -296,7 +381,7 @@ export async function generateBranches(context: ExplorationContext): Promise<Gen
       throw new Error('Unexpected response type from Claude');
     }
 
-    const parsed = parseJsonResponse(content.text);
+    const parsed = parseJsonResponse(content.text) as ClaudePayload;
     const answer = typeof parsed.answer === 'string' ? parsed.answer.trim() : '';
     const branches = normalizeBranches(parsed.branches);
     const keyTerms = normalizeTerms(parsed.keyTerms);
@@ -343,6 +428,84 @@ export async function generateBranches(context: ExplorationContext): Promise<Gen
       durationMs: logger.durationMs(timer),
       depth: context.depth,
       focusTerm: context.focusTerm,
+    });
+    throw error;
+  }
+}
+
+export async function generateSuggestions(context: {
+  personalQuestions: string[];
+  trendingQuestions: string[];
+  suggestionCount?: number;
+}): Promise<SuggestionGenerationResult> {
+  ensureApiKey();
+
+  const suggestionCount = Math.min(6, Math.max(2, context.suggestionCount ?? 4));
+  const prompt = buildSuggestionPrompt({
+    personalQuestions: context.personalQuestions.slice(0, 20),
+    trendingQuestions: context.trendingQuestions.slice(0, 20),
+    suggestionCount,
+  });
+  const timer = logger.startTimer();
+
+  try {
+    const message = await anthropic.messages.create({
+      model: CLAUDE_SUGGESTION_MODEL,
+      max_tokens: 700,
+      system: SUGGESTION_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    });
+
+    const content = message.content[0];
+    if (!content || content.type !== 'text') {
+      throw new Error('Unexpected response type from Claude');
+    }
+
+    const parsed = parseJsonResponse(content.text) as ClaudePayload;
+    const suggestions = normalizeSuggestionEntries(parsed.suggestions, suggestionCount);
+
+    if (suggestions.length === 0) {
+      throw new Error('Claude returned no valid suggestions');
+    }
+
+    const usage = {
+      model: CLAUDE_SUGGESTION_MODEL,
+      inputTokens: message.usage.input_tokens || 0,
+      outputTokens: message.usage.output_tokens || 0,
+      cacheCreationInputTokens: message.usage.cache_creation_input_tokens || 0,
+      cacheReadInputTokens: message.usage.cache_read_input_tokens || 0,
+      estimatedCostUsd: estimateCostUsd(CLAUDE_SUGGESTION_MODEL, message.usage),
+      requestId: message._request_id || undefined,
+    };
+
+    logger.aiUsage('anthropic', {
+      model: usage.model,
+      requestId: usage.requestId,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      estimatedCostUsd: usage.estimatedCostUsd,
+      durationMs: logger.durationMs(timer),
+      personalSeedCount: context.personalQuestions.length,
+      trendingSeedCount: context.trendingQuestions.length,
+      suggestionCount: suggestions.length,
+      feature: 'suggestions',
+    });
+
+    return {
+      suggestions,
+      usage,
+    };
+  } catch (error) {
+    logger.apiError('Claude.generateSuggestions', error, {
+      model: CLAUDE_SUGGESTION_MODEL,
+      durationMs: logger.durationMs(timer),
+      personalSeedCount: context.personalQuestions.length,
+      trendingSeedCount: context.trendingQuestions.length,
     });
     throw error;
   }
