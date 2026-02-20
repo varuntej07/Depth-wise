@@ -12,7 +12,7 @@ import { API_ENDPOINTS } from '@/lib/api-config';
 import { UsageIndicator } from '@/components/UsageIndicator';
 import { normalizeLoadedSessionGraph } from '@/lib/graph-normalization';
 import Link from 'next/link';
-import { Compass, Crown, Layers, Network, Sparkles } from 'lucide-react';
+import { Compass, Layers, Network, Sparkles } from 'lucide-react';
 import { SignInButton } from '@/components/auth/SignInButton';
 import { UserMenu } from '@/components/auth/UserMenu';
 
@@ -242,7 +242,7 @@ export default function ExplorePage() {
           sidebarCollapsed ? 'md:ml-16' : 'md:ml-[280px]'
         }`}
       >
-        <header className="h-16 w-full flex-shrink-0 border-b border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.78)] backdrop-blur-xl sm:h-[74px]">
+        <header className="relative z-40 h-16 w-full flex-shrink-0 border-b border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.78)] backdrop-blur-xl sm:h-[74px]">
           <div className="flex h-full items-center justify-between gap-3 px-3 sm:px-6">
             <div className="min-w-0 flex-1">
               {nodes.length > 0 ? (
@@ -288,37 +288,19 @@ export default function ExplorePage() {
                 </>
               )}
 
-              {session && (
-                <Link
-                  href="/pricing"
-                  className="hidden items-center gap-2 rounded-lg bg-[image:var(--mint-accent-gradient)] px-4 py-2 text-sm font-medium text-[#04120e] shadow-[0_8px_24px_var(--mint-accent-glow)] transition-all hover:brightness-105 active:scale-95 sm:flex"
-                >
-                  <Crown className="w-4 h-4" />
-                  <span>Upgrade</span>
-                </Link>
-              )}
-              {session && (
-                <Link
-                  href="/pricing"
-                  className="sm:hidden flex items-center justify-center w-8 h-8 bg-[image:var(--mint-accent-gradient)] text-[#04120e] rounded-lg transition-all hover:brightness-105 active:scale-95"
-                  title="Upgrade"
-                >
-                  <Crown className="w-4 h-4" />
-                </Link>
-              )}
               {session && <UserMenu />}
             </div>
           </div>
         </header>
 
-        <main className="relative min-h-0 flex-1 overflow-hidden p-3 sm:p-5">
+        <main className="relative z-0 min-h-0 flex-1 overflow-hidden p-3 sm:p-5">
           {nodes.length === 0 ? (
             <div className="mx-auto grid h-full w-full max-w-7xl gap-5 lg:grid-cols-[1.08fr_0.92fr]">
               <div className="flex items-center">
                 <SearchBar />
               </div>
 
-              <div className="rounded-3xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.78)] p-6 backdrop-blur-xl sm:p-8">
+              <div className="relative z-0 rounded-3xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.78)] p-6 backdrop-blur-xl sm:p-8">
                 <p className="text-xs uppercase tracking-[0.24em] text-white/50">How to get better maps</p>
                 <h3 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                   Build depth deliberately.

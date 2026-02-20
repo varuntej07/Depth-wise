@@ -35,7 +35,7 @@ export function UserMenu() {
   if (!session?.user) return null
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative z-50" ref={menuRef}>
       {/* User Avatar Button */}
       <button
         type="button"
@@ -84,9 +84,9 @@ export function UserMenu() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 sm:w-64 rounded-xl bg-[var(--mint-surface)] border-2 border-[var(--mint-accent-2)] shadow-2xl shadow-[0_0_24px_var(--mint-accent-glow)] overflow-hidden z-[9999]">
+        <div className="absolute right-0 z-[70] mt-2 w-56 overflow-hidden rounded-xl border border-[rgba(209,213,219,0.14)] bg-[rgba(13,26,22,0.97)] shadow-2xl shadow-[rgba(0,0,0,0.5)] backdrop-blur-xl sm:w-64">
           {/* User Info Section */}
-          <div className="p-3 sm:p-4 border-b border-[var(--mint-accent-2)] bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]">
+          <div className="border-b border-[rgba(209,213,219,0.14)] bg-[rgba(32,52,45,0.45)] p-3 sm:p-4">
             <div className="flex items-center gap-3">
               {session.user.image ? (
                 <Image
@@ -107,7 +107,7 @@ export function UserMenu() {
                 <p className="text-white font-semibold text-sm truncate">
                   {session.user.name || 'User'}
                 </p>
-                <p className="text-[var(--mint-text-secondary)] text-xs truncate">
+                <p className="text-[var(--mint-text-secondary)]/90 text-xs truncate">
                   {session.user.email}
                 </p>
               </div>
@@ -118,7 +118,7 @@ export function UserMenu() {
           <div className="py-1">
             <button
               type="button"
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-[var(--mint-text-secondary)] hover:bg-[rgba(16,185,129,0.16)] hover:text-[var(--mint-accent-1)] transition-colors flex items-center gap-2 cursor-pointer"
+              className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-[var(--mint-text-secondary)] transition-colors hover:bg-[rgba(32,52,45,0.7)] hover:text-[var(--mint-accent-1)] sm:px-4 sm:py-2.5"
               onClick={(e) => {
                 e.stopPropagation();
                 router.push('/account');
@@ -133,7 +133,7 @@ export function UserMenu() {
 
             <button
               type="button"
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-[var(--mint-accent-1)] hover:bg-[rgba(16,185,129,0.16)] hover:text-[var(--mint-accent-1)] transition-colors flex items-center gap-2 font-medium cursor-pointer"
+              className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm font-medium text-[var(--mint-accent-1)] transition-colors hover:bg-[rgba(32,52,45,0.7)] hover:text-[var(--mint-accent-1)] sm:px-4 sm:py-2.5"
               onClick={(e) => {
                 e.stopPropagation();
                 console.log('Upgrade button clicked');
@@ -149,7 +149,7 @@ export function UserMenu() {
           </div>
 
           {/* Sign Out Section */}
-          <div className="border-t border-[var(--mint-accent-2)]">
+          <div className="border-t border-[rgba(209,213,219,0.14)]">
             <button
               type="button"
               onClick={(e) => {
@@ -157,7 +157,7 @@ export function UserMenu() {
                 console.log('Sign out button clicked');
                 signOut({ callbackUrl: '/home' });
               }}
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2 cursor-pointer"
+              className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-red-400 transition-colors hover:bg-red-500/10 sm:px-4 sm:py-2.5"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

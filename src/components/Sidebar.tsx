@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   ChevronLeft,
   ChevronRight,
-  Crown,
   HelpCircle,
   Home,
   LayoutDashboard,
@@ -129,7 +128,6 @@ export function ChatSidebar({
     () => [
       { href: '/home', label: 'Home', icon: Home },
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/pricing', label: 'Pricing', icon: Crown },
       { href: '/help', label: 'Help', icon: HelpCircle },
       { href: '/settings', label: 'Settings', icon: Settings },
     ],
@@ -205,7 +203,7 @@ export function ChatSidebar({
         type="button"
         onClick={openQuickNav}
         className="fixed bottom-4 left-4 z-50 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.92)] text-white/85 shadow-[0_8px_24px_rgba(2,6,18,0.45)] transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.55)] md:hidden"
-        aria-label="Open pages menu"
+        aria-label="Open shortcuts menu"
       >
         <Menu className="h-4 w-4" />
       </button>
@@ -288,8 +286,8 @@ export function ChatSidebar({
                 openQuickNav();
               }}
               className="mt-auto inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] text-white/85 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.55)]"
-              title="Pages Menu"
-              aria-label="Pages Menu"
+              title="Shortcuts Menu"
+              aria-label="Shortcuts Menu"
             >
               <Menu className="h-4 w-4" />
             </button>
@@ -364,7 +362,7 @@ export function ChatSidebar({
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] px-3 py-2.5 text-sm font-medium text-white/80 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.5)]"
               >
                 <Menu className="h-4 w-4" />
-                Pages
+                Shortcuts
               </button>
             </div>
           </div>
@@ -443,7 +441,7 @@ export function ChatSidebar({
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.35)] px-3 py-2.5 text-sm font-medium text-white/80 transition hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.5)]"
               >
                 <Menu className="h-4 w-4" />
-                Pages
+                Shortcuts
               </button>
             </div>
           </motion.aside>
@@ -460,7 +458,7 @@ export function ChatSidebar({
               exit={{ opacity: 0 }}
               onClick={closeQuickNav}
               className="fixed inset-0 z-[72] bg-black/55 backdrop-blur-[2px]"
-              aria-label="Close pages menu"
+              aria-label="Close shortcuts menu"
             />
             <motion.div
               initial={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -470,12 +468,12 @@ export function ChatSidebar({
               className="fixed bottom-4 left-4 z-[82] w-[min(320px,calc(100vw-2rem))] rounded-2xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.97)] p-3 shadow-[0_24px_72px_rgba(2,6,18,0.7)]"
             >
               <div className="mb-2 flex items-center justify-between px-1">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-white/55">Pages</p>
+                <p className="text-[11px] uppercase tracking-[0.14em] text-white/55">Shortcuts</p>
                 <button
                   type="button"
                   onClick={closeQuickNav}
                   className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.3)] text-white/70 transition hover:border-[var(--mint-accent-2)] hover:text-white"
-                  aria-label="Close pages menu"
+                  aria-label="Close shortcuts menu"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>

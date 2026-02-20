@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, TrendingUp } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -28,7 +28,7 @@ export const UsageIndicator: React.FC = () => {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUsage = async () => {
+  const fetchUsage = useCallback(async () => {
     if (!session?.user) {
       setLoading(false);
       return;
@@ -45,11 +45,11 @@ export const UsageIndicator: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user]);
 
   useEffect(() => {
     fetchUsage();
-  }, [session]);
+  }, [fetchUsage]);
 
   // Listen for usage refresh events
   useEffect(() => {
@@ -59,13 +59,19 @@ export const UsageIndicator: React.FC = () => {
 
     window.addEventListener('refresh-usage', handleRefreshUsage);
     return () => window.removeEventListener('refresh-usage', handleRefreshUsage);
-  }, [session]);
+  }, [fetchUsage]);
 
   if (!session?.user || loading || !usage) {
     return null;
   }
 
   const { explorationsUsed, explorationsLimit, percentage } = usage;
+  const explorationsRemaining =
+    explorationsLimit === null ? null : Math.max(0, explorationsLimit - explorationsUsed);
+  const remainingLabel =
+    explorationsRemaining === null
+      ? 'Unlimited explorations left on your current plan.'
+      : `${explorationsRemaining} exploration${explorationsRemaining === 1 ? '' : 's'} left this cycle.`;
 
   // Color coding based on percentage
   const getColorClasses = () => {
@@ -84,7 +90,8 @@ export const UsageIndicator: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2 bg-[var(--mint-surface)] backdrop-blur-sm border border-[var(--mint-accent-2)] rounded-lg"
+      tabIndex={0}
+      className="group relative flex items-center gap-1.5 rounded-lg border border-[var(--mint-accent-2)] bg-[var(--mint-surface)] px-2 py-1.5 backdrop-blur-sm focus-visible:outline-none sm:gap-3 sm:px-4 sm:py-2"
     >
       {/* Icon */}
       <Zap className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${getTextColor()}`} />
@@ -124,6 +131,10 @@ export const UsageIndicator: React.FC = () => {
             <span className="text-xs font-semibold text-[var(--mint-accent-1)]">Unlimited</span>
           </div>
         )}
+      </div>
+
+      <div className="pointer-events-none absolute left-1/2 top-[calc(100%+0.55rem)] z-30 w-max -translate-x-1/2 rounded-md border border-[var(--mint-elevated)] bg-[rgba(5,13,11,0.95)] px-2.5 py-1 text-[11px] text-[var(--mint-text-secondary)] opacity-0 shadow-[0_8px_20px_rgba(2,6,18,0.45)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
+        {remainingLabel}
       </div>
     </motion.div>
   );
