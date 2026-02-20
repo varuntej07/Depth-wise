@@ -207,15 +207,15 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                   {/* Premium Toggle Section */}
                   <motion.div
                     layout
-                    className="relative p-5 bg-gradient-to-br from-white/5 to-white/0 rounded-2xl border border-white/10 backdrop-blur-sm overflow-hidden"
+                    className="relative overflow-hidden rounded-2xl border border-[rgba(110,231,183,0.2)] bg-[rgba(22,35,24,0.92)] p-5 backdrop-blur-sm"
                   >
-                    {/* Animated background gradient */}
+                    {/* Keeps motion subtle with dark tones; reserve bright green for accents */}
                     <motion.div
                       animate={{
                         backgroundPosition: ['0% 0%', '100% 100%'],
                       }}
                       transition={{ duration: 3, repeat: Infinity, repeatType: 'reverse' }}
-                      className="absolute inset-0 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] opacity-50"
+                      className="absolute inset-0 bg-gradient-to-br from-[rgba(22,35,24,0.95)] to-[rgba(26,46,36,0.95)] opacity-90"
                       style={{ backgroundSize: '200% 200%' }}
                     />
 
@@ -228,12 +228,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                           transition={{ duration: 0.5 }}
                           className={`p-3 rounded-xl ${
                             isPublic
-                              ? 'bg-green-500/20 border-2 border-green-500/30'
-                              : 'bg-[var(--mint-elevated)] border-2 border-[var(--mint-elevated)]'
+                              ? 'bg-[rgba(22,35,24,0.92)] border-2 border-[rgba(110,231,183,0.35)]'
+                              : 'bg-[rgba(17,29,24,0.9)] border-2 border-[rgba(110,231,183,0.16)]'
                           }`}
                         >
                           {isPublic ? (
-                            <Globe className="w-6 h-6 text-green-400" />
+                            <Globe className="w-6 h-6 text-[var(--mint-accent-1)]" />
                           ) : (
                             <Lock className="w-6 h-6 text-[var(--mint-text-secondary)]" />
                           )}
@@ -262,17 +262,19 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                         whileTap={{ scale: 0.95 }}
                         onClick={handleTogglePublic}
                         disabled={isLoading}
-                        className={`relative inline-flex h-9 w-16 items-center rounded-full transition-all duration-300 ${
+                        className={`relative inline-flex h-9 w-16 items-center rounded-full border transition-all duration-300 ${
                           isPublic
-                            ? 'bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] shadow-lg shadow-[0_0_24px_var(--mint-accent-glow)]'
-                            : 'bg-[var(--mint-elevated)]'
+                            ? 'border-[var(--mint-accent-2)] bg-[rgba(22,35,24,0.92)] shadow-[0_0_16px_var(--mint-accent-glow)]'
+                            : 'border-[rgba(110,231,183,0.22)] bg-[rgba(17,29,24,0.9)]'
                         } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                       >
                         {/* Toggle knob */}
                         <motion.span
                           layout
                           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                          className={`inline-block h-7 w-7 transform rounded-full bg-white shadow-lg transition-transform ${
+                          className={`inline-block h-7 w-7 transform rounded-full shadow-lg transition-transform ${
+                            isPublic ? 'bg-[var(--mint-accent-2)]' : 'bg-white'
+                          } ${
                             isPublic ? 'translate-x-8' : 'translate-x-1'
                           }`}
                         >
@@ -290,7 +292,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                                 transition={{ duration: 0.3 }}
                               >
                                 {isPublic ? (
-                                  <Check className="w-4 h-4 text-green-500" />
+                                  <Check className="w-4 h-4 text-[#04120e]" />
                                 ) : (
                                   <Lock className="w-4 h-4 text-[var(--mint-text-secondary)]" />
                                 )}
@@ -388,18 +390,18 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="relative p-4 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-xl border border-white/5"
+                    className="relative rounded-xl border border-[rgba(110,231,183,0.2)] bg-[rgba(22,35,24,0.9)] p-4"
                   >
                     <p className="text-xs text-[var(--mint-text-secondary)] leading-relaxed">
                       {isPublic ? (
                         <>
-                          <span className="text-green-400 font-semibold">🌍 Public:</span> Your
+                          <span className="font-semibold text-[var(--mint-accent-1)]">Public:</span> Your
                           graph is now visible to anyone with the link. They can view and explore
                           but cannot edit.
                         </>
                       ) : (
                         <>
-                          <span className="text-[var(--mint-text-secondary)] font-semibold">🔒 Private:</span> Your
+                          <span className="font-semibold text-[var(--mint-text-secondary)]">Private:</span> Your
                           graph is private and only visible to you. Toggle public to share with
                           others.
                         </>
@@ -427,3 +429,4 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
     </AnimatePresence>
   );
 };
+
