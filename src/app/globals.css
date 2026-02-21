@@ -249,6 +249,51 @@
   overflow: hidden;
 }
 
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Node readability + focus treatment */
+.react-flow.crisp-text-mode .knowledge-node {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.react-flow.crisp-text-mode .knowledge-node [data-slot='card'] {
+  transform: translateZ(0);
+}
+
+.react-flow__node.depthwise-node-center-highlight {
+  z-index: 100 !important;
+}
+
+.react-flow__node.depthwise-node-center-highlight .knowledge-node [data-slot='card'] {
+  border-color: rgba(110, 231, 183, 0.85) !important;
+  box-shadow:
+    0 0 0 2px rgba(16, 185, 129, 0.5),
+    0 0 35px rgba(16, 185, 129, 0.42);
+}
+
+.knowledge-content-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.knowledge-content-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.knowledge-content-scroll::-webkit-scrollbar-thumb {
+  background: rgba(110, 231, 183, 0.28);
+  border-radius: 9999px;
+}
+
+.knowledge-content-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(110, 231, 183, 0.45);
+}
+
 /* Shimmer animation for skeleton loading */
 @keyframes shimmer {
   0% {

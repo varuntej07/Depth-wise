@@ -4,15 +4,26 @@ import React, { memo, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KnowledgeNodeData, FollowUpType } from '@/types/graph';
-import { Loader2, AlertCircle, RotateCw, Maximize2 } from 'lucide-react';
-import NodeDetailModal from './NodeDetailModal';
+import { Loader2, AlertCircle, RotateCw, Sparkles, ChevronUp, ChevronDown, ThumbsUp, ThumbsDown } from 'lucide-react';
 import useGraphStore from '@/store/graphStore';
 import { usePostHog } from 'posthog-js/react';
+import { API_ENDPOINTS } from '@/lib/api-config';
+import { getClientId } from '@/lib/utils';
 
 interface KnowledgeNodeProps {
   data: KnowledgeNodeData;
   id: string;
 }
+
+type FeedbackValue = 'up' | 'down';
+
+const DOWN_FEEDBACK_OPTIONS = [
+  { value: 'unclear', label: 'Unclear' },
+  { value: 'too_shallow', label: 'Too shallow' },
+  { value: 'incorrect', label: 'Incorrect' },
+  { value: 'repetitive', label: 'Repetitive' },
+  { value: 'skip_reason', label: 'Skip reason' },
+] as const;
 
 // Get color based on depth
 const getDepthColor = (depth: number) => {
@@ -27,13 +38,78 @@ const getDepthColor = (depth: number) => {
 };
 
 const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
+  const [feedbackValue, setFeedbackValue] = useState<FeedbackValue | null>(null);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [showDownvoteReasons, setShowDownvoteReasons] = useState(false);
+  const [selectedDownvoteReason, setSelectedDownvoteReason] = useState<string | null>(null);
   const posthog = usePostHog();
 
   // Check if we're viewing a shared (public) graph
   // If so, we shouldn't allow exploration (read-only mode)
-  const { isPublic } = useGraphStore();
+  const { isPublic, isAnonymous } = useGraphStore();
   const isReadOnly = isPublic;
+
+  const stopEventPropagation = (event: React.MouseEvent) => {
+    event.stopPropagation();
+  };
+
+  const submitNodeFeedback = async (value: FeedbackValue, reason?: string) => {
+    if (isSubmittingFeedback || data.loading || !data.sessionId) {
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+
+    try {
+      const response = await fetch(API_ENDPOINTS.NODE_FEEDBACK, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: data.sessionId,
+          nodeId: id,
+          isAnonymous,
+          value,
+          reason: reason || undefined,
+          nodeDepth: data.depth,
+          nodeTitle: data.title,
+          followUpType: data.followUpType,
+          clientId: getClientId(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to save node feedback');
+      }
+
+      setFeedbackValue(value);
+      if (value === 'up') {
+        setShowDownvoteReasons(false);
+        setSelectedDownvoteReason(null);
+      } else {
+        setShowDownvoteReasons(false);
+      }
+
+      posthog.capture('node_feedback_submitted', {
+        node_id: id,
+        node_title: data.title,
+        depth: data.depth,
+        session_id: data.sessionId,
+        value,
+        reason: reason || null,
+      });
+    } catch (error) {
+      console.error('Node feedback submission failed:', error);
+      posthog.capture('node_feedback_submission_failed', {
+        node_id: id,
+        session_id: data.sessionId,
+      });
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   const handleExplore = (exploreType?: FollowUpType, focusTerm?: string) => {
     // Don't allow exploration on read-only (shared) graphs
@@ -89,17 +165,11 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
   const depthColors = getDepthColor(data.depth);
   const contentText = data.content || data.summary || '';
   const charCount = contentText.length;
-  const shouldShowViewDetails = charCount > 200; // Show button if more than 200 characters
+  const shouldShowInlineExpansion = charCount > 220;
   const isRootNode = data.depth === 1;
 
   return (
     <>
-      <NodeDetailModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        data={data}
-      />
-
       <div className="knowledge-node">
         <Handle
           type="target"
@@ -120,7 +190,7 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
             data.error ? 'shadow-red-500/30' : depthColors.shadow
           } shadow-lg transition-all duration-300 ${
             data.error ? 'hover:shadow-red-500/50' : depthColors.glow
-          } hover:scale-[1.02] ${
+          } ${
             data.loading
               ? 'animate-pulse'
               : ''
@@ -143,34 +213,128 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-2.5 pb-2.5 space-y-2 flex-1 flex flex-col overflow-hidden">
-          {/* Content display - full text for <=200 chars, truncated for longer */}
+          {/* Content display with inline "Lens" expansion for long answers */}
           {contentText && (
             <div className="flex-1 overflow-hidden">
-              <div className={`text-sm sm:text-base text-[var(--mint-text-secondary)] leading-relaxed ${
-                shouldShowViewDetails ? 'line-clamp-3' : ''
+              <div className={`relative rounded-lg border border-[rgba(110,231,183,0.18)] bg-[rgba(32,52,45,0.3)] px-3 py-2.5 transition-all duration-200 ${
+                isContentExpanded ? 'border-[rgba(110,231,183,0.36)]' : ''
               }`}>
-                {shouldShowViewDetails
-                  ? (data.content || data.summary)?.slice(0, 200) + '...'
-                  : (data.content || data.summary)
-                }
+                <div className={`knowledge-content-scroll text-[15px] sm:text-base text-white/92 leading-[1.65] ${
+                  shouldShowInlineExpansion
+                    ? isContentExpanded
+                      ? 'max-h-[220px] overflow-y-auto pr-1'
+                      : 'line-clamp-4'
+                    : ''
+                }`}>
+                  {data.content || data.summary}
+                </div>
+
+                {shouldShowInlineExpansion && !isContentExpanded && (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-[rgba(13,26,22,0.95)] to-transparent" />
+                )}
               </div>
 
-              {/* Read more button only for longer content */}
-              {shouldShowViewDetails && (
+              {shouldShowInlineExpansion && (
                 <button
-                  onClick={() => {
-                    posthog.capture('node_detail_viewed', {
+                  onClick={(event) => {
+                    stopEventPropagation(event);
+                    setIsContentExpanded((expanded) => !expanded);
+                    posthog.capture('node_content_expansion_toggled', {
                       node_id: id,
-                      node_title: data.title,
+                      expanded: !isContentExpanded,
                       depth: data.depth,
                     });
-                    setIsModalOpen(true);
                   }}
-                  className={`mt-1 text-xs ${depthColors.text} hover:underline flex items-center gap-1 transition-colors font-medium`}
+                  className={`mt-2 text-xs ${depthColors.text} hover:underline flex items-center gap-1 transition-colors font-medium`}
                 >
-                  <Maximize2 className="w-3 h-3" />
-                  <span>Read more</span>
+                  {isContentExpanded ? (
+                    <>
+                      <ChevronUp className="w-3 h-3" />
+                      <span>Collapse Lens</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      <span>Open Lens</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </>
+                  )}
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* Per-node quality feedback */}
+          {!data.loading && !data.error && (
+            <div className="space-y-2 rounded-lg border border-[rgba(110,231,183,0.18)] bg-[rgba(32,52,45,0.24)] px-3 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/55">Was this node useful?</p>
+                {isSubmittingFeedback && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--mint-accent-1)]" />
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={(event) => {
+                    stopEventPropagation(event);
+                    setShowDownvoteReasons(false);
+                    setSelectedDownvoteReason(null);
+                    submitNodeFeedback('up');
+                  }}
+                  disabled={isSubmittingFeedback}
+                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors disabled:opacity-60 ${
+                    feedbackValue === 'up'
+                      ? 'border-[var(--mint-accent-2)] bg-[rgba(16,185,129,0.16)] text-[var(--mint-accent-1)]'
+                      : 'border-[var(--mint-elevated)] text-[var(--mint-text-secondary)] hover:border-[var(--mint-accent-2)] hover:text-[var(--mint-accent-1)]'
+                  }`}
+                >
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                  <span>Yes</span>
+                </button>
+
+                <button
+                  onClick={(event) => {
+                    stopEventPropagation(event);
+                    setFeedbackValue('down');
+                    setShowDownvoteReasons((visible) => !visible);
+                  }}
+                  disabled={isSubmittingFeedback}
+                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors disabled:opacity-60 ${
+                    feedbackValue === 'down'
+                      ? 'border-red-500/60 bg-red-500/10 text-red-300'
+                      : 'border-[var(--mint-elevated)] text-[var(--mint-text-secondary)] hover:border-red-500/60 hover:text-red-300'
+                  }`}
+                >
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                  <span>No</span>
+                </button>
+              </div>
+
+              {showDownvoteReasons && (
+                <div className="flex flex-wrap gap-1.5">
+                  {DOWN_FEEDBACK_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={(event) => {
+                        stopEventPropagation(event);
+                        setSelectedDownvoteReason(option.value);
+                        submitNodeFeedback(
+                          'down',
+                          option.value === 'skip_reason' ? undefined : option.value
+                        );
+                      }}
+                      disabled={isSubmittingFeedback}
+                      className={`rounded-md border px-2 py-1 text-[11px] transition-colors disabled:opacity-60 ${
+                        selectedDownvoteReason === option.value
+                          ? 'border-red-500/60 bg-red-500/10 text-red-300'
+                          : 'border-[var(--mint-elevated)] text-[var(--mint-text-secondary)] hover:border-red-500/60 hover:text-red-300'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -182,7 +346,10 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
                 {data.exploreTerms.map((term) => (
                   <button
                     key={`${id}-${term.label}`}
-                    onClick={() => handleExplore(undefined, term.query)}
+                    onClick={(event) => {
+                      stopEventPropagation(event);
+                      handleExplore(undefined, term.query);
+                    }}
                     className={`text-xs ${depthColors.text} border border-[var(--mint-elevated)] rounded-md py-1 px-2.5 font-medium transition-all duration-200 hover:border-[var(--mint-accent-2)] hover:bg-[var(--mint-elevated)]`}
                   >
                     {term.label}
@@ -201,7 +368,10 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               </div>
               {!isReadOnly && (
                 <button
-                  onClick={() => handleExplore()}
+                  onClick={(event) => {
+                    stopEventPropagation(event);
+                    handleExplore();
+                  }}
                   className="w-full text-sm text-red-400 hover:bg-red-500/10 border border-red-500/30 rounded-lg py-2 px-4 font-medium transition-all duration-200 hover:border-red-500/60 flex items-center justify-center gap-2 group"
                 >
                   <RotateCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
@@ -219,7 +389,10 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
                 {getFollowUpButtons().map((btn) => (
                   <button
                     key={btn.type}
-                    onClick={() => handleExplore(btn.type)}
+                    onClick={(event) => {
+                      stopEventPropagation(event);
+                      handleExplore(btn.type);
+                    }}
                     className={`text-xs ${depthColors.text} hover:bg-[var(--mint-elevated)] border border-[var(--mint-elevated)] rounded-md py-1 px-2.5 font-medium transition-all duration-200 hover:border-[var(--mint-accent-2)]`}
                   >
                     {btn.label}
@@ -228,7 +401,10 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id }) => {
               </div>
               {/* Generic explore button */}
               <button
-                onClick={() => handleExplore()}
+                onClick={(event) => {
+                  stopEventPropagation(event);
+                  handleExplore();
+                }}
                 className={`w-full text-xs sm:text-sm ${depthColors.text} hover:bg-[var(--mint-elevated)] border border-[rgba(16,185,129,0.35)] rounded-lg py-1.5 sm:py-2 px-3 sm:px-4 font-medium transition-all duration-200 hover:border-[var(--mint-accent-2)] flex items-center justify-center gap-2 group`}
               >
                 <span>Explore Deeper</span>

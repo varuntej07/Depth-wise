@@ -6,6 +6,7 @@ import {
   Background,
   Controls,
   MiniMap,
+  Panel,
   useNodesState,
   useEdgesState,
   useReactFlow,
@@ -29,6 +30,8 @@ import { API_ENDPOINTS } from '@/lib/api-config';
 import { SignInDialog } from './SignInDialog';
 import { useSession } from 'next-auth/react';
 import { getClientId } from '@/lib/utils';
+import { ArrowLeft, Crosshair, Type } from 'lucide-react';
+import { usePostHog } from 'posthog-js/react';
 
 const nodeTypes = {
   knowledge: (props: { data: GraphNode['data']; id: string; selected: boolean }) => {
@@ -69,9 +72,17 @@ const KnowledgeCanvasInner: React.FC = () => {
   const { data: session } = useSession();
   const [anonymousSessionIdForMigration, setAnonymousSessionIdForMigration] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const { fitView } = useReactFlow();
+  const [crispTextMode, setCrispTextMode] = useState(true);
+  const [centeredNodeId, setCenteredNodeId] = useState<string | null>(null);
+  const [centerHistory, setCenterHistory] = useState<string[]>([]);
+  const { fitView, setCenter, getZoom } = useReactFlow();
+  const posthog = usePostHog();
   const initialFitDone = useRef(false);
+  const centerPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const crispPreferenceHydrated = useRef(false);
   const shouldRenderDesktopTools = !isMobile && nodes.length > 0;
+  const canvasMinZoom = isMobile ? 0.05 : crispTextMode ? 0.55 : 0.05;
+  const canvasFitMaxZoom = isMobile ? 0.6 : crispTextMode ? 1.05 : 1;
 
   const getMiniMapNodeColor = useCallback((node: Node) => {
     const data = (node as Partial<GraphNode>).data as GraphNode['data'] | undefined;
@@ -100,9 +111,63 @@ const KnowledgeCanvasInner: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Persisted crisp text mode preference.
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const storageKey = 'depthwise_crisp_text_mode';
+    const saved = localStorage.getItem(storageKey);
+    if (saved === null) {
+      const desktopDefault = window.innerWidth >= 768;
+      setCrispTextMode(desktopDefault);
+      localStorage.setItem(storageKey, String(desktopDefault));
+    } else {
+      setCrispTextMode(saved === 'true');
+    }
+    crispPreferenceHydrated.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!crispPreferenceHydrated.current || typeof window === 'undefined') {
+      return;
+    }
+
+    localStorage.setItem('depthwise_crisp_text_mode', String(crispTextMode));
+  }, [crispTextMode]);
+
+  // Detect long tasks so we can track jank in production.
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof PerformanceObserver === 'undefined') {
+      return;
+    }
+    if (!PerformanceObserver.supportedEntryTypes?.includes('longtask')) {
+      return;
+    }
+
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.duration < 120) {
+          continue;
+        }
+
+        posthog.capture('graph_render_long_task_detected', {
+          duration_ms: Number(entry.duration.toFixed(1)),
+          crisp_text_mode: crispTextMode,
+        });
+      }
+    });
+
+    observer.observe({ entryTypes: ['longtask'] });
+    return () => observer.disconnect();
+  }, [crispTextMode, posthog]);
+
   // Reset fit state when switching sessions so each loaded history graph gets centered once.
   useEffect(() => {
     initialFitDone.current = false;
+    setCenterHistory([]);
+    setCenteredNodeId(null);
   }, [sessionId]);
 
   // Trigger fitView after rendered nodes are available (after skeleton nodes are replaced).
@@ -127,14 +192,14 @@ const KnowledgeCanvasInner: React.FC = () => {
         fitView({
           padding: isMobile ? 0.1 : 0.2,
           duration: 300,
-          maxZoom: isMobile ? 0.5 : 1,
-          minZoom: 0.08,
+          maxZoom: canvasFitMaxZoom,
+          minZoom: canvasMinZoom,
         });
         initialFitDone.current = true;
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [nodes, fitView, isMobile]);
+  }, [nodes, fitView, isMobile, canvasFitMaxZoom, canvasMinZoom]);
 
   // Find all edges in the path from root to a given node
   const getPathToRoot = useCallback(
@@ -192,8 +257,21 @@ const KnowledgeCanvasInner: React.FC = () => {
     const visibleNodes = focusMode ? getVisibleNodes() : storeNodes;
     const nodesToRender =
       visibleNodes.length === 0 && storeNodes.length > 0 ? storeNodes : visibleNodes;
-    setNodes(nodesToRender as unknown as Node[]);
-  }, [storeNodes, focusMode, focusedNodeId, setNodes, getVisibleNodes]);
+    const enhancedNodes = nodesToRender.map((node) => {
+      const isCentered = node.id === centeredNodeId;
+      const existingClassName =
+        typeof node.className === 'string' ? node.className : '';
+      const className = `${existingClassName} ${isCentered ? 'depthwise-node-center-highlight' : ''}`.trim();
+
+      return {
+        ...node,
+        className: className || undefined,
+        zIndex: isCentered ? 100 : node.zIndex,
+      };
+    });
+
+    setNodes(enhancedNodes as unknown as Node[]);
+  }, [storeNodes, focusMode, focusedNodeId, centeredNodeId, setNodes, getVisibleNodes]);
 
   // Enhanced edges with depth and highlight information (apply focus mode filtering)
   useEffect(() => {
@@ -216,6 +294,117 @@ const KnowledgeCanvasInner: React.FC = () => {
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
+
+  const clearCenterPulse = useCallback(() => {
+    if (centerPulseTimer.current) {
+      clearTimeout(centerPulseTimer.current);
+      centerPulseTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearCenterPulse();
+    };
+  }, [clearCenterPulse]);
+
+  const centerNodeInViewport = useCallback(
+    (node: Node, options?: { addToHistory?: boolean; trigger?: 'click' | 'back' }) => {
+      const nodeData = node.data as GraphNode['data'] | undefined;
+      const fallbackWidth = nodeData?.depth === 1 ? 500 : 420;
+      const fallbackHeight = 240;
+      const width = node.width ?? fallbackWidth;
+      const height = node.height ?? fallbackHeight;
+      const centerX = node.position.x + width / 2;
+      const centerY = node.position.y + height / 2;
+      const currentZoom = getZoom();
+      const targetZoom = isMobile
+        ? Math.max(currentZoom, 0.65)
+        : Math.max(currentZoom, crispTextMode ? 0.95 : 0.8);
+
+      setCenter(centerX, centerY, {
+        zoom: targetZoom,
+        duration: 320,
+      });
+
+      setCenteredNodeId(node.id);
+      clearCenterPulse();
+      centerPulseTimer.current = setTimeout(() => {
+        setCenteredNodeId((current) => (current === node.id ? null : current));
+      }, 1200);
+
+      if (options?.addToHistory !== false) {
+        setCenterHistory((history) => {
+          if (history[history.length - 1] === node.id) {
+            return history;
+          }
+          const nextHistory = [...history, node.id];
+          return nextHistory.slice(-30);
+        });
+      }
+
+      if (options?.trigger === 'click') {
+        posthog.capture('node_clicked_centered', {
+          node_id: node.id,
+          node_title: nodeData?.title || null,
+          depth: nodeData?.depth ?? null,
+          zoom_before: Number(currentZoom.toFixed(3)),
+          zoom_after: Number(targetZoom.toFixed(3)),
+        });
+      }
+    },
+    [clearCenterPulse, crispTextMode, getZoom, isMobile, posthog, setCenter]
+  );
+
+  const handleNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('button, a, input, textarea, [role="button"]')) {
+        return;
+      }
+
+      centerNodeInViewport(node, { addToHistory: true, trigger: 'click' });
+    },
+    [centerNodeInViewport]
+  );
+
+  const handleBackToPreviousCenter = useCallback(() => {
+    const previousNodeId = centerHistory[centerHistory.length - 2];
+    if (!previousNodeId) {
+      return;
+    }
+
+    const previousNode = nodes.find((node) => node.id === previousNodeId);
+    if (!previousNode) {
+      return;
+    }
+
+    setCenterHistory((history) => history.slice(0, -1));
+    centerNodeInViewport(previousNode, { addToHistory: false, trigger: 'back' });
+  }, [centerHistory, centerNodeInViewport, nodes]);
+
+  const handleResetViewport = useCallback(() => {
+    fitView({
+      padding: isMobile ? 0.1 : 0.2,
+      duration: 300,
+      minZoom: canvasMinZoom,
+      maxZoom: canvasFitMaxZoom,
+      includeHiddenNodes: false,
+    });
+    posthog.capture('viewport_reset', {
+      crisp_text_mode: crispTextMode,
+    });
+  }, [canvasFitMaxZoom, canvasMinZoom, crispTextMode, fitView, isMobile, posthog]);
+
+  const toggleCrispTextMode = useCallback(() => {
+    setCrispTextMode((previous) => {
+      const next = !previous;
+      posthog.capture('crisp_text_mode_toggled', {
+        enabled: next,
+      });
+      return next;
+    });
+  }, [posthog]);
 
   // Handle migration after sign-in
   useEffect(() => {
@@ -460,11 +649,13 @@ const KnowledgeCanvasInner: React.FC = () => {
         onMouseLeave={() => setHoveredNodeId(null)}
       >
         <ReactFlow
+        className={crispTextMode ? 'crisp-text-mode' : ''}
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
@@ -473,10 +664,10 @@ const KnowledgeCanvasInner: React.FC = () => {
         fitViewOptions={{
           padding: isMobile ? 0.1 : 0.2,
           includeHiddenNodes: false,
-          minZoom: 0.05,
-          maxZoom: isMobile ? 0.6 : 1,
+          minZoom: canvasMinZoom,
+          maxZoom: canvasFitMaxZoom,
         }}
-        minZoom={0.05}
+        minZoom={canvasMinZoom}
         maxZoom={2}
         nodesDraggable={false}
         nodesConnectable={false}
@@ -488,6 +679,37 @@ const KnowledgeCanvasInner: React.FC = () => {
         zoomOnDoubleClick={false}
         preventScrolling={true}
       >
+        <Panel position="top-right">
+          <div className="flex flex-col gap-2 rounded-xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.92)] p-2 shadow-xl backdrop-blur-sm">
+            <button
+              onClick={toggleCrispTextMode}
+              className="flex items-center gap-2 rounded-md border border-[var(--mint-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--mint-text-secondary)] transition-colors hover:border-[var(--mint-accent-2)] hover:text-[var(--mint-accent-1)]"
+              title="Toggle crisp text mode"
+            >
+              <Type className="h-3.5 w-3.5" />
+              <span>{crispTextMode ? 'Crisp Text On' : 'Crisp Text Off'}</span>
+            </button>
+
+            <button
+              onClick={handleResetViewport}
+              className="flex items-center gap-2 rounded-md border border-[var(--mint-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--mint-text-secondary)] transition-colors hover:border-[var(--mint-accent-2)] hover:text-[var(--mint-accent-1)]"
+              title="Fit all nodes in viewport"
+            >
+              <Crosshair className="h-3.5 w-3.5" />
+              <span>Fit Graph</span>
+            </button>
+
+            <button
+              onClick={handleBackToPreviousCenter}
+              disabled={centerHistory.length < 2}
+              className="flex items-center gap-2 rounded-md border border-[var(--mint-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--mint-text-secondary)] transition-colors enabled:hover:border-[var(--mint-accent-2)] enabled:hover:text-[var(--mint-accent-1)] disabled:cursor-not-allowed disabled:opacity-40"
+              title="Jump back to previous centered node"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back Focus</span>
+            </button>
+          </div>
+        </Panel>
         <Background
           color="#34D399"
           gap={20}
