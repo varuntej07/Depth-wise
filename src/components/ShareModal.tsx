@@ -131,7 +131,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-md z-50"
+            className="fixed inset-0 z-50 bg-black/55"
             onClick={onClose}
           />
 
@@ -159,10 +159,10 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
               </AnimatePresence>
 
               {/* Glow effect behind modal */}
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] blur-2xl -z-10" />
+              <div className="absolute inset-0 -z-10 rounded-3xl bg-gradient-to-r from-[rgba(110,231,183,0.14)] to-[rgba(52,211,153,0.1)] blur-lg" />
 
               {/* Main Modal Card with Glassmorphism */}
-              <div className="relative bg-[var(--mint-surface)] backdrop-blur-2xl border-2 border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+              <div className="relative overflow-hidden rounded-3xl border-2 border-white/10 bg-[rgba(13,26,22,0.98)] shadow-2xl">
                 {/* Gradient top border accent */}
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]" />
 
@@ -322,7 +322,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                         {/* Link Display with Copy Button */}
                         <div className="relative group">
                           {/* Background glow on hover */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-xl opacity-0 group-hover:opacity-100 blur transition-opacity" />
+                          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[rgba(110,231,183,0.22)] to-[rgba(52,211,153,0.18)] opacity-0 transition-opacity group-hover:opacity-35" />
 
                           <div className="relative flex items-center gap-2 p-3 bg-[var(--mint-elevated)] backdrop-blur-sm border border-white/10 rounded-xl">
                             {/* URL Display - with proper overflow handling */}
@@ -337,10 +337,10 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                               onClick={handleCopyLink}
-                              className={`flex-shrink-0 p-3 rounded-lg font-semibold transition-all ${
+                              className={`flex-shrink-0 rounded-lg border px-3 py-3 font-semibold transition-all ${
                                 copied
-                                  ? 'bg-green-500 text-white'
-                                  : 'bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] text-white hover:shadow-lg hover:shadow-[0_0_24px_var(--mint-accent-glow)]'
+                                  ? 'border-[#134E4A] bg-[#0F766E] text-white'
+                                  : 'border-[rgba(4,18,14,0.58)] bg-[rgba(16,185,129,0.97)] text-[#04120e] hover:bg-[rgba(16,185,129,1)]'
                               }`}
                               title={copied ? 'Copied!' : 'Copy link'}
                             >
