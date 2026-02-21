@@ -255,7 +255,6 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id, selected = fals
             className={`rounded-xl border border-[rgba(110,231,183,0.2)] px-3 py-2.5 transition-colors duration-200 ${
               isContentExpanded ? 'bg-[rgba(32,52,45,0.35)]' : 'bg-[rgba(32,52,45,0.24)]'
             }`}
-            title={contentText || 'No content available yet'}
           >
             {contentText ? (
               <p
