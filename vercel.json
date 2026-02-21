@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/dashboard-public-graphs",
+      "schedule": "0 5 * * *"
+    }
+  ],
   "functions": {
     "src/app/api/session/create/route.ts": {
       "maxDuration": 60
