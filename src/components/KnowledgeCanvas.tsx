@@ -24,7 +24,8 @@ import KnowledgeEdge from './KnowledgeEdge';
 import Breadcrumb from './Breadcrumb';
 import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
-import { LAYOUT_CONFIG, NODE_CARD_DIMENSIONS, getResponsiveLayoutConfig } from '@/lib/layout';
+import { LAYOUT_CONFIG, NODE_CARD_DIMENSIONS } from '@/lib/layout';
+import { applyNonOverlappingDepthLayout } from '@/lib/node-layout';
 import { SubscriptionModal } from './SubscriptionModal';
 import { SubscriptionTier } from '@prisma/client';
 import { API_ENDPOINTS } from '@/lib/api-config';
@@ -47,6 +48,11 @@ const nodeTypes = {
 const edgeTypes = {
   default: KnowledgeEdge,
 };
+
+const MIN_NODE_GAP = {
+  desktop: { x: 24, y: 28 },
+  mobile: { x: 18, y: 22 },
+} as const;
 
 const KnowledgeCanvasInner: React.FC = () => {
   const {
@@ -84,14 +90,14 @@ const KnowledgeCanvasInner: React.FC = () => {
   const shouldRenderDesktopTools = !isMobile && nodes.length > 0;
   const canvasMinZoom = isMobile ? 0.05 : crispTextMode ? 0.55 : 0.05;
   const canvasFitMaxZoom = isMobile ? 0.6 : crispTextMode ? 1.05 : 1;
-  const responsiveLayout = getResponsiveLayoutConfig(isMobile);
   const fallbackNodeHeight = isMobile
     ? NODE_CARD_DIMENSIONS.mobile.height
     : NODE_CARD_DIMENSIONS.desktop.height;
   const fallbackNodeWidth = isMobile
     ? NODE_CARD_DIMENSIONS.mobile.width
     : NODE_CARD_DIMENSIONS.desktop.width;
-  const depthRowGap = Math.max(36, responsiveLayout.level2Plus.verticalSpacing - fallbackNodeHeight);
+  const minNodeGapX = isMobile ? MIN_NODE_GAP.mobile.x : MIN_NODE_GAP.desktop.x;
+  const minNodeGapY = isMobile ? MIN_NODE_GAP.mobile.y : MIN_NODE_GAP.desktop.y;
   const baselineDepthYMap = useMemo(() => {
     const map = new Map<number, number>();
 
@@ -260,78 +266,15 @@ const KnowledgeCanvasInner: React.FC = () => {
 
   const applyDepthRowLayout = useCallback(
     (inputNodes: Node[]): Node[] => {
-      if (inputNodes.length < 2) {
-        return inputNodes;
-      }
-
-      type SizedNode = Node & { measured?: { width?: number; height?: number } };
-      const depthGroups = new Map<number, SizedNode[]>();
-      const minYByDepth = new Map<number, number>();
-      const maxHeightByDepth = new Map<number, number>();
-
-      for (const node of inputNodes) {
-        const sizedNode = node as SizedNode;
-        const nodeData = node.data as GraphNode['data'] | undefined;
-        const depth = Math.max(1, nodeData?.depth || 1);
-        const nodeHeight = Math.max(
-          sizedNode.height ?? sizedNode.measured?.height ?? fallbackNodeHeight,
-          120
-        );
-
-        if (!depthGroups.has(depth)) {
-          depthGroups.set(depth, []);
-        }
-        depthGroups.get(depth)!.push(sizedNode);
-
-        const minY = minYByDepth.get(depth);
-        minYByDepth.set(depth, minY === undefined ? node.position.y : Math.min(minY, node.position.y));
-
-        const currentMax = maxHeightByDepth.get(depth) ?? 0;
-        maxHeightByDepth.set(depth, Math.max(currentMax, nodeHeight));
-      }
-
-      const depths = Array.from(depthGroups.keys()).sort((a, b) => a - b);
-      if (depths.length < 2) {
-        return inputNodes;
-      }
-
-      const rowYByDepth = new Map<number, number>();
-      const firstDepth = depths[0];
-      const firstDepthY = baselineDepthYMap.get(firstDepth) ?? minYByDepth.get(firstDepth) ?? 0;
-      rowYByDepth.set(firstDepth, firstDepthY);
-
-      for (let index = 1; index < depths.length; index += 1) {
-        const depth = depths[index];
-        const previousDepth = depths[index - 1];
-        const previousRowY = rowYByDepth.get(previousDepth) ?? 0;
-        const previousRowHeight = maxHeightByDepth.get(previousDepth) ?? fallbackNodeHeight;
-        const computedY = previousRowY + previousRowHeight + depthRowGap;
-        const baselineY = baselineDepthYMap.get(depth) ?? minYByDepth.get(depth) ?? computedY;
-        rowYByDepth.set(depth, Math.max(computedY, baselineY));
-      }
-
-      let hasPositionChanges = false;
-      const reflowedNodes = inputNodes.map((node) => {
-        const nodeData = node.data as GraphNode['data'] | undefined;
-        const depth = Math.max(1, nodeData?.depth || 1);
-        const nextY = rowYByDepth.get(depth);
-        if (nextY === undefined || Math.abs(node.position.y - nextY) < 0.5) {
-          return node;
-        }
-
-        hasPositionChanges = true;
-        return {
-          ...node,
-          position: {
-            ...node.position,
-            y: nextY,
-          },
-        };
+      return applyNonOverlappingDepthLayout(inputNodes, {
+        minHorizontalGap: minNodeGapX,
+        minVerticalGap: minNodeGapY,
+        fallbackWidth: fallbackNodeWidth,
+        fallbackHeight: fallbackNodeHeight,
+        baselineDepthY: baselineDepthYMap,
       });
-
-      return hasPositionChanges ? reflowedNodes : inputNodes;
     },
-    [baselineDepthYMap, depthRowGap, fallbackNodeHeight]
+    [baselineDepthYMap, fallbackNodeHeight, fallbackNodeWidth, minNodeGapX, minNodeGapY]
   );
 
   // Auto-activate focus mode when depth reaches threshold
