@@ -22,39 +22,40 @@ const getDepthColor = (depth: number) => {
 
 const SkeletonNode: React.FC<SkeletonNodeProps> = ({ data }) => {
   const depthColors = getDepthColor(data.depth);
-  const isRootNode = data.depth === 1;
 
   return (
     <div className="knowledge-node">
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 !bg-[var(--mint-accent-2)] !border-2 !border-slate-900"
+        className="h-2.5 w-2.5 !bg-[var(--mint-accent-2)] !border-2 !border-[var(--mint-page)]"
       />
       <Card
-        className={`${
-          isRootNode
-            ? 'min-w-[320px] w-[320px] sm:min-w-[400px] sm:w-[400px] md:min-w-[500px] md:w-[500px]'
-            : 'min-w-[280px] w-[280px] sm:min-w-[340px] sm:w-[340px] md:min-w-[420px] md:w-[420px]'
-        } min-h-[200px] bg-[var(--mint-surface)] backdrop-blur-sm border-2 ${depthColors.border} shadow-lg flex flex-col`}
+        className={`w-[300px] gap-0 rounded-[22px] border-2 py-0 sm:w-[340px] lg:w-[360px] bg-[var(--mint-surface)] ${depthColors.border} shadow-lg`}
       >
-        <CardHeader className="pb-3 border-b border-slate-800">
-          <div className={`h-5 bg-gradient-to-r ${depthColors.shimmer} rounded animate-shimmer w-3/4`}></div>
-          <div className={`h-3 bg-gradient-to-r ${depthColors.shimmer} rounded animate-shimmer w-20 mt-2`}></div>
+        <CardHeader className="!space-y-2 border-b border-[var(--mint-elevated)] !px-4 !py-3">
+          <div className={`h-2.5 w-20 rounded bg-gradient-to-r ${depthColors.shimmer} animate-shimmer`} />
+          <div className={`h-5 w-4/5 rounded bg-gradient-to-r ${depthColors.shimmer} animate-shimmer`} />
         </CardHeader>
-        <CardContent className="pt-4 space-y-3 flex-1 flex flex-col">
-          <div className="space-y-2 flex-1">
-            <div className={`h-3 bg-gradient-to-r ${depthColors.shimmer} rounded animate-shimmer w-full`}></div>
-            <div className={`h-3 bg-gradient-to-r ${depthColors.shimmer} rounded animate-shimmer w-full`}></div>
-            <div className={`h-3 bg-gradient-to-r ${depthColors.shimmer} rounded animate-shimmer w-4/5`}></div>
+        <CardContent className="flex min-h-[180px] flex-col gap-2.5 !px-4 !py-3">
+          <div className="flex-1 rounded-lg border border-[rgba(110,231,183,0.18)] bg-[rgba(32,52,45,0.28)] px-3 py-2">
+            <div className="space-y-2">
+              <div className={`h-3 w-full rounded bg-gradient-to-r ${depthColors.shimmer} animate-shimmer`} />
+              <div className={`h-3 w-full rounded bg-gradient-to-r ${depthColors.shimmer} animate-shimmer`} />
+              <div className={`h-3 w-4/5 rounded bg-gradient-to-r ${depthColors.shimmer} animate-shimmer`} />
+              <div className={`h-3 w-11/12 rounded bg-gradient-to-r ${depthColors.shimmer} animate-shimmer`} />
+            </div>
           </div>
-          <div className={`h-10 bg-gradient-to-r ${depthColors.shimmer} rounded-lg animate-shimmer w-full`}></div>
+          <div className="flex items-center justify-between gap-2">
+            <div className={`h-6 w-28 rounded-md bg-gradient-to-r ${depthColors.shimmer} animate-shimmer`} />
+            <div className={`h-6 w-20 rounded-md bg-gradient-to-r ${depthColors.shimmer} animate-shimmer`} />
+          </div>
         </CardContent>
       </Card>
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 !bg-[var(--mint-accent-2)] !border-2 !border-slate-900"
+        className="h-2.5 w-2.5 !bg-[var(--mint-accent-2)] !border-2 !border-[var(--mint-page)]"
       />
     </div>
   );

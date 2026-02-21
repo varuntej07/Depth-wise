@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -14,6 +14,7 @@ import {
   Connection,
   Node,
   Edge,
+  Position,
   ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -23,7 +24,7 @@ import KnowledgeEdge from './KnowledgeEdge';
 import Breadcrumb from './Breadcrumb';
 import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
-import { LAYOUT_CONFIG } from '@/lib/layout';
+import { LAYOUT_CONFIG, NODE_CARD_DIMENSIONS, getResponsiveLayoutConfig } from '@/lib/layout';
 import { SubscriptionModal } from './SubscriptionModal';
 import { SubscriptionTier } from '@prisma/client';
 import { API_ENDPOINTS } from '@/lib/api-config';
@@ -83,6 +84,26 @@ const KnowledgeCanvasInner: React.FC = () => {
   const shouldRenderDesktopTools = !isMobile && nodes.length > 0;
   const canvasMinZoom = isMobile ? 0.05 : crispTextMode ? 0.55 : 0.05;
   const canvasFitMaxZoom = isMobile ? 0.6 : crispTextMode ? 1.05 : 1;
+  const responsiveLayout = getResponsiveLayoutConfig(isMobile);
+  const fallbackNodeHeight = isMobile
+    ? NODE_CARD_DIMENSIONS.mobile.height
+    : NODE_CARD_DIMENSIONS.desktop.height;
+  const fallbackNodeWidth = isMobile
+    ? NODE_CARD_DIMENSIONS.mobile.width
+    : NODE_CARD_DIMENSIONS.desktop.width;
+  const depthRowGap = Math.max(36, responsiveLayout.level2Plus.verticalSpacing - fallbackNodeHeight);
+  const baselineDepthYMap = useMemo(() => {
+    const map = new Map<number, number>();
+
+    for (const node of storeNodes) {
+      const depth = Math.max(1, node.data?.depth || 1);
+      const existingY = map.get(depth);
+      const nodeY = node.position.y;
+      map.set(depth, existingY === undefined ? nodeY : Math.min(existingY, nodeY));
+    }
+
+    return map;
+  }, [storeNodes]);
 
   const getMiniMapNodeColor = useCallback((node: Node) => {
     const data = (node as Partial<GraphNode>).data as GraphNode['data'] | undefined;
@@ -190,7 +211,7 @@ const KnowledgeCanvasInner: React.FC = () => {
       // Delay fitView slightly to ensure nodes are rendered
       const timer = setTimeout(() => {
         fitView({
-          padding: isMobile ? 0.1 : 0.2,
+          padding: isMobile ? 0.12 : 0.24,
           duration: 300,
           maxZoom: canvasFitMaxZoom,
           minZoom: canvasMinZoom,
@@ -237,6 +258,82 @@ const KnowledgeCanvasInner: React.FC = () => {
     [storeNodes]
   );
 
+  const applyDepthRowLayout = useCallback(
+    (inputNodes: Node[]): Node[] => {
+      if (inputNodes.length < 2) {
+        return inputNodes;
+      }
+
+      type SizedNode = Node & { measured?: { width?: number; height?: number } };
+      const depthGroups = new Map<number, SizedNode[]>();
+      const minYByDepth = new Map<number, number>();
+      const maxHeightByDepth = new Map<number, number>();
+
+      for (const node of inputNodes) {
+        const sizedNode = node as SizedNode;
+        const nodeData = node.data as GraphNode['data'] | undefined;
+        const depth = Math.max(1, nodeData?.depth || 1);
+        const nodeHeight = Math.max(
+          sizedNode.height ?? sizedNode.measured?.height ?? fallbackNodeHeight,
+          120
+        );
+
+        if (!depthGroups.has(depth)) {
+          depthGroups.set(depth, []);
+        }
+        depthGroups.get(depth)!.push(sizedNode);
+
+        const minY = minYByDepth.get(depth);
+        minYByDepth.set(depth, minY === undefined ? node.position.y : Math.min(minY, node.position.y));
+
+        const currentMax = maxHeightByDepth.get(depth) ?? 0;
+        maxHeightByDepth.set(depth, Math.max(currentMax, nodeHeight));
+      }
+
+      const depths = Array.from(depthGroups.keys()).sort((a, b) => a - b);
+      if (depths.length < 2) {
+        return inputNodes;
+      }
+
+      const rowYByDepth = new Map<number, number>();
+      const firstDepth = depths[0];
+      const firstDepthY = baselineDepthYMap.get(firstDepth) ?? minYByDepth.get(firstDepth) ?? 0;
+      rowYByDepth.set(firstDepth, firstDepthY);
+
+      for (let index = 1; index < depths.length; index += 1) {
+        const depth = depths[index];
+        const previousDepth = depths[index - 1];
+        const previousRowY = rowYByDepth.get(previousDepth) ?? 0;
+        const previousRowHeight = maxHeightByDepth.get(previousDepth) ?? fallbackNodeHeight;
+        const computedY = previousRowY + previousRowHeight + depthRowGap;
+        const baselineY = baselineDepthYMap.get(depth) ?? minYByDepth.get(depth) ?? computedY;
+        rowYByDepth.set(depth, Math.max(computedY, baselineY));
+      }
+
+      let hasPositionChanges = false;
+      const reflowedNodes = inputNodes.map((node) => {
+        const nodeData = node.data as GraphNode['data'] | undefined;
+        const depth = Math.max(1, nodeData?.depth || 1);
+        const nextY = rowYByDepth.get(depth);
+        if (nextY === undefined || Math.abs(node.position.y - nextY) < 0.5) {
+          return node;
+        }
+
+        hasPositionChanges = true;
+        return {
+          ...node,
+          position: {
+            ...node.position,
+            y: nextY,
+          },
+        };
+      });
+
+      return hasPositionChanges ? reflowedNodes : inputNodes;
+    },
+    [baselineDepthYMap, depthRowGap, fallbackNodeHeight]
+  );
+
   // Auto-activate focus mode when depth reaches threshold
   useEffect(() => {
     const maxDepth = getMaxDepth();
@@ -257,21 +354,34 @@ const KnowledgeCanvasInner: React.FC = () => {
     const visibleNodes = focusMode ? getVisibleNodes() : storeNodes;
     const nodesToRender =
       visibleNodes.length === 0 && storeNodes.length > 0 ? storeNodes : visibleNodes;
-    const enhancedNodes = nodesToRender.map((node) => {
-      const isCentered = node.id === centeredNodeId;
-      const existingClassName =
-        typeof node.className === 'string' ? node.className : '';
-      const className = `${existingClassName} ${isCentered ? 'depthwise-node-center-highlight' : ''}`.trim();
+    setNodes((currentNodes) => {
+      const currentNodeMap = new Map(currentNodes.map((node) => [node.id, node]));
+      const enhancedNodes = nodesToRender.map((node) => {
+        const isCentered = node.id === centeredNodeId;
+        const existingClassName =
+          typeof node.className === 'string' ? node.className : '';
+        const className = `${existingClassName} ${isCentered ? 'depthwise-node-center-highlight' : ''}`.trim();
+        const existingNode = currentNodeMap.get(node.id) as
+          | (Node & { measured?: { width?: number; height?: number } })
+          | undefined;
 
-      return {
-        ...node,
-        className: className || undefined,
-        zIndex: isCentered ? 100 : node.zIndex,
-      };
+        return {
+          ...node,
+          className: className || undefined,
+          zIndex: isCentered ? 100 : node.zIndex,
+          width: node.width ?? existingNode?.width,
+          height: node.height ?? existingNode?.height,
+          measured: existingNode?.measured,
+        };
+      });
+
+      return applyDepthRowLayout(enhancedNodes as unknown as Node[]);
     });
+  }, [storeNodes, focusMode, focusedNodeId, centeredNodeId, setNodes, getVisibleNodes, applyDepthRowLayout]);
 
-    setNodes(enhancedNodes as unknown as Node[]);
-  }, [storeNodes, focusMode, focusedNodeId, centeredNodeId, setNodes, getVisibleNodes]);
+  useEffect(() => {
+    setNodes((currentNodes) => applyDepthRowLayout(currentNodes));
+  }, [nodes, setNodes, applyDepthRowLayout]);
 
   // Enhanced edges with depth and highlight information (apply focus mode filtering)
   useEffect(() => {
@@ -281,6 +391,8 @@ const KnowledgeCanvasInner: React.FC = () => {
     const enhancedEdges = visibleEdges.map((edge) => ({
       ...edge,
       type: 'default',
+      sourcePosition: Position.Bottom,
+      targetPosition: Position.Top,
       data: {
         depth: getEdgeDepth(edge.target),
         isHighlighted: highlightedEdges.includes(edge.id),
@@ -310,9 +422,8 @@ const KnowledgeCanvasInner: React.FC = () => {
 
   const centerNodeInViewport = useCallback(
     (node: Node, options?: { addToHistory?: boolean; trigger?: 'click' | 'back' }) => {
-      const nodeData = node.data as GraphNode['data'] | undefined;
-      const fallbackWidth = nodeData?.depth === 1 ? 500 : 420;
-      const fallbackHeight = 240;
+      const fallbackWidth = fallbackNodeWidth;
+      const fallbackHeight = fallbackNodeHeight;
       const width = node.width ?? fallbackWidth;
       const height = node.height ?? fallbackHeight;
       const centerX = node.position.x + width / 2;
@@ -344,6 +455,7 @@ const KnowledgeCanvasInner: React.FC = () => {
       }
 
       if (options?.trigger === 'click') {
+        const nodeData = node.data as GraphNode['data'] | undefined;
         posthog.capture('node_clicked_centered', {
           node_id: node.id,
           node_title: nodeData?.title || null,
@@ -353,7 +465,7 @@ const KnowledgeCanvasInner: React.FC = () => {
         });
       }
     },
-    [clearCenterPulse, crispTextMode, getZoom, isMobile, posthog, setCenter]
+    [clearCenterPulse, crispTextMode, fallbackNodeHeight, fallbackNodeWidth, getZoom, isMobile, posthog, setCenter]
   );
 
   const handleNodeClick = useCallback(
@@ -385,7 +497,7 @@ const KnowledgeCanvasInner: React.FC = () => {
 
   const handleResetViewport = useCallback(() => {
     fitView({
-      padding: isMobile ? 0.1 : 0.2,
+      padding: isMobile ? 0.12 : 0.24,
       duration: 300,
       minZoom: canvasMinZoom,
       maxZoom: canvasFitMaxZoom,
@@ -662,7 +774,7 @@ const KnowledgeCanvasInner: React.FC = () => {
         onNodeMouseLeave={() => setHoveredNodeId(null)}
         fitView
         fitViewOptions={{
-          padding: isMobile ? 0.1 : 0.2,
+          padding: isMobile ? 0.12 : 0.24,
           includeHiddenNodes: false,
           minZoom: canvasMinZoom,
           maxZoom: canvasFitMaxZoom,
