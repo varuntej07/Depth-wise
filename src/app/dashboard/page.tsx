@@ -15,6 +15,7 @@ import {
   TrendingUp,
   X,
 } from 'lucide-react';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 type SortKey = 'recent' | 'title' | 'depth';
 
@@ -28,182 +29,54 @@ type DashboardCard = {
   category: string;
   depth: number;
   gradient: string;
+  href: string;
 };
 
-const previewStats = [
-  { label: 'Public Graphs', value: '1,240+', icon: LayoutGrid },
-  { label: 'Topics Covered', value: '86', icon: Globe },
-  { label: 'Avg. Insights / Graph', value: '42', icon: BarChart3 },
-  { label: 'Weekly Growth', value: '+18%', icon: TrendingUp },
-];
+type DashboardMetrics = {
+  publicGraphs: number;
+  topicsCovered: number;
+  avgInsightsPerGraph: number;
+  weeklyGrowthPercent: number;
+};
 
-const exploreCards: DashboardCard[] = [
-  {
-    id: 'exp-1',
-    title: 'AI Adoption Atlas',
-    description: 'How regulation and infrastructure shape enterprise model rollout timelines.',
-    tags: ['Technology', 'Policy', 'Timeline'],
-    lastOpened: '15 min ago',
-    openedAt: 1708276500,
-    category: 'Technology',
-    depth: 4,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-2',
-    title: 'Climate Systems Map',
-    description: 'Linked causes behind emissions, weather shocks, and adaptation outcomes.',
-    tags: ['Climate', 'Science', 'Systems'],
-    lastOpened: '34 min ago',
-    openedAt: 1708275300,
-    category: 'Science',
-    depth: 5,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-3',
-    title: 'Global Health Signals',
-    description: 'Regional intervention patterns tied to disease spread and response capacity.',
-    tags: ['Health', 'Data', 'Forecasting'],
-    lastOpened: '1h ago',
-    openedAt: 1708273200,
-    category: 'Health',
-    depth: 3,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-4',
-    title: 'Venture Funding Pulse',
-    description: 'Cross-sector capital movement with stage, geography, and cycle overlays.',
-    tags: ['Finance', 'Startup', 'Trends'],
-    lastOpened: '2h ago',
-    openedAt: 1708269600,
-    category: 'Finance',
-    depth: 2,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-5',
-    title: 'Urban Mobility Web',
-    description: 'Transit policy decisions and usage shifts visualized as connected networks.',
-    tags: ['Mobility', 'Cities', 'Policy'],
-    lastOpened: '3h ago',
-    openedAt: 1708266000,
-    category: 'Policy',
-    depth: 4,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-6',
-    title: 'Education Outcomes Matrix',
-    description: 'Programs, teacher support, and assessment quality impact student outcomes.',
-    tags: ['Education', 'Impact', 'Research'],
-    lastOpened: '4h ago',
-    openedAt: 1708262400,
-    category: 'Education',
-    depth: 3,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-7',
-    title: 'Supply Chain Friction Graph',
-    description: 'Upstream dependencies and freight bottlenecks mapped by region.',
-    tags: ['Operations', 'Logistics', 'Risk'],
-    lastOpened: '5h ago',
-    openedAt: 1708258800,
-    category: 'Operations',
-    depth: 5,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-8',
-    title: 'Energy Transition Index',
-    description: 'Generation mix changes tied to policy, storage, and pricing pressure.',
-    tags: ['Energy', 'Markets', 'Climate'],
-    lastOpened: '7h ago',
-    openedAt: 1708251600,
-    category: 'Energy',
-    depth: 4,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-9',
-    title: 'Consumer Sentiment Tree',
-    description: 'Brand trust and spending intent organized into leading sentiment branches.',
-    tags: ['Consumer', 'Behavior', 'Insights'],
-    lastOpened: '9h ago',
-    openedAt: 1708244400,
-    category: 'Consumer',
-    depth: 2,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-10',
-    title: 'Semiconductor Risk Atlas',
-    description: 'Manufacturing, sourcing, and geopolitical chokepoints connected in one map.',
-    tags: ['Hardware', 'Risk', 'Industry'],
-    lastOpened: '12h ago',
-    openedAt: 1708233600,
-    category: 'Industry',
-    depth: 5,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-11',
-    title: 'Startup GTM Patterns',
-    description: 'Acquisition loops and product velocity drivers by business model.',
-    tags: ['Go-to-Market', 'Growth', 'B2B'],
-    lastOpened: '18h ago',
-    openedAt: 1708212000,
-    category: 'Startup',
-    depth: 3,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-12',
-    title: 'Global Trade Corridors',
-    description: 'Trade routes, tariffs, and production shifts linked across regions.',
-    tags: ['Trade', 'Macro', 'Policy'],
-    lastOpened: '1 day ago',
-    openedAt: 1708190400,
-    category: 'Macro',
-    depth: 4,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-13',
-    title: 'AI Safety Debates',
-    description: 'Argument trees comparing open, closed, and hybrid governance models.',
-    tags: ['AI', 'Governance', 'Debate'],
-    lastOpened: '2 days ago',
-    openedAt: 1708104000,
-    category: 'Technology',
-    depth: 5,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-14',
-    title: 'Healthcare Cost Drivers',
-    description: 'Pricing, policy, and utilization branches behind care cost inflation.',
-    tags: ['Healthcare', 'Economics', 'Data'],
-    lastOpened: '3 days ago',
-    openedAt: 1708017600,
-    category: 'Health',
-    depth: 3,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-  {
-    id: 'exp-15',
-    title: 'Retail Demand Signals',
-    description: 'Seasonality and promotion effects tracked across demand clusters.',
-    tags: ['Retail', 'Forecasting', 'Analytics'],
-    lastOpened: '4 days ago',
-    openedAt: 1707931200,
-    category: 'Consumer',
-    depth: 2,
-    gradient: 'from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]',
-  },
-];
+type DashboardPublicGraphsResponse = {
+  generatedAt: string;
+  cards: DashboardCard[];
+  metrics: DashboardMetrics;
+};
+
+const EMPTY_METRICS: DashboardMetrics = {
+  publicGraphs: 0,
+  topicsCovered: 0,
+  avgInsightsPerGraph: 0,
+  weeklyGrowthPercent: 0,
+};
+
+const DASHBOARD_LIMIT = 48;
+const DASHBOARD_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+const formatCompactCount = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+  return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+};
+
+const formatAverageInsights = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+};
+
+const formatWeeklyGrowth = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return '0%';
+  }
+  const rounded = Math.round(value * 10) / 10;
+  const sign = rounded > 0 ? '+' : '';
+  return `${sign}${rounded}%`;
+};
 
 const sortOptions: { key: SortKey; label: string }[] = [
   { key: 'recent', label: 'Recently Opened' },
@@ -235,12 +108,62 @@ export default function DashboardPage() {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isMoreCategoriesOpen, setIsMoreCategoriesOpen] = useState(false);
   const [isExploreLoading, setIsExploreLoading] = useState(true);
+  const [exploreCards, setExploreCards] = useState<DashboardCard[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_METRICS);
+  const [dashboardDataError, setDashboardDataError] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setIsExploreLoading(false);
-    }, 900);
-    return () => window.clearTimeout(timer);
+    let isDisposed = false;
+    let isInitialLoad = true;
+
+    const loadDashboardData = async () => {
+      if (isInitialLoad) {
+        setIsExploreLoading(true);
+      }
+
+      try {
+        const response = await fetch(`${API_ENDPOINTS.DASHBOARD_PUBLIC_GRAPHS}?limit=${DASHBOARD_LIMIT}`);
+        if (!response.ok) {
+          throw new Error('Unable to load public dashboard graphs');
+        }
+
+        const payload = (await response.json()) as DashboardPublicGraphsResponse;
+        if (isDisposed) {
+          return;
+        }
+
+        setExploreCards(Array.isArray(payload.cards) ? payload.cards : []);
+        setMetrics(payload.metrics ?? EMPTY_METRICS);
+        setDashboardDataError(null);
+      } catch (error) {
+        if (isDisposed) {
+          return;
+        }
+        setExploreCards([]);
+        setMetrics(EMPTY_METRICS);
+        setDashboardDataError(
+          error instanceof Error ? error.message : 'Failed to load public graphs'
+        );
+      } finally {
+        if (isDisposed) {
+          return;
+        }
+        if (isInitialLoad) {
+          setIsExploreLoading(false);
+          isInitialLoad = false;
+        }
+      }
+    };
+
+    void loadDashboardData();
+    const refreshTimer = window.setInterval(() => {
+      void loadDashboardData();
+    }, DASHBOARD_REFRESH_INTERVAL_MS);
+
+    return () => {
+      isDisposed = true;
+      window.clearInterval(refreshTimer);
+    };
   }, []);
 
   useEffect(() => {
@@ -261,14 +184,29 @@ export default function DashboardPage() {
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([category]) => category);
-  }, []);
+  }, [exploreCards]);
 
   const primaryCategoryOptions = useMemo(() => ['All', ...categoryOptions.slice(0, 8)], [categoryOptions]);
   const moreCategoryOptions = useMemo(() => categoryOptions.slice(8), [categoryOptions]);
 
   const depthOptions = useMemo(() => {
-    return ['All', '2', '3', '4', '5'];
-  }, []);
+    const depthValues = Array.from(new Set(exploreCards.map((card) => String(card.depth)))).sort(
+      (a, b) => Number(a) - Number(b)
+    );
+    return ['All', ...depthValues];
+  }, [exploreCards]);
+
+  useEffect(() => {
+    if (selectedCategory !== 'All' && !categoryOptions.includes(selectedCategory)) {
+      setSelectedCategory('All');
+    }
+  }, [categoryOptions, selectedCategory]);
+
+  useEffect(() => {
+    if (selectedDepth !== 'All' && !depthOptions.includes(selectedDepth)) {
+      setSelectedDepth('All');
+    }
+  }, [depthOptions, selectedDepth]);
 
   const filteredExploreCards = useMemo(() => {
     const filtered = exploreCards.filter((card) => {
@@ -277,7 +215,17 @@ export default function DashboardPage() {
       return categoryMatch && depthMatch;
     });
     return sortCards(filtered, sortKey);
-  }, [sortKey, selectedCategory, selectedDepth]);
+  }, [exploreCards, sortKey, selectedCategory, selectedDepth]);
+
+  const previewStats = useMemo(
+    () => [
+      { label: 'Public Graphs', value: formatCompactCount(metrics.publicGraphs), icon: LayoutGrid },
+      { label: 'Topics Covered', value: formatCompactCount(metrics.topicsCovered), icon: Globe },
+      { label: 'Avg. Insights / Graph', value: formatAverageInsights(metrics.avgInsightsPerGraph), icon: BarChart3 },
+      { label: 'Weekly Growth', value: formatWeeklyGrowth(metrics.weeklyGrowthPercent), icon: TrendingUp },
+    ],
+    [metrics]
+  );
 
   const renderFilters = () => (
     <div className="space-y-4">
@@ -581,18 +529,30 @@ export default function DashboardPage() {
               </div>
             ) : filteredExploreCards.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.28)] p-8 text-center">
-                <p className="text-base font-medium text-white">No graphs match these filters.</p>
-                <p className="mt-2 text-sm text-[var(--mint-text-secondary)]">Clear category or depth filters to see more results.</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCategory('All');
-                    setSelectedDepth('All');
-                  }}
-                  className="mt-4 rounded-full border border-[var(--mint-elevated)] px-4 py-2 text-xs font-medium text-[var(--mint-text-secondary)] transition hover:border-[var(--mint-accent-2)] hover:text-white"
-                >
-                  Reset Filters
-                </button>
+                <p className="text-base font-medium text-white">
+                  {dashboardDataError
+                    ? 'Public graph feed is temporarily unavailable.'
+                    : selectedCategory !== 'All' || selectedDepth !== 'All'
+                      ? 'No graphs match these filters.'
+                      : 'No public graphs are available yet.'}
+                </p>
+                <p className="mt-2 text-sm text-[var(--mint-text-secondary)]">
+                  {dashboardDataError
+                    ? 'Please try again shortly. Data refresh runs automatically.'
+                    : 'Clear category or depth filters to see more results.'}
+                </p>
+                {(selectedCategory !== 'All' || selectedDepth !== 'All') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('All');
+                      setSelectedDepth('All');
+                    }}
+                    className="mt-4 rounded-full border border-[var(--mint-elevated)] px-4 py-2 text-xs font-medium text-[var(--mint-text-secondary)] transition hover:border-[var(--mint-accent-2)] hover:text-white"
+                  >
+                    Reset Filters
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -603,13 +563,15 @@ export default function DashboardPage() {
                   >
                     <div className={`h-28 bg-gradient-to-br ${card.gradient}`} />
                     <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5 opacity-0 transition group-hover:opacity-100">
-                      <button
-                        type="button"
+                      <Link
+                        href={card.href}
+                        target="_blank"
+                        rel="noreferrer"
                         aria-label="Open graph"
                         className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white/90 transition hover:border-white/50"
                       >
                         <ExternalLink className="h-3 w-3" />
-                      </button>
+                      </Link>
                       <button
                         type="button"
                         aria-label="Bookmark graph"
@@ -620,6 +582,9 @@ export default function DashboardPage() {
                     </div>
                     <div className="p-3">
                       <h3 className="truncate text-sm font-semibold text-white">{card.title}</h3>
+                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--mint-text-secondary)]">
+                        {card.description}
+                      </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {card.tags.slice(0, 3).map((tag) => (
                           <span

@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
 
   // User & Usage
   USER_USAGE: `${API_BASE_URL}/api/user/usage`,
+  DASHBOARD_PUBLIC_GRAPHS: `${API_BASE_URL}/api/dashboard/public-graphs`,
 
   // Sharing
   SHARE_GET: (sessionId: string) => `${API_BASE_URL}/api/share/${sessionId}`,
