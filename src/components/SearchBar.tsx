@@ -190,6 +190,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
         summary: string;
         depth: number;
         position: { x: number; y: number };
+        followUpType?: string;
       }) => ({
         id: branch.id,
         type: 'knowledge',
@@ -203,6 +204,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
           loading: false,
           sessionId: data.sessionId,
           parentId: data.rootNode.id,
+          followUpType: branch.followUpType, // Include follow-up type
         },
       }));
 

@@ -19,6 +19,7 @@ import '@xyflow/react/dist/style.css';
 import KnowledgeNode from './KnowledgeNode';
 import SkeletonNode from './SkeletonNode';
 import KnowledgeEdge from './KnowledgeEdge';
+import Breadcrumb from './Breadcrumb';
 import useGraphStore from '@/store/graphStore';
 import { GraphNode, GraphEdge } from '@/types/graph';
 import { LAYOUT_CONFIG } from '@/lib/layout';
@@ -44,7 +45,23 @@ const edgeTypes = {
 };
 
 const KnowledgeCanvasInner: React.FC = () => {
-  const { nodes: storeNodes, edges: storeEdges, updateNode, isAnonymous: isAnonymousSession, sessionId: currentSessionId } = useGraphStore();
+  const {
+    nodes: storeNodes,
+    edges: storeEdges,
+    updateNode,
+    isAnonymous: isAnonymousSession,
+    sessionId: currentSessionId,
+    focusMode,
+    focusedNodeId,
+    focusDepthThreshold,
+    setFocusMode,
+    setFocusedNode,
+    exitFocusMode,
+    getVisibleNodes,
+    getVisibleEdges,
+    getMaxDepth,
+    getAncestorPath,
+  } = useGraphStore();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -125,16 +142,33 @@ const KnowledgeCanvasInner: React.FC = () => {
     [storeNodes]
   );
 
-  // Sync store with React Flow state
+  // Auto-activate focus mode when depth reaches threshold
   useEffect(() => {
-    setNodes(storeNodes as unknown as Node[]);
-  }, [storeNodes, setNodes]);
+    const maxDepth = getMaxDepth();
+    if (maxDepth >= focusDepthThreshold && !focusMode && storeNodes.length > 0) {
+      // Find the deepest explored node to focus on
+      const deepestExploredNode = storeNodes
+        .filter((n) => n.data.explored && n.data.depth === maxDepth)
+        .sort((a, b) => b.data.depth - a.data.depth)[0];
 
-  // Enhanced edges with depth and highlight information
+      if (deepestExploredNode) {
+        setFocusedNode(deepestExploredNode.id);
+      }
+    }
+  }, [storeNodes, focusMode, focusDepthThreshold, getMaxDepth, setFocusedNode]);
+
+  // Sync store with React Flow state (apply focus mode filtering)
   useEffect(() => {
+    const visibleNodes = focusMode ? getVisibleNodes() : storeNodes;
+    setNodes(visibleNodes as unknown as Node[]);
+  }, [storeNodes, focusMode, focusedNodeId, setNodes, getVisibleNodes]);
+
+  // Enhanced edges with depth and highlight information (apply focus mode filtering)
+  useEffect(() => {
+    const visibleEdges = focusMode ? getVisibleEdges() : storeEdges;
     const highlightedEdges = hoveredNodeId ? getPathToRoot(hoveredNodeId) : [];
 
-    const enhancedEdges = storeEdges.map((edge) => ({
+    const enhancedEdges = visibleEdges.map((edge) => ({
       ...edge,
       type: 'default',
       data: {
@@ -144,7 +178,7 @@ const KnowledgeCanvasInner: React.FC = () => {
     }));
 
     setEdges(enhancedEdges as unknown as Edge[]);
-  }, [storeEdges, hoveredNodeId, getPathToRoot, getEdgeDepth, setEdges]);
+  }, [storeEdges, hoveredNodeId, getPathToRoot, getEdgeDepth, setEdges, focusMode, focusedNodeId, getVisibleEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -188,8 +222,8 @@ const KnowledgeCanvasInner: React.FC = () => {
   // Handle node exploration
   useEffect(() => {
     const handleExploreNode = async (event: Event) => {
-      const customEvent = event as CustomEvent<{ nodeId: string }>;
-      const { nodeId } = customEvent.detail;
+      const customEvent = event as CustomEvent<{ nodeId: string; exploreType?: string }>;
+      const { nodeId, exploreType } = customEvent.detail;
 
       const node = storeNodes.find((n) => n.id === nodeId);
       if (!node || node.data.explored || node.data.loading) return;
@@ -243,6 +277,7 @@ const KnowledgeCanvasInner: React.FC = () => {
             depth: node.data.depth,
             isAnonymous,
             clientId: getClientId(),
+            exploreType, // Pass the exploration type (why/how/what/example)
           }),
         });
 
@@ -304,6 +339,7 @@ const KnowledgeCanvasInner: React.FC = () => {
           summary: string;
           depth: number;
           position: { x: number; y: number };
+          followUpType?: string;
         }) => ({
           id: branch.id,
           type: 'knowledge',
@@ -317,6 +353,7 @@ const KnowledgeCanvasInner: React.FC = () => {
             loading: false,
             sessionId: sessionId!,
             parentId: nodeId,
+            followUpType: branch.followUpType, // Include follow-up type
           },
         }));
 
@@ -337,6 +374,11 @@ const KnowledgeCanvasInner: React.FC = () => {
 
         // Mark parent as explored
         updateNode(nodeId, { loading: false, explored: true });
+
+        // Update focus to the explored node if in focus mode
+        if (useGraphStore.getState().focusMode) {
+          useGraphStore.getState().setFocusedNode(nodeId);
+        }
       } catch (error) {
         console.error('Exploration error:', error);
 
@@ -368,6 +410,9 @@ const KnowledgeCanvasInner: React.FC = () => {
         isOpen={showSignInDialog}
         onClose={() => setShowSignInDialog(false)}
       />
+
+      {/* Breadcrumb navigation for focus mode */}
+      <Breadcrumb />
 
       <div
         className="w-full h-full"

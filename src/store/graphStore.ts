@@ -16,6 +16,11 @@ interface GraphState {
   isLoading: boolean;
   error: string | null;
 
+  // Focus Mode State
+  focusMode: boolean; // Is focus mode active?
+  focusedNodeId: string | null; // Currently focused node (null = show all)
+  focusDepthThreshold: number; // Depth at which focus mode auto-activates (default: 3)
+
   // Actions
   setSessionId: (id: string) => void;
   setRootQuery: (query: string) => void;
@@ -33,10 +38,18 @@ interface GraphState {
   // Share actions
   setIsPublic: (isPublic: boolean) => void;
 
+  // Focus Mode Actions
+  setFocusMode: (enabled: boolean) => void;
+  setFocusedNode: (nodeId: string | null) => void;
+  exitFocusMode: () => void;
+
   // Computed
   getNodeById: (id: string) => GraphNode | undefined;
   getChildrenOf: (parentId: string) => GraphNode[];
   getMaxDepth: () => number;
+  getAncestorPath: (nodeId: string) => GraphNode[];
+  getVisibleNodes: () => GraphNode[];
+  getVisibleEdges: () => GraphEdge[];
 }
 
 const useGraphStore = create<GraphState>((set, get) => ({
@@ -49,12 +62,22 @@ const useGraphStore = create<GraphState>((set, get) => ({
   isLoading: false,
   error: null,
 
+  // Focus Mode State
+  focusMode: false,
+  focusedNodeId: null,
+  focusDepthThreshold: 3, // Auto-activate focus mode at depth 3+
+
   setSessionId: (id) => set({ sessionId: id }),
   setRootQuery: (query) => set({ rootQuery: query }),
   setIsAnonymous: (isAnonymous) => set({ isAnonymous }),
 
   // Update the share status of the current graph
   setIsPublic: (isPublic) => set({ isPublic }),
+
+  // Focus Mode Actions
+  setFocusMode: (enabled) => set({ focusMode: enabled }),
+  setFocusedNode: (nodeId) => set({ focusedNodeId: nodeId, focusMode: nodeId !== null }),
+  exitFocusMode: () => set({ focusMode: false, focusedNodeId: null }),
 
   addNodes: (newNodes) =>
     set((state) => ({
@@ -88,6 +111,8 @@ const useGraphStore = create<GraphState>((set, get) => ({
       isPublic: false, // Reset share status when clearing
       isAnonymous: false, // Reset anonymous status when clearing
       error: null,
+      focusMode: false, // Reset focus mode when clearing
+      focusedNodeId: null,
     }),
 
   // Load a session with all its data, optionally including share status
@@ -117,6 +142,72 @@ const useGraphStore = create<GraphState>((set, get) => ({
   getMaxDepth: () => {
     const depths = get().nodes.map((n) => n.data.depth);
     return depths.length > 0 ? Math.max(...depths) : 0;
+  },
+
+  // Get ancestor path from root to given node
+  getAncestorPath: (nodeId: string) => {
+    const { nodes } = get();
+    const path: GraphNode[] = [];
+    let currentNode = nodes.find((n) => n.id === nodeId);
+
+    while (currentNode) {
+      path.unshift(currentNode);
+      if (currentNode.data.parentId) {
+        currentNode = nodes.find((n) => n.id === currentNode!.data.parentId);
+      } else {
+        break;
+      }
+    }
+
+    return path;
+  },
+
+  // Get visible nodes based on focus mode
+  getVisibleNodes: () => {
+    const { nodes, focusMode, focusedNodeId } = get();
+
+    // If focus mode is off, return all nodes
+    if (!focusMode || !focusedNodeId) {
+      return nodes;
+    }
+
+    const focusedNode = nodes.find((n) => n.id === focusedNodeId);
+    if (!focusedNode) {
+      return nodes;
+    }
+
+    // Get ancestors (path from root to focused node)
+    const ancestorPath = get().getAncestorPath(focusedNodeId);
+    const ancestorIds = new Set(ancestorPath.map((n) => n.id));
+
+    // Get children of focused node
+    const childrenIds = new Set(
+      nodes
+        .filter((n) => n.data.parentId === focusedNodeId)
+        .map((n) => n.id)
+    );
+
+    // Return: ancestors + focused node + children
+    return nodes.filter(
+      (n) => ancestorIds.has(n.id) || childrenIds.has(n.id)
+    );
+  },
+
+  // Get visible edges based on focus mode
+  getVisibleEdges: () => {
+    const { edges, focusMode, focusedNodeId } = get();
+
+    if (!focusMode || !focusedNodeId) {
+      return edges;
+    }
+
+    const visibleNodes = get().getVisibleNodes();
+    const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+
+    // Only show edges where both source and target are visible
+    return edges.filter(
+      (e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target)
+    );
   },
 }));
 
