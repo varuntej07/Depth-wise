@@ -2,39 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
-import { getMaxDepth, canUserExplore } from '@/lib/subscription-config';
-import { isValidUUID, sanitizeBoolean, sanitizeQuery } from '@/lib/utils';
+import { getMaxDepth } from '@/lib/subscription-config';
+import { rateLimit } from '@/lib/ratelimit';
+import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
 import { FollowUpType } from '@/types/graph';
-import { logger } from '@/lib/logger';
-import { getRequestContext } from '@/lib/request-context';
-import { buildUserUsageUpdate, recordUsageEventSafe, touchUserLastSeenSafe } from '@/lib/usage-tracking';
-import type { AnonymousNode, AnonymousEdge, Node, Edge, SubscriptionTier } from '@prisma/client';
-
-interface AnonymousSessionTelemetry {
-  id: string;
-  rootQuery: string;
-  ipAddress: string | null;
-  userAgent: string | null;
-  clientId: string | null;
-  ipHash: string | null;
-  country: string | null;
-  region: string | null;
-  city: string | null;
-}
-
-interface GraphSessionTelemetry {
-  id: string;
-  userId: string | null;
-  rootQuery: string;
-  clientId: string | null;
-  ipAddress: string | null;
-  ipHash: string | null;
-  country: string | null;
-  region: string | null;
-  city: string | null;
-  userAgent: string | null;
-  user: { subscriptionTier: SubscriptionTier } | null;
-}
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);

@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
       path: [sanitizedQuery],
       depth: 1,
       coveredTopics: [],
+      classification, // Pass classification for dynamic branching
     });
     logger.info("Claude response received", {
       requestId,
@@ -369,6 +370,7 @@ export async function POST(request: NextRequest) {
       sessionId: result.session.id,
       isAnonymous: result.isAnonymous,
       createdAt: result.session.createdAt.toISOString(),
+      classification, // NEW: include classification info
       rootNode: {
         id: result.rootNode.id,
         title: result.rootNode.title,
