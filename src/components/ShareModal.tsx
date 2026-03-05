@@ -162,23 +162,20 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
               <div className="absolute inset-0 -z-10 rounded-3xl bg-gradient-to-r from-[rgba(110,231,183,0.14)] to-[rgba(52,211,153,0.1)] blur-lg" />
 
               {/* Main Modal Card with Glassmorphism */}
-              <div className="relative overflow-hidden rounded-3xl border-2 border-white/10 bg-[rgba(13,26,22,0.98)] shadow-2xl">
-                {/* Gradient top border accent */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)]" />
-
+              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(13,26,22,0.98)] shadow-2xl">
                 {/* Header */}
                 <div className="relative flex items-center justify-between p-6 border-b border-white/5">
                   <div className="flex items-center gap-3">
                     {/* Icon with gradient background */}
                     <div className="relative p-3 bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] rounded-2xl border border-white/10">
-                      <Share2 className="w-6 h-6 text-[var(--mint-accent-1)]" />
+                      <Share2 className="w-6 h-6 text-[#04120e]" />
                       {/* Sparkle effect */}
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                         className="absolute -top-1 -right-1"
                       >
-                        <Sparkles className="w-4 h-4 text-[var(--mint-accent-1)]" />
+                        <Sparkles className="w-4 h-4 text-white/90" />
                       </motion.div>
                     </div>
                     <div>

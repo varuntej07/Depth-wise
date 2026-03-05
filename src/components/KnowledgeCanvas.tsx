@@ -32,7 +32,7 @@ import { API_ENDPOINTS } from '@/lib/api-config';
 import { SignInDialog } from './SignInDialog';
 import { useSession } from 'next-auth/react';
 import { getClientId } from '@/lib/utils';
-import { ArrowLeft, Crosshair, Type } from 'lucide-react';
+import { ArrowLeft, Crosshair } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
 
 const nodeTypes = {
@@ -79,7 +79,7 @@ const KnowledgeCanvasInner: React.FC = () => {
   const { data: session } = useSession();
   const [anonymousSessionIdForMigration, setAnonymousSessionIdForMigration] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [crispTextMode, setCrispTextMode] = useState(true);
+  const crispTextMode = true;
   const [centeredNodeId, setCenteredNodeId] = useState<string | null>(null);
   const [centerHistory, setCenterHistory] = useState<string[]>([]);
   const { fitView, setCenter, getZoom } = useReactFlow();
@@ -87,10 +87,9 @@ const KnowledgeCanvasInner: React.FC = () => {
   const initialFitDone = useRef(false);
   const inFlightRef = useRef<Set<string>>(new Set());
   const centerPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const crispPreferenceHydrated = useRef(false);
   const shouldRenderDesktopTools = !isMobile && nodes.length > 0;
-  const canvasMinZoom = isMobile ? 0.05 : crispTextMode ? 0.55 : 0.05;
-  const canvasFitMaxZoom = isMobile ? 0.6 : crispTextMode ? 1.05 : 1;
+  const canvasMinZoom = isMobile ? 0.05 : 0.55;
+  const canvasFitMaxZoom = isMobile ? 0.6 : 1.05;
   const fallbackNodeHeight = isMobile
     ? NODE_CARD_DIMENSIONS.mobile.height
     : NODE_CARD_DIMENSIONS.desktop.height;
@@ -138,32 +137,6 @@ const KnowledgeCanvasInner: React.FC = () => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Persisted crisp text mode preference.
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const storageKey = 'depthwise_crisp_text_mode';
-    const saved = localStorage.getItem(storageKey);
-    if (saved === null) {
-      const desktopDefault = window.innerWidth >= 768;
-      setCrispTextMode(desktopDefault);
-      localStorage.setItem(storageKey, String(desktopDefault));
-    } else {
-      setCrispTextMode(saved === 'true');
-    }
-    crispPreferenceHydrated.current = true;
-  }, []);
-
-  useEffect(() => {
-    if (!crispPreferenceHydrated.current || typeof window === 'undefined') {
-      return;
-    }
-
-    localStorage.setItem('depthwise_crisp_text_mode', String(crispTextMode));
-  }, [crispTextMode]);
 
   // Detect long tasks so we can track jank in production.
   useEffect(() => {
@@ -227,7 +200,7 @@ const KnowledgeCanvasInner: React.FC = () => {
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [nodes, fitView, isMobile, canvasFitMaxZoom, canvasMinZoom]);
+  }, [nodes, fitView, isMobile, canvasFitMaxZoom, canvasMinZoom, storeNodes.length]);
 
   // Find all edges in the path from root to a given node
   const getPathToRoot = useCallback(
@@ -375,7 +348,7 @@ const KnowledgeCanvasInner: React.FC = () => {
       const currentZoom = getZoom();
       const targetZoom = isMobile
         ? Math.max(currentZoom, 0.65)
-        : Math.max(currentZoom, crispTextMode ? 0.95 : 0.8);
+        : Math.max(currentZoom, 0.95);
 
       setCenter(centerX, centerY, {
         zoom: targetZoom,
@@ -409,7 +382,7 @@ const KnowledgeCanvasInner: React.FC = () => {
         });
       }
     },
-    [clearCenterPulse, crispTextMode, fallbackNodeHeight, fallbackNodeWidth, getZoom, isMobile, posthog, setCenter]
+    [clearCenterPulse, fallbackNodeHeight, fallbackNodeWidth, getZoom, isMobile, posthog, setCenter]
   );
 
   const handleNodeClick = useCallback(
@@ -451,16 +424,6 @@ const KnowledgeCanvasInner: React.FC = () => {
       crisp_text_mode: crispTextMode,
     });
   }, [canvasFitMaxZoom, canvasMinZoom, crispTextMode, fitView, isMobile, posthog]);
-
-  const toggleCrispTextMode = useCallback(() => {
-    setCrispTextMode((previous) => {
-      const next = !previous;
-      posthog.capture('crisp_text_mode_toggled', {
-        enabled: next,
-      });
-      return next;
-    });
-  }, [posthog]);
 
   // Handle migration after sign-in
   useEffect(() => {
@@ -711,47 +674,38 @@ const KnowledgeCanvasInner: React.FC = () => {
         onMouseLeave={() => setHoveredNodeId(null)}
       >
         <ReactFlow
-        className={crispTextMode ? 'crisp-text-mode' : ''}
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={handleNodeClick}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
-        onNodeMouseLeave={() => setHoveredNodeId(null)}
-        fitView
-        fitViewOptions={{
-          padding: isMobile ? 0.12 : 0.24,
-          includeHiddenNodes: false,
-          minZoom: canvasMinZoom,
-          maxZoom: canvasFitMaxZoom,
-        }}
-        minZoom={canvasMinZoom}
-        maxZoom={2}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={true}
-        panOnScroll={true}
-        panOnDrag={true}
-        zoomOnScroll={true}
-        zoomOnPinch={true}
-        zoomOnDoubleClick={false}
-        preventScrolling={true}
-      >
+          className="crisp-text-mode"
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={handleNodeClick}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
+          onNodeMouseLeave={() => setHoveredNodeId(null)}
+          fitView
+          fitViewOptions={{
+            padding: isMobile ? 0.12 : 0.24,
+            includeHiddenNodes: false,
+            minZoom: canvasMinZoom,
+            maxZoom: canvasFitMaxZoom,
+          }}
+          minZoom={canvasMinZoom}
+          maxZoom={2}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={true}
+          panOnScroll={true}
+          panOnDrag={true}
+          zoomOnScroll={true}
+          zoomOnPinch={true}
+          zoomOnDoubleClick={false}
+          preventScrolling={true}
+        >
         <Panel position="top-right">
           <div className="flex flex-col gap-2 rounded-xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.92)] p-2 shadow-xl backdrop-blur-sm">
-            <button
-              onClick={toggleCrispTextMode}
-              className="flex items-center gap-2 rounded-md border border-[var(--mint-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--mint-text-secondary)] transition-colors hover:border-[var(--mint-accent-2)] hover:text-[var(--mint-accent-1)]"
-              title="Toggle crisp text mode"
-            >
-              <Type className="h-3.5 w-3.5" />
-              <span>{crispTextMode ? 'Crisp Text On' : 'Crisp Text Off'}</span>
-            </button>
-
             <button
               onClick={handleResetViewport}
               className="flex items-center gap-2 rounded-md border border-[var(--mint-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--mint-text-secondary)] transition-colors hover:border-[var(--mint-accent-2)] hover:text-[var(--mint-accent-1)]"
