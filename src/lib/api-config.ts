@@ -35,6 +35,13 @@ export const API_ENDPOINTS = {
   // Sharing
   SHARE_GET: (sessionId: string) => `${API_BASE_URL}/api/share/${sessionId}`,
 
+  // Session Heartbeat
+  SESSION_HEARTBEAT: `${API_BASE_URL}/api/session/heartbeat`,
+
+  // Tracking
+  TRACK_PLAN_INTEREST: `${API_BASE_URL}/api/track/plan-interest`,
+  TRACK_ERROR: `${API_BASE_URL}/api/track/error`,
+
   // Authentication (NextAuth)
   AUTH: `${API_BASE_URL}/api/auth`,
 } as const;

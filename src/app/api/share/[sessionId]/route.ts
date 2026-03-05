@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { isValidUUID } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { getRequestContext } from '@/lib/request-context';
+import { recordUsageEventSafe } from '@/lib/usage-tracking';
 
 /**
  * GET /api/share/[sessionId]
@@ -124,7 +126,26 @@ export async function GET(
         : null,
     };
 
-    // Step 7: Return the complete graph data
+    // Step 7: Record share page view event
+    const requestContext = getRequestContext(request);
+    recordUsageEventSafe(
+      prisma,
+      {
+        eventName: 'share_page_viewed',
+        graphSessionId: sessionId,
+        requestId,
+        route: 'GET /api/share/[sessionId]',
+        success: true,
+        statusCode: 200,
+        metadata: {
+          nodeCount: graphSession.nodeCount,
+          creatorId: graphSession.userId,
+        },
+      },
+      requestContext
+    );
+
+    // Step 8: Return the complete graph data
     return NextResponse.json(response);
 
   } catch (error) {

@@ -1,17 +1,33 @@
 'use client';
 
-import React from 'react';
-import { AlertCircle, X, RefreshCw } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { AlertCircle, RefreshCw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useGraphStore from '@/store/graphStore';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 interface ErrorAlertProps {
   message: string;
   onClose: () => void;
+  errorCode?: string;
+  route?: string;
 }
 
-const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose }) => {
-  const { clearGraph } = useGraphStore();
+const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose, errorCode, route }) => {
+  const { clearGraph, sessionId } = useGraphStore();
+
+  useEffect(() => {
+    fetch(API_ENDPOINTS.TRACK_ERROR, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        errorMessage: message,
+        errorCode,
+        route,
+        sessionId,
+      }),
+    }).catch(() => {});
+  }, [message, errorCode, route, sessionId]);
 
   const isSessionError = message.includes('Session expired') || message.includes('Session not found');
 
@@ -19,11 +35,6 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose }) => {
     clearGraph();
     onClose();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleRetry = () => {
-    onClose();
-    window.dispatchEvent(new CustomEvent('retry-last-action'));
   };
 
   return (
@@ -73,11 +84,11 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, onClose }) => {
                 </button>
               ) : (
                 <button
-                  onClick={handleRetry}
+                  onClick={onClose}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[image:var(--mint-accent-gradient)] hover:brightness-105 text-[#04120e] text-sm font-medium transition-all active:scale-95"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  Try Again
+                  <X className="w-4 h-4" />
+                  Dismiss
                 </button>
               )}
             </div>

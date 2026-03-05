@@ -653,6 +653,33 @@ export async function POST(request: NextRequest) {
       return { newNodes, newEdges };
     });
 
+    await recordUsageEventSafe(
+      prisma,
+      {
+        eventName: 'node_explored',
+        userId: session.userId,
+        graphSessionId: session.id,
+        requestId,
+        clientId: requestContext.clientId,
+        route: 'POST /api/explore',
+        success: true,
+        statusCode: 200,
+        latencyMs: logger.durationMs(requestStart),
+        model: usage.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        estimatedCostUsd: usage.estimatedCostUsd,
+        metadata: {
+          parentId: parentNode.id,
+          parentDepth: parentNode.depth,
+          branchCount: result.newNodes.length,
+          focusTerm: validatedFocusTerm ?? null,
+          exploreType: validatedExploreType ?? null,
+        },
+      },
+      requestContext
+    );
+
     return NextResponse.json({
       parentId: parentNode.id,
       parentContent: answer,

@@ -3,6 +3,16 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { HeartHandshake, Sparkles, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useCallback } from 'react';
+import { API_ENDPOINTS } from '@/lib/api-config';
+
+function trackPlanInterest(eventName: string, planName: string) {
+  fetch(API_ENDPOINTS.TRACK_PLAN_INTEREST, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventName, planName }),
+  }).catch(() => {});
+}
 
 interface PlanInterestDialogProps {
   isOpen: boolean;
@@ -17,6 +27,23 @@ export function PlanInterestDialog({
 }: PlanInterestDialogProps) {
   const router = useRouter();
 
+  useEffect(() => {
+    if (isOpen) {
+      trackPlanInterest('plan_interest_shown', planName);
+    }
+  }, [isOpen, planName]);
+
+  const handleClose = useCallback(() => {
+    trackPlanInterest('plan_interest_dismissed', planName);
+    onClose();
+  }, [onClose, planName]);
+
+  const handleExploreInstead = useCallback(() => {
+    trackPlanInterest('plan_interest_explore_instead', planName);
+    onClose();
+    router.push('/explore');
+  }, [onClose, planName, router]);
+
   if (!isOpen) return null;
 
   return (
@@ -29,7 +56,7 @@ export function PlanInterestDialog({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm"
-            onClick={onClose}
+            onClick={handleClose}
           />
 
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
@@ -59,7 +86,7 @@ export function PlanInterestDialog({
                   </div>
 
                   <button
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="rounded-xl p-2 text-[var(--mint-text-secondary)] transition-colors hover:bg-white/5 hover:text-white"
                     aria-label="Close dialog"
                   >
@@ -78,16 +105,13 @@ export function PlanInterestDialog({
 
                   <div className="mt-5 flex gap-3">
                     <button
-                      onClick={onClose}
+                      onClick={handleClose}
                       className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/85 transition-colors hover:bg-white/10"
                     >
                       Close
                     </button>
                     <button
-                      onClick={() => {
-                        onClose();
-                        router.push('/explore');
-                      }}
+                      onClick={handleExploreInstead}
                       className="flex-1 rounded-xl bg-[image:var(--mint-accent-gradient)] px-4 py-3 text-sm font-semibold text-[#04120e] shadow-[0_14px_28px_rgba(16,185,129,0.2)] transition-transform hover:-translate-y-0.5"
                     >
                       Explore Instead

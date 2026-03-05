@@ -7,6 +7,7 @@ import { resetAndCheckUsage } from '@/lib/subscription-server';
 import { sanitizeQuery } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { getRequestContext } from '@/lib/request-context';
+import { recordUsageEventSafe } from '@/lib/usage-tracking';
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -239,6 +240,50 @@ export async function POST(request: NextRequest) {
 
       return { session: anonymousSession, rootNode, childNodes, isAnonymous: true };
     });
+
+    // Record session_created event
+    const eventName = result.isAnonymous ? 'session_created_anonymous' : 'session_created';
+    recordUsageEventSafe(
+      prisma,
+      {
+        eventName,
+        userId: userId ?? undefined,
+        graphSessionId: result.isAnonymous ? undefined : result.session.id,
+        anonymousSessionId: result.isAnonymous ? result.session.id : undefined,
+        requestId,
+        clientId: requestContext.clientId,
+        route: 'POST /api/session/create',
+        success: true,
+        statusCode: 200,
+        latencyMs: logger.durationMs(requestStart),
+        model: usage.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        estimatedCostUsd: usage.estimatedCostUsd,
+        metadata: {
+          rootQuery: sanitizedQuery,
+          branchCount: result.childNodes.length,
+          querySource,
+        },
+      },
+      requestContext
+    );
+
+    // Write question event (non-blocking)
+    prisma.questionEvent.create({
+      data: {
+        questionText: sanitizedQuery,
+        normalizedText: sanitizedQuery.toLowerCase().trim(),
+        source: querySource,
+        userId,
+        graphSessionId: result.isAnonymous ? null : result.session.id,
+        anonymousSessionId: result.isAnonymous ? result.session.id : null,
+        clientId: requestContext.clientId,
+        country: requestContext.country,
+        region: requestContext.region,
+        userAgent: requestContext.userAgent,
+      },
+    }).catch(() => {});
 
     return NextResponse.json({
       sessionId: result.session.id,

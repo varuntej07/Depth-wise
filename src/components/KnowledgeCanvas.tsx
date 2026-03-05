@@ -28,6 +28,7 @@ import { applyNonOverlappingDepthLayout } from '@/lib/node-layout';
 import { SubscriptionModal } from './SubscriptionModal';
 import { SubscriptionTier } from '@prisma/client';
 import { API_ENDPOINTS } from '@/lib/api-config';
+import { useSessionHeartbeat } from '@/hooks/useSessionHeartbeat';
 import { SignInDialog } from './SignInDialog';
 import { useSession } from 'next-auth/react';
 import { getClientId } from '@/lib/utils';
@@ -68,6 +69,7 @@ const KnowledgeCanvasInner: React.FC = () => {
     getVisibleEdges,
     getMaxDepth,
   } = useGraphStore();
+  useSessionHeartbeat(sessionId, isAnonymousSession);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
