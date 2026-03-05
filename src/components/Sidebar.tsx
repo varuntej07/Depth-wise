@@ -335,7 +335,7 @@ export function ChatSidebar({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3">
+            <div className="sidebar-scroll flex-1 overflow-y-auto p-3 pr-2">
               {filteredChats.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.28)] p-4 text-center text-xs text-white/55">
                   No chats found.
@@ -414,7 +414,7 @@ export function ChatSidebar({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3">
+            <div className="sidebar-scroll flex-1 overflow-y-auto p-3 pr-2">
               {filteredChats.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.28)] p-4 text-center text-xs text-white/55">
                   No chats found.
@@ -535,7 +535,7 @@ export function ChatSidebar({
                 </button>
               </div>
 
-              <div className="mt-3 max-h-[52vh] overflow-y-auto">
+              <div className="sidebar-scroll mt-3 max-h-[52vh] overflow-y-auto pr-1">
                 {filteredChats.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-[var(--mint-elevated)] bg-[rgba(32,52,45,0.28)] p-4 text-center text-xs text-white/55">
                     No chats found.
