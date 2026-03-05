@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { logger } from '@/lib/logger';
-import { getRequestContext } from '@/lib/request-context';
-import { recordUsageEventSafe, touchUserLastSeenSafe } from '@/lib/usage-tracking';
+import { isValidUUID } from '@/lib/utils';
 
 export async function GET(
   request: NextRequest,
@@ -19,6 +17,10 @@ export async function GET(
 
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
+    }
+
+    if (!isValidUUID(sessionId)) {
+      return NextResponse.json({ error: 'Invalid session ID format', code: 'INVALID_INPUT' }, { status: 400 });
     }
 
     // Fetch the GraphSession with all nodes and edges
@@ -163,6 +165,10 @@ export async function DELETE(
 
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
+    }
+
+    if (!isValidUUID(sessionId)) {
+      return NextResponse.json({ error: 'Invalid session ID format', code: 'INVALID_INPUT' }, { status: 400 });
     }
 
     // Verify the session exists and belongs to the user

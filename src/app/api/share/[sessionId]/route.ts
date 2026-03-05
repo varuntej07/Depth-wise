@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { logger } from '@/lib/logger';
+import { isValidUUID } from '@/lib/utils';
 
 /**
  * GET /api/share/[sessionId]
@@ -30,6 +30,14 @@ export async function GET(
     // Step 1: Await params to get the session ID (Next.js 15 requirement)
     const params = await props.params;
     const sessionId = params.sessionId;
+
+    // Validate UUID format
+    if (!isValidUUID(sessionId)) {
+      return NextResponse.json(
+        { error: 'Invalid session ID format', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
 
     // Step 2: Find the graph session in the database
     // We include the user relation to get creator information for attribution

@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
-import { getMaxDepth } from '@/lib/subscription-config';
-import { rateLimit } from '@/lib/ratelimit';
-import { isValidUUID, sanitizeBoolean } from '@/lib/utils';
+import { getMaxDepth, resetAndCheckUsage } from '@/lib/subscription-config';
+import { isValidUUID } from '@/lib/utils';
 import { FollowUpType } from '@/types/graph';
 
 export async function POST(request: NextRequest) {
@@ -13,15 +12,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { sessionId, parentId, isAnonymous, exploreType, focusTerm, clientId } = body;
-    const requestContext = getRequestContext(request, clientId);
+    const { sessionId, parentId, exploreType } = body;
 
     logger.apiStart('POST /api/explore', {
       requestId,
       sessionId: sessionId?.slice(0, 8),
       parentId: parentId?.slice(0, 8),
-      clientId: requestContext.clientId?.slice(0, 8),
-      isAnonymous,
       exploreType,
       focusTerm,
     });
@@ -72,35 +68,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate isAnonymous
-    const anonymousResult = sanitizeBoolean(isAnonymous);
-    if (!anonymousResult.isValid) {
+    // Server-side session type detection — don't trust client's isAnonymous flag
+    const graphSession = await prisma.graphSession.findUnique({ where: { id: sessionId } });
+    const anonSession = graphSession ? null : await prisma.anonymousSession.findUnique({ where: { id: sessionId } });
+    const validatedIsAnonymous = !graphSession && !!anonSession;
+
+    if (!graphSession && !anonSession) {
       return NextResponse.json(
-        { error: anonymousResult.error, code: 'INVALID_INPUT' },
-        { status: 400 }
+        { error: 'Session expired or not found. Please start a new search.', code: 'SESSION_NOT_FOUND' },
+        { status: 404 }
       );
     }
-    const validatedIsAnonymous = anonymousResult.value!;
 
     // Handle ANONYMOUS sessions
     if (validatedIsAnonymous) {
-      // Get anonymous session and parent node
-      const session = (await prisma.anonymousSession.findUnique({
-        where: { id: sessionId },
-      })) as unknown as AnonymousSessionTelemetry | null;
-
-      if (!session) {
-        return NextResponse.json(
-          {
-            error: 'Session expired or not found. Please start a new search.',
-            code: 'SESSION_NOT_FOUND'
-          },
-          { status: 404 }
-        );
-      }
+      const session = anonSession!;
 
       const parentNode = await prisma.anonymousNode.findUnique({
-        where: { id: parentId },
+        where: { id: parentId, sessionId: sessionId },
       });
 
       if (!parentNode) {
@@ -215,15 +200,17 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Build exploration path
+      // Build exploration path (with cycle/infinite loop guard)
       const nodeChain = [parentNode];
       let currentNode = parentNode;
+      const visited = new Set<string>([parentNode.id]);
 
-      while (currentNode.parentId) {
+      while (currentNode.parentId && !visited.has(currentNode.parentId) && visited.size < 20) {
         const parent = await prisma.anonymousNode.findUnique({
           where: { id: currentNode.parentId },
         });
         if (parent) {
+          visited.add(parent.id);
           nodeChain.unshift(parent);
           currentNode = parent;
         } else {
@@ -386,7 +373,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle AUTHENTICATED USER sessions
-    const session = (await prisma.graphSession.findUnique({
+    // Re-fetch with user included for subscription checks
+    const session = await prisma.graphSession.findUnique({
       where: { id: sessionId },
       include: {
         user: {
@@ -408,7 +396,7 @@ export async function POST(request: NextRequest) {
     }
 
     const parentNode = await prisma.node.findUnique({
-      where: { id: parentId },
+      where: { id: parentId, sessionId: sessionId },
     });
 
     if (!parentNode) {
@@ -454,51 +442,16 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Check exploration usage limit
-      const user = session.userId ? await prisma.user.findUnique({
-        where: { id: session.userId },
-        select: {
-          id: true,
-          subscriptionTier: true,
-          explorationsUsed: true,
-          explorationsReset: true,
-        },
-      }) : null;
+      // Atomically check and increment exploration usage
+      if (session.userId) {
+        const usageCheck = await resetAndCheckUsage(session.userId);
 
-      if (user) {
-        const explorationCheck = canUserExplore({
-          subscriptionTier: user.subscriptionTier,
-          explorationsUsed: user.explorationsUsed,
-          explorationsReset: user.explorationsReset,
-        });
-
-        if (!explorationCheck.allowed) {
-          await recordUsageEventSafe(
-            prisma,
-            {
-              eventName: 'exploration_limit_reached',
-              userId: user.id,
-              graphSessionId: session.id,
-              requestId,
-              clientId: requestContext.clientId,
-              route: 'POST /api/explore',
-              success: false,
-              statusCode: 429,
-              metadata: {
-                tier: user.subscriptionTier,
-                reason: explorationCheck.reason || null,
-                phase: 'node_explore',
-              },
-            },
-            requestContext
-          );
-          await touchUserLastSeenSafe(prisma, user.id, { route: 'POST /api/explore', requestId });
-
+        if (!usageCheck.allowed) {
           return NextResponse.json(
             {
-              error: explorationCheck.reason || 'Exploration limit reached',
+              error: `You've reached your monthly exploration limit. Upgrade to explore more!`,
               code: 'LIMIT_REACHED',
-              tier: user.subscriptionTier,
+              tier: session.user.subscriptionTier,
             },
             { status: 429 }
           );
@@ -554,15 +507,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Build exploration path
+    // Build exploration path (with cycle/infinite loop guard)
     const nodeChain = [parentNode];
     let currentNode = parentNode;
+    const visited = new Set<string>([parentNode.id]);
 
-    while (currentNode.parentId) {
+    while (currentNode.parentId && !visited.has(currentNode.parentId) && visited.size < 20) {
       const parent = await prisma.node.findUnique({
         where: { id: currentNode.parentId },
       });
       if (parent) {
+        visited.add(parent.id);
         nodeChain.unshift(parent);
         currentNode = parent;
       } else {
@@ -676,46 +631,6 @@ export async function POST(request: NextRequest) {
 
       return { newNodes, newEdges };
     });
-
-    // Increment exploration counter for authenticated users
-    if (session.userId) {
-      await prisma.user.update({
-        where: { id: session.userId },
-        data: buildUserUsageUpdate({
-          incrementExplorations: true,
-          inputTokens: usage.inputTokens,
-          outputTokens: usage.outputTokens,
-          estimatedCostUsd: usage.estimatedCostUsd,
-        }),
-      });
-    }
-
-    await recordUsageEventSafe(
-      prisma,
-      {
-        eventName: 'node_explored',
-        userId: session.userId,
-        graphSessionId: session.id,
-        requestId,
-        clientId: requestContext.clientId,
-        route: 'POST /api/explore',
-        success: true,
-        statusCode: 200,
-        latencyMs: logger.durationMs(requestStart),
-        model: usage.model,
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens,
-        estimatedCostUsd: usage.estimatedCostUsd,
-        metadata: {
-          parentId: parentNode.id,
-          parentDepth: parentNode.depth,
-          branchCount: result.newNodes.length,
-          focusTerm: validatedFocusTerm ?? null,
-          exploreType: validatedExploreType ?? null,
-        },
-      },
-      requestContext
-    );
 
     return NextResponse.json({
       parentId: parentNode.id,

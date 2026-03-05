@@ -93,11 +93,13 @@ export async function POST(
           { status: 403 } // 403 = Forbidden
         );
       }
-
-      ownerUserId = user.id;
+    } else {
+      // Anonymous sessions (userId === null) should not be togglable by random users
+      return NextResponse.json(
+        { error: 'Anonymous sessions cannot be shared' },
+        { status: 403 }
+      );
     }
-    // If graphSession.userId is null, it's an anonymous graph
-    // We allow anyone to toggle it (no ownership check needed for anonymous graphs)
 
     // Step 6: Get the desired public status from the request body
     const body = await request.json();

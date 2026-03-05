@@ -116,9 +116,17 @@ export default function DashboardPage() {
     let isDisposed = false;
     let isInitialLoad = true;
 
-    const loadDashboardData = async () => {
-      if (isInitialLoad) {
-        setIsExploreLoading(true);
+  const fetchUsage = async () => {
+    if (!session?.user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(API_ENDPOINTS.USER_USAGE);
+      if (response.ok) {
+        const data = await response.json();
+        setUsage(data);
       }
 
       try {

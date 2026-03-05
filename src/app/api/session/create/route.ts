@@ -1,14 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { generateBranches } from "@/lib/claude";
-import { LAYOUT_CONFIG } from "@/lib/layout";
-import { canUserExplore } from "@/lib/subscription-config";
-import { sanitizeQuery } from "@/lib/utils";
-import { logger } from "@/lib/logger";
-import { getRequestContext } from "@/lib/request-context";
-import { buildUserUsageUpdate, recordUsageEventSafe, touchUserLastSeenSafe } from "@/lib/usage-tracking";
-import { normalizeQuestionForStorage } from "@/lib/suggestions";
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { generateBranches, classifyQuery } from '@/lib/claude';
+import { LAYOUT_CONFIG } from '@/lib/layout';
+import { resetAndCheckUsage } from '@/lib/subscription-config';
+import { sanitizeQuery } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -62,62 +59,15 @@ export async function POST(request: NextRequest) {
     // Use sanitized query
     const sanitizedQuery = sanitizationResult.sanitized;
 
-    // Check exploration limits for authenticated users
+    // Atomically check and increment exploration usage for authenticated users
     if (user) {
-      // Check if usage should be reset (30+ days since last reset)
-      const now = new Date();
-      const resetDate = new Date(user.explorationsReset);
-      const daysSinceReset = Math.floor((now.getTime() - resetDate.getTime()) / (1000 * 60 * 60 * 24));
+      const usageCheck = await resetAndCheckUsage(user.id);
 
-      // Reset usage if 30+ days have passed
-      if (daysSinceReset >= 30) {
-        const newResetDate = new Date(now);
-        newResetDate.setDate(newResetDate.getDate() + 30);
-
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            explorationsUsed: 0,
-            explorationsReset: newResetDate,
-          },
-        });
-
-        user.explorationsUsed = 0;
-        user.explorationsReset = newResetDate;
-      }
-
-      // Check if user can explore
-      const explorationCheck = canUserExplore({
-        subscriptionTier: user.subscriptionTier,
-        explorationsUsed: user.explorationsUsed,
-        explorationsReset: user.explorationsReset,
-      });
-
-      if (!explorationCheck.allowed) {
-        await touchUserLastSeenSafe(prisma, user.id, { route: "POST /api/session/create", requestId });
-        await recordUsageEventSafe(
-          prisma,
-          {
-            eventName: "exploration_limit_reached",
-            userId: user.id,
-            requestId,
-            clientId: requestContext.clientId,
-            route: "POST /api/session/create",
-            success: false,
-            statusCode: 429,
-            metadata: {
-              tier: user.subscriptionTier,
-              reason: explorationCheck.reason || null,
-              phase: "session_create",
-            },
-          },
-          requestContext
-        );
-
+      if (!usageCheck.allowed) {
         return NextResponse.json(
           {
-            error: explorationCheck.reason || "Exploration limit reached",
-            code: "LIMIT_REACHED",
+            error: `You've reached your monthly exploration limit. Upgrade to explore more!`,
+            code: 'LIMIT_REACHED',
             tier: user.subscriptionTier,
           },
           { status: 429 }
@@ -287,84 +237,6 @@ export async function POST(request: NextRequest) {
 
       return { session: anonymousSession, rootNode, childNodes, isAnonymous: true };
     });
-
-    // Increment exploration counter for authenticated users and persist lifetime usage aggregates
-    if (user) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: buildUserUsageUpdate({
-          incrementExplorations: true,
-          inputTokens: usage.inputTokens,
-          outputTokens: usage.outputTokens,
-          estimatedCostUsd: usage.estimatedCostUsd,
-        }),
-      });
-    }
-
-    const normalizedQuestionText = normalizeQuestionForStorage(sanitizedQuery);
-
-    try {
-      if (normalizedQuestionText) {
-        await prisma.questionEvent.create({
-          data: {
-            questionText: sanitizedQuery,
-            normalizedText: normalizedQuestionText,
-            source: querySource,
-            userId: user?.id ?? null,
-            graphSessionId: result.isAnonymous ? null : result.session.id,
-            anonymousSessionId: result.isAnonymous ? result.session.id : null,
-            clientId: requestContext.clientId,
-            country: requestContext.country,
-            region: requestContext.region,
-            userAgent: requestContext.userAgent,
-            metadata: {
-              isAuthenticated,
-              source: querySource,
-            },
-          },
-        });
-      } else {
-        logger.warn("question_event_write_skipped", {
-          requestId,
-          userId: user?.id ?? null,
-          isAnonymous: result.isAnonymous,
-          reason: "empty_normalized_text",
-        });
-      }
-    } catch (error) {
-      logger.warn("question_event_write_failed", {
-        requestId,
-        userId: user?.id ?? null,
-        isAnonymous: result.isAnonymous,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-
-    await recordUsageEventSafe(
-      prisma,
-      {
-        eventName: result.isAnonymous ? "session_created_anonymous" : "session_created",
-        userId: user?.id ?? null,
-        graphSessionId: result.isAnonymous ? null : result.session.id,
-        anonymousSessionId: result.isAnonymous ? result.session.id : null,
-        requestId,
-        clientId: requestContext.clientId,
-        route: "POST /api/session/create",
-        success: true,
-        statusCode: 200,
-        latencyMs: logger.durationMs(requestStart),
-        model: usage.model,
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens,
-        estimatedCostUsd: usage.estimatedCostUsd,
-        metadata: {
-          branchCount: branches.length,
-          keyTermCount: keyTerms.length,
-          isAuthenticated,
-        },
-      },
-      requestContext
-    );
 
     return NextResponse.json({
       sessionId: result.session.id,
