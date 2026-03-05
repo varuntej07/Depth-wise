@@ -110,7 +110,8 @@ const useGraphStore = create<GraphState>((set, get) => ({
       rootQuery: null,
       isPublic: false, // Reset share status when clearing
       isAnonymous: false, // Reset anonymous status when clearing
-      error: null,
+      // NOTE: Do NOT reset error here - errors should persist until explicitly cleared
+      // This prevents race conditions where clearGraph() overwrites error messages
       focusMode: false, // Reset focus mode when clearing
       focusedNodeId: null,
     }),
@@ -124,7 +125,10 @@ const useGraphStore = create<GraphState>((set, get) => ({
       edges,
       isPublic, // Load the share status from the session
       isAnonymous, // Load the anonymous status
+      isLoading: false,
       error: null,
+      focusMode: false,
+      focusedNodeId: null,
     }),
 
   setLoading: (loading) => set({ isLoading: loading }),

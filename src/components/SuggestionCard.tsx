@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
+import { DEFAULT_SUGGESTIONS, type SuggestionItem } from '@/lib/suggestion-defaults';
 
 interface SuggestionCardProps {
   title: string;
@@ -9,25 +10,6 @@ interface SuggestionCardProps {
   onClick: () => void;
   index?: number;
 }
-
-const SUGGESTION_EXAMPLES = [
-  {
-    title: 'How does quantum computing work?',
-    description: 'Explore the fundamentals of quantum mechanics and computation',
-  },
-  {
-    title: 'What is artificial intelligence?',
-    description: 'Understand machine learning, neural networks, and AI systems',
-  },
-  {
-    title: 'How do black holes form?',
-    description: 'Dive into astrophysics and gravitational phenomena',
-  },
-  {
-    title: 'What is blockchain technology?',
-    description: 'Learn about distributed systems and cryptocurrency',
-  },
-];
 
 export function SuggestionCard({ title, description, onClick, index = 0 }: SuggestionCardProps) {
   return (
@@ -38,18 +20,18 @@ export function SuggestionCard({ title, description, onClick, index = 0 }: Sugge
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="w-full p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-cyan-500/30 hover:bg-slate-800/50 transition-all text-left group"
+      className="group w-full rounded-xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.82)] p-4 text-left transition-all hover:border-[var(--mint-accent-2)] hover:bg-[rgba(32,52,45,0.46)]"
     >
       <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-cyan-500/20 transition-colors">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[rgba(16,185,129,0.16)] transition-colors group-hover:bg-[rgba(16,185,129,0.16)]">
+          <Sparkles className="h-4 w-4 text-[var(--mint-accent-1)]" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white group-hover:text-cyan-400 transition-colors truncate">
+          <p className="truncate text-sm font-medium text-white transition-colors group-hover:text-[var(--mint-accent-1)]">
             {title}
           </p>
           {description && (
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2">{description}</p>
+            <p className="mt-1 line-clamp-2 text-xs text-[var(--mint-text-secondary)]">{description}</p>
           )}
         </div>
       </div>
@@ -60,14 +42,15 @@ export function SuggestionCard({ title, description, onClick, index = 0 }: Sugge
 interface SuggestionsGridProps {
   onSelectSuggestion: (query: string) => void;
   displayCount?: number;
+  suggestions?: SuggestionItem[];
 }
 
-export function SuggestionsGrid({ onSelectSuggestion, displayCount = 2 }: SuggestionsGridProps) {
-  const suggestions = SUGGESTION_EXAMPLES.slice(0, displayCount);
+export function SuggestionsGrid({ onSelectSuggestion, displayCount = 2, suggestions }: SuggestionsGridProps) {
+  const suggestionsToRender = (suggestions && suggestions.length > 0 ? suggestions : DEFAULT_SUGGESTIONS).slice(0, displayCount);
 
   return (
     <div className="w-full max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {suggestions.map((suggestion, index) => (
+      {suggestionsToRender.map((suggestion, index) => (
         <SuggestionCard
           key={suggestion.title}
           title={suggestion.title}
@@ -81,5 +64,5 @@ export function SuggestionsGrid({ onSelectSuggestion, displayCount = 2 }: Sugges
 }
 
 export function getSuggestionExamples() {
-  return SUGGESTION_EXAMPLES;
+  return DEFAULT_SUGGESTIONS;
 }

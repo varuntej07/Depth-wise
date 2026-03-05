@@ -12,7 +12,7 @@ export function SignInDialog({ isOpen, onClose }: SignInDialogProps) {
   if (!isOpen) return null;
 
   const handleSignIn = () => {
-    signIn('google', { callbackUrl: '/' });
+    signIn('google', { callbackUrl: '/home' });
   };
 
   const benefits = [
@@ -30,19 +30,19 @@ export function SignInDialog({ isOpen, onClose }: SignInDialogProps) {
       />
 
       {/* Dialog */}
-      <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 border border-cyan-500/30 rounded-2xl shadow-2xl max-w-md w-full p-8">
+      <div className="relative bg-gradient-to-br from-[var(--mint-surface)] to-[var(--mint-elevated)] border border-[var(--mint-accent-2)] rounded-2xl shadow-2xl max-w-md w-full p-8">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 text-[var(--mint-text-secondary)] hover:text-white transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Icon */}
         <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-cyan-400" />
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] border border-[var(--mint-accent-2)] flex items-center justify-center">
+            <Lock className="w-8 h-8 text-[#04120e]" />
           </div>
         </div>
 
@@ -51,7 +51,7 @@ export function SignInDialog({ isOpen, onClose }: SignInDialogProps) {
           <h2 className="text-2xl font-bold text-white mb-3">
             Sign in to Explore
           </h2>
-          <p className="text-slate-300 text-sm leading-relaxed">
+          <p className="text-[var(--mint-text-secondary)] text-sm leading-relaxed">
             To explore deeper into this topic and unlock the full power of knowledge mapping,
             Please sign in with your Google account.
           </p>
@@ -60,9 +60,9 @@ export function SignInDialog({ isOpen, onClose }: SignInDialogProps) {
         {/* Benefits */}
         <div className="space-y-3 mb-8">
           {benefits.map((benefit, index) => (
-            <div key={index} className="flex items-center gap-3 text-sm text-slate-300">
-              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
-                <Check className="w-3 h-3 text-cyan-400" />
+            <div key={index} className="flex items-center gap-3 text-sm text-[var(--mint-text-secondary)]">
+              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[rgba(16,185,129,0.16)] border border-[var(--mint-accent-2)] flex items-center justify-center">
+                <Check className="w-3 h-3 text-[var(--mint-accent-1)]" />
               </div>
               <span>{benefit}</span>
             </div>
@@ -72,13 +72,13 @@ export function SignInDialog({ isOpen, onClose }: SignInDialogProps) {
         {/* Sign in button */}
         <button
           onClick={handleSignIn}
-          className="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium transition-all duration-200 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40"
+          className="w-full px-6 py-3 rounded-lg bg-[image:var(--mint-accent-gradient)] hover:brightness-105 text-[#04120e] font-medium transition-all duration-200 shadow-lg shadow-[0_0_24px_var(--mint-accent-glow)] hover:shadow-[0_0_24px_var(--mint-accent-glow)]"
         >
           Sign in
         </button>
 
         {/* Footer note */}
-        <p className="text-center text-xs text-slate-500 mt-6">
+        <p className="text-center text-xs text-[var(--mint-text-secondary)] mt-6">
           Free to start. No credit card required.
         </p>
       </div>

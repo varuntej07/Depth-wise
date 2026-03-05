@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/share/[sessionId]
@@ -22,7 +23,10 @@ export async function GET(
   request: NextRequest,
   props: { params: Promise<{ sessionId: string }> }
 ) {
+  const requestId = crypto.randomUUID().slice(0, 8);
   try {
+    logger.apiStart('GET /api/share/[sessionId]', { requestId });
+
     // Step 1: Await params to get the session ID (Next.js 15 requirement)
     const params = await props.params;
     const sessionId = params.sessionId;
@@ -115,8 +119,7 @@ export async function GET(
     return NextResponse.json(response);
 
   } catch (error) {
-    // Log the error for debugging
-    console.error('Public share fetch error:', error);
+    logger.apiError('GET /api/share/[sessionId]', error, { requestId });
 
     // Return a generic error message
     return NextResponse.json(
@@ -126,5 +129,7 @@ export async function GET(
       },
       { status: 500 }
     );
+  } finally {
+    logger.info('api.complete:GET /api/share/[sessionId]', { requestId });
   }
 }

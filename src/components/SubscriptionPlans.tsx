@@ -10,13 +10,13 @@ export default function SubscriptionPlans() {
   const plans = Object.values(SUBSCRIPTION_PLANS);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white py-16 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-[var(--mint-page)] via-[var(--mint-surface)] to-[var(--mint-page)] text-white py-16 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl sm:text-6xl font-bold mb-4 bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent"
+            className="text-5xl sm:text-6xl font-bold mb-4 bg-gradient-to-r from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)] bg-clip-text text-transparent"
           >
             Knowledge Graph Explorer
           </motion.h1>
@@ -24,7 +24,7 @@ export default function SubscriptionPlans() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="text-slate-400 text-lg mb-2"
+            className="text-[var(--mint-text-secondary)] text-lg mb-2"
           >
             Choose the plan that fits your exploration needs
           </motion.p>
@@ -32,7 +32,7 @@ export default function SubscriptionPlans() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-slate-500 text-base"
+            className="text-[var(--mint-text-secondary)] text-base"
           >
             Unlock deeper insights with our intelligent knowledge graphs
           </motion.p>
@@ -49,13 +49,13 @@ export default function SubscriptionPlans() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`relative bg-slate-800/50 backdrop-blur rounded-3xl p-8 border ${
-                  isPopular ? 'border-2 border-cyan-500/50 shadow-xl shadow-cyan-500/20' : 'border border-slate-700/50'
+                className={`relative bg-[var(--mint-elevated)] backdrop-blur rounded-3xl p-8 border ${
+                  isPopular ? 'border-2 border-[var(--mint-accent-2)] shadow-xl shadow-[0_0_24px_var(--mint-accent-glow)]' : 'border border-[var(--mint-elevated)]'
                 }`}
               >
                 {isPopular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="px-4 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-xs font-semibold shadow-lg">
+                    <span className="px-4 py-1 rounded-full bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] text-white text-xs font-semibold shadow-lg">
                       Most Popular
                     </span>
                   </div>
@@ -68,7 +68,7 @@ export default function SubscriptionPlans() {
                     </div>
                   </div>
 
-                  <p className="text-slate-400 text-sm mb-2">{plan.description}</p>
+                  <p className="text-[var(--mint-text-secondary)] text-sm mb-2">{plan.description}</p>
                   <h2 className="text-4xl font-bold mb-1">{plan.name}</h2>
 
                   <div className="flex items-baseline gap-1 mb-6">
@@ -77,7 +77,7 @@ export default function SubscriptionPlans() {
                     ) : (
                       <>
                         <span className="text-3xl font-bold">${plan.price}</span>
-                        <span className="text-slate-400 text-lg">/month</span>
+                        <span className="text-[var(--mint-text-secondary)] text-lg">/month</span>
                       </>
                     )}
                   </div>
@@ -85,15 +85,15 @@ export default function SubscriptionPlans() {
                   <button
                     className={`w-full py-3 px-6 rounded-full font-medium transition-all cursor-pointer ${
                       plan.price === 0
-                        ? 'bg-slate-700 text-slate-300 hover:bg-slate-600 cursor-default'
+                        ? 'bg-[var(--mint-elevated)] text-[var(--mint-text-secondary)] hover:bg-[rgba(32,52,45,0.55)] cursor-default'
                         : isPopular
-                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:shadow-lg hover:shadow-cyan-500/50 hover:scale-105'
-                        : 'bg-gradient-to-r from-violet-500 to-pink-500 text-white hover:shadow-lg hover:shadow-violet-500/50 hover:scale-105'
+                        ? 'bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] text-white hover:shadow-lg hover:shadow-[0_0_24px_var(--mint-accent-glow)] hover:scale-105'
+                        : 'bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] text-white hover:shadow-lg hover:shadow-[0_0_24px_var(--mint-accent-glow)] hover:scale-105'
                     }`}
                     onClick={() => {
                       if (plan.price === 0) {
                         // Already on free plan
-                        router.push('/dashboard');
+                        router.push('/account');
                         return;
                       }
                       // TODO: Integrate Stripe checkout
@@ -112,15 +112,15 @@ export default function SubscriptionPlans() {
                       <div key={feature.id} className="flex items-start gap-3">
                         <FeatureIcon
                           className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                            feature.included ? 'text-cyan-400' : 'text-slate-500'
+                            feature.included ? 'text-[var(--mint-accent-1)]' : 'text-[var(--mint-text-secondary)]'
                           }`}
                         />
                         <div className="flex-1">
-                          <span className={feature.included ? 'text-slate-200' : 'text-slate-500'}>
+                          <span className={feature.included ? 'text-slate-200' : 'text-[var(--mint-text-secondary)]'}>
                             {feature.name}
                           </span>
                           {feature.comingSoon && (
-                            <span className="ml-2 text-xs text-violet-400 font-semibold">(Soon)</span>
+                            <span className="ml-2 text-xs text-[var(--mint-accent-1)] font-semibold">(Soon)</span>
                           )}
                         </div>
                         {feature.included && (

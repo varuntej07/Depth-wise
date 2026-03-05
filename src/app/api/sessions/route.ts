@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { logger } from '@/lib/logger';
+import { touchUserLastSeenSafe } from '@/lib/usage-tracking';
 
 export async function GET() {
+  const requestId = crypto.randomUUID().slice(0, 8);
   try {
+    logger.apiStart('GET /api/sessions', { requestId });
+
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -18,6 +23,8 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    await touchUserLastSeenSafe(prisma, user.id, { route: 'GET /api/sessions', requestId });
 
     // Fetch all GraphSessions for this user, ordered by most recent first
     const sessions = await prisma.graphSession.findMany({
@@ -49,10 +56,12 @@ export async function GET() {
 
     return NextResponse.json({ sessions: formattedSessions });
   } catch (error) {
-    console.error('Error fetching sessions:', error);
+    logger.apiError('GET /api/sessions', error, { requestId });
     return NextResponse.json(
       { error: 'Failed to fetch sessions' },
       { status: 500 }
     );
+  } finally {
+    logger.info('api.complete:GET /api/sessions', { requestId });
   }
 }

@@ -11,6 +11,11 @@ export interface QueryClassification {
   suggestedBranchCount: number; // 2-5
 }
 
+export interface ExploreTerm {
+  label: string;
+  query: string;
+}
+
 export interface KnowledgeNodeData {
   title: string;
   content?: string;
@@ -22,7 +27,8 @@ export interface KnowledgeNodeData {
   sessionId: string;
   parentId?: string;
   isSkeleton?: boolean;
-  followUpType?: FollowUpType; // NEW: what kind of follow-up this branch represents
+  followUpType?: FollowUpType;
+  exploreTerms?: ExploreTerm[];
   [key: string]: unknown;
 }
 
@@ -47,5 +53,6 @@ export interface Branch {
   content?: string;
   depth: number;
   position: { x: number; y: number };
-  followUpType?: FollowUpType; // NEW: what kind of follow-up this branch represents
+  followUpType?: FollowUpType; // what kind of follow-up this branch represents
+  exploreTerms?: ExploreTerm[];
 }

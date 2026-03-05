@@ -127,7 +127,7 @@ export function ExplorationLayout() {
   };
 
   return (
-    <div className="w-full h-screen bg-slate-950 overflow-hidden">
+    <div className="w-full h-screen bg-[var(--mint-page)] overflow-hidden">
       {/* Sidebar */}
       <ChatSidebar
         isCollapsed={isSidebarCollapsed}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, TrendingUp } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -28,7 +28,7 @@ export const UsageIndicator: React.FC = () => {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUsage = async () => {
+  const fetchUsage = useCallback(async () => {
     if (!session?.user) {
       setLoading(false);
       return;
@@ -45,11 +45,11 @@ export const UsageIndicator: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user]);
 
   useEffect(() => {
     fetchUsage();
-  }, [session]);
+  }, [fetchUsage]);
 
   // Listen for usage refresh events
   useEffect(() => {
@@ -59,55 +59,62 @@ export const UsageIndicator: React.FC = () => {
 
     window.addEventListener('refresh-usage', handleRefreshUsage);
     return () => window.removeEventListener('refresh-usage', handleRefreshUsage);
-  }, [session]);
+  }, [fetchUsage]);
 
   if (!session?.user || loading || !usage) {
     return null;
   }
 
   const { explorationsUsed, explorationsLimit, percentage } = usage;
+  const explorationsRemaining =
+    explorationsLimit === null ? null : Math.max(0, explorationsLimit - explorationsUsed);
+  const remainingLabel =
+    explorationsRemaining === null
+      ? 'Unlimited explorations left on your current plan.'
+      : `${explorationsRemaining} exploration${explorationsRemaining === 1 ? '' : 's'} left this cycle.`;
 
   // Color coding based on percentage
   const getColorClasses = () => {
     if (percentage >= 90) return 'from-red-500 to-orange-500';
     if (percentage >= 70) return 'from-yellow-500 to-orange-500';
-    return 'from-cyan-500 to-blue-500';
+    return 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]';
   };
 
   const getTextColor = () => {
     if (percentage >= 90) return 'text-red-400';
     if (percentage >= 70) return 'text-yellow-400';
-    return 'text-cyan-400';
+    return 'text-[var(--mint-accent-1)]';
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-3 px-4 py-2 bg-slate-900/80 backdrop-blur-sm border border-cyan-500/30 rounded-lg"
+      tabIndex={0}
+      className="group relative flex items-center gap-1.5 rounded-lg border border-[var(--mint-accent-2)] bg-[var(--mint-surface)] px-2 py-1.5 backdrop-blur-sm focus-visible:outline-none sm:gap-3 sm:px-4 sm:py-2"
     >
       {/* Icon */}
-      <Zap className={`w-4 h-4 ${getTextColor()}`} />
+      <Zap className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${getTextColor()}`} />
 
       {/* Usage Text */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-slate-300">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <span className="text-xs sm:text-sm text-[var(--mint-text-secondary)]">
           {explorationsLimit === null ? (
             <>
-              <span className="font-semibold text-violet-400">{explorationsUsed}</span>
-              <span className="text-slate-400"> explorations</span>
+              <span className="font-semibold text-[var(--mint-accent-1)]">{explorationsUsed}</span>
+              <span className="text-[var(--mint-text-secondary)] hidden sm:inline"> explorations</span>
             </>
           ) : (
             <>
               <span className={`font-semibold ${getTextColor()}`}>{explorationsUsed}</span>
-              <span className="text-slate-400"> / {explorationsLimit}</span>
+              <span className="text-[var(--mint-text-secondary)]">/{explorationsLimit}</span>
             </>
           )}
         </span>
 
         {/* Progress Bar (only for limited plans) */}
         {explorationsLimit !== null && (
-          <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div className="w-10 sm:w-16 h-1.5 bg-[var(--mint-elevated)] rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${percentage}%` }}
@@ -119,11 +126,15 @@ export const UsageIndicator: React.FC = () => {
 
         {/* Unlimited Badge */}
         {explorationsLimit === null && (
-          <div className="flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-violet-500/20 to-pink-500/20 border border-violet-500/30 rounded-full">
-            <TrendingUp className="w-3 h-3 text-violet-400" />
-            <span className="text-xs font-semibold text-violet-400">Unlimited</span>
+          <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] border border-[var(--mint-accent-2)] rounded-full">
+            <TrendingUp className="w-3 h-3 text-[var(--mint-accent-1)]" />
+            <span className="text-xs font-semibold text-[var(--mint-accent-1)]">Unlimited</span>
           </div>
         )}
+      </div>
+
+      <div className="pointer-events-none absolute left-1/2 top-[calc(100%+0.55rem)] z-30 w-max -translate-x-1/2 rounded-md border border-[var(--mint-elevated)] bg-[rgba(5,13,11,0.95)] px-2.5 py-1 text-[11px] text-[var(--mint-text-secondary)] opacity-0 shadow-[0_8px_20px_rgba(2,6,18,0.45)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
+        {remainingLabel}
       </div>
     </motion.div>
   );

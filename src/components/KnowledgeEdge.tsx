@@ -13,11 +13,11 @@ interface KnowledgeEdgeProps extends EdgeProps {
 // Color palette based on depth level
 const getDepthColor = (depth: number = 0): string => {
   const colors = [
-    '#06b6d4', // cyan-500 - depth 0
-    '#3b82f6', // blue-500 - depth 1
-    '#8b5cf6', // violet-500 - depth 2
-    '#ec4899', // pink-500 - depth 3
-    '#f59e0b', // amber-500 - depth 4+
+    '#6EE7B7',
+    '#34D399',
+    '#10B981',
+    '#59D7AA',
+    '#7DE5BE',
   ];
   return colors[Math.min(depth, colors.length - 1)];
 };
@@ -33,6 +33,12 @@ const KnowledgeEdge: React.FC<KnowledgeEdgeProps> = ({
   data,
   markerEnd,
 }) => {
+  // Validate coordinates before rendering
+  if (!Number.isFinite(sourceX) || !Number.isFinite(sourceY) ||
+      !Number.isFinite(targetX) || !Number.isFinite(targetY)) {
+    return null;
+  }
+
   const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
@@ -40,6 +46,7 @@ const KnowledgeEdge: React.FC<KnowledgeEdgeProps> = ({
     targetX,
     targetY,
     targetPosition,
+    curvature: 0.42,
   });
 
   const depth = data?.depth || 0;
@@ -55,11 +62,11 @@ const KnowledgeEdge: React.FC<KnowledgeEdgeProps> = ({
           d={edgePath}
           fill="none"
           stroke={color}
-          strokeWidth={8}
-          strokeOpacity={0.3}
-          className="animate-pulse"
+          strokeWidth={7}
+          strokeOpacity={0.22}
+          className="transition-opacity duration-200"
           style={{
-            filter: `drop-shadow(0 0 8px ${color})`,
+            filter: `drop-shadow(0 0 6px ${color})`,
           }}
         />
       )}
@@ -69,25 +76,17 @@ const KnowledgeEdge: React.FC<KnowledgeEdgeProps> = ({
         id={id}
         d={edgePath}
         fill="none"
-        stroke={color}
-        strokeWidth={isHighlighted ? 3 : 2}
-        strokeOpacity={isHighlighted ? 1 : 0.6}
+        stroke={isHighlighted ? '#6EE7B7' : color}
+        strokeWidth={isHighlighted ? 2.9 : 2.2}
+        strokeOpacity={isHighlighted ? 0.94 : 0.58}
         className="transition-all duration-300"
         style={{
-          strokeDasharray: isHighlighted ? '0' : '5,5',
-          animation: 'edge-appear 0.5s ease-out',
+          animation: 'edge-appear 0.24s ease-out',
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
         }}
         markerEnd={markerEnd}
       />
-
-      {/* Animated particle effect on highlighted paths */}
-      {isHighlighted && (
-        <circle r="4" fill={color} className="edge-particle">
-          <animateMotion dur="2s" repeatCount="indefinite">
-            <mpath href={`#${id}`} />
-          </animateMotion>
-        </circle>
-      )}
     </g>
   );
 };

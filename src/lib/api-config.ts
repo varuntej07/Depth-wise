@@ -19,14 +19,18 @@ export const API_ENDPOINTS = {
   SESSION_CREATE: `${API_BASE_URL}/api/session/create`,
   SESSION_LIST: `${API_BASE_URL}/api/sessions`,
   SESSION_GET: (id: string) => `${API_BASE_URL}/api/session/${id}`,
+  SESSION_DELETE: (id: string) => `${API_BASE_URL}/api/session/${id}`,
   SESSION_SHARE: (id: string) => `${API_BASE_URL}/api/session/${id}/share`,
   SESSION_MIGRATE: `${API_BASE_URL}/api/session/migrate`,
 
   // Exploration
   EXPLORE_NODE: `${API_BASE_URL}/api/explore`,
+  NODE_FEEDBACK: `${API_BASE_URL}/api/feedback`,
+  SUGGESTIONS: `${API_BASE_URL}/api/suggestions`,
 
   // User & Usage
   USER_USAGE: `${API_BASE_URL}/api/user/usage`,
+  DASHBOARD_PUBLIC_GRAPHS: `${API_BASE_URL}/api/dashboard/public-graphs`,
 
   // Sharing
   SHARE_GET: (sessionId: string) => `${API_BASE_URL}/api/share/${sessionId}`,

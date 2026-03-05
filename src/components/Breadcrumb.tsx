@@ -36,18 +36,18 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ className = '' }) => {
     <div
       className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-30 ${className}`}
     >
-      <div className="flex items-center gap-1 px-4 py-2 bg-slate-900/95 backdrop-blur-sm border border-cyan-500/30 rounded-full shadow-lg">
+      <div className="flex items-center gap-1 px-4 py-2 bg-[var(--mint-surface)] backdrop-blur-sm border border-[var(--mint-accent-2)] rounded-full shadow-lg">
         {/* Exit Focus Mode Button */}
         <button
           onClick={exitFocusMode}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs text-[var(--mint-text-secondary)] hover:text-white hover:bg-[var(--mint-elevated)] rounded-full transition-colors"
           title="Exit Focus Mode"
         >
           <X className="w-3 h-3" />
           <span className="hidden sm:inline">Exit Focus</span>
         </button>
 
-        <div className="w-px h-4 bg-slate-700 mx-1" />
+        <div className="w-px h-4 bg-[var(--mint-elevated)] mx-1" />
 
         {/* Root/Home */}
         <button
@@ -57,7 +57,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ className = '' }) => {
               setFocusedNode(rootNode.id);
             }
           }}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 rounded-full transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs text-[var(--mint-accent-1)] hover:text-[var(--mint-accent-1)] hover:bg-[var(--mint-elevated)] rounded-full transition-colors"
           title={rootQuery || 'Root'}
         >
           <Home className="w-3 h-3" />
@@ -72,8 +72,8 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ className = '' }) => {
               onClick={() => setFocusedNode(node.id)}
               className={`px-2 py-1 text-xs rounded-full transition-colors ${
                 node.id === focusedNodeId
-                  ? 'text-white bg-cyan-500/20 border border-cyan-500/50'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'text-white bg-[rgba(16,185,129,0.16)] border border-[var(--mint-accent-2)]'
+                  : 'text-[var(--mint-text-secondary)] hover:text-white hover:bg-[var(--mint-elevated)]'
               }`}
               title={node.data.title}
             >
@@ -83,7 +83,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ className = '' }) => {
         ))}
 
         {/* Depth indicator */}
-        <div className="ml-2 px-2 py-0.5 text-[10px] text-slate-500 bg-slate-800 rounded-full">
+        <div className="ml-2 px-2 py-0.5 text-[10px] text-[var(--mint-text-secondary)] bg-[var(--mint-elevated)] rounded-full">
           Depth {ancestorPath.length}
         </div>
       </div>

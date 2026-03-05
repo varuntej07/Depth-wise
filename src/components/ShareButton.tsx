@@ -15,7 +15,7 @@ import { usePostHog } from 'posthog-js/react';
  *
  * Features:
  * - Fixed positioning over canvas
- * - Pulsing animation when graph is public
+ * - Static public/private status indicator
  * - Smooth hover effects with shadows
  * - Glassmorphism design
  * - Always accessible while viewing graph
@@ -61,18 +61,13 @@ export const ShareButton: React.FC = () => {
               className="relative group"
               title="Share this graph"
             >
-              {/* Pulsing ring effect when public */}
-              {isPublic && (
-                <span className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 animate-ping opacity-75" />
-              )}
-
               {/* Glow effect on hover */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300" />
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300" />
 
               {/* Button container with glassmorphism */}
-              <div className="relative flex items-center gap-2 px-5 py-4 bg-slate-900/80 backdrop-blur-xl border-2 border-cyan-500/50 rounded-full shadow-2xl shadow-cyan-500/25 transition-all duration-300 group-hover:border-cyan-400 group-hover:shadow-cyan-500/40">
+              <div className="relative flex items-center gap-2 px-5 py-4 bg-[var(--mint-surface)] backdrop-blur-xl border-2 border-[var(--mint-accent-2)] rounded-full shadow-lg shadow-black/40 transition-all duration-300 group-hover:border-[var(--mint-accent-2)] group-hover:shadow-[0_0_20px_var(--mint-accent-glow)]">
                 {/* Share icon */}
-                <Share2 className="w-5 h-5 text-cyan-400 transition-transform duration-300 group-hover:rotate-12" />
+                <Share2 className="w-5 h-5 text-[var(--mint-accent-1)] transition-transform duration-300 group-hover:rotate-12" />
 
                 {/* Label that appears on hover */}
                 <AnimatePresence>
@@ -82,7 +77,7 @@ export const ShareButton: React.FC = () => {
                       animate={{ width: 'auto', opacity: 1 }}
                       exit={{ width: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="overflow-hidden whitespace-nowrap text-sm font-semibold text-cyan-400"
+                      className="overflow-hidden whitespace-nowrap text-sm font-semibold text-[var(--mint-accent-1)]"
                     >
                       Share
                     </motion.span>
@@ -91,17 +86,9 @@ export const ShareButton: React.FC = () => {
 
                 {/* Public indicator badge */}
                 {isPublic && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-900 flex items-center justify-center"
-                  >
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="w-2 h-2 bg-white rounded-full"
-                    />
-                  </motion.div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-900 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full" />
+                  </div>
                 )}
               </div>
             </motion.button>
@@ -115,8 +102,8 @@ export const ShareButton: React.FC = () => {
                   exit={{ opacity: 0, y: 10 }}
                   className="absolute bottom-full right-0 mb-2 pointer-events-none"
                 >
-                  <div className="px-3 py-1.5 bg-slate-900/95 backdrop-blur-sm border border-cyan-500/30 rounded-lg shadow-xl">
-                    <p className="text-xs font-medium text-cyan-400 whitespace-nowrap">
+                  <div className="px-3 py-1.5 bg-[var(--mint-surface)] backdrop-blur-sm border border-[var(--mint-accent-2)] rounded-lg shadow-xl">
+                    <p className="text-xs font-medium text-[var(--mint-accent-1)] whitespace-nowrap">
                       {isPublic ? 'Public Graph' : 'Share Graph'}
                     </p>
                   </div>
