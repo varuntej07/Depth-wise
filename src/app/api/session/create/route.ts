@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateBranches, classifyQuery } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
-import { resetAndCheckUsage } from '@/lib/subscription-config';
+import { resetAndCheckUsage } from '@/lib/subscription-server';
 import { sanitizeQuery } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 

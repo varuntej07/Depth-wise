@@ -21,8 +21,8 @@ model User {
   // Subscription fields
   subscriptionTier   SubscriptionTier @default(FREE) @map("subscription_tier")
   subscriptionStatus SubscriptionStatus @default(ACTIVE) @map("subscription_status")
-  subscriptionId     String? @unique @map("subscription_id") // Stripe subscription ID
-  customerId         String? @unique @map("customer_id") // Stripe customer ID
+  subscriptionId     String? @unique @map("subscription_id") // Razorpay subscription ID
+  customerId         String? @unique @map("customer_id") // Razorpay customer ID
 
   // Usage tracking
   explorationsUsed   Int      @default(0) @map("explorations_used")

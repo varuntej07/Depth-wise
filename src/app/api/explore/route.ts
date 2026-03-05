@@ -2,9 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateBranches } from '@/lib/claude';
 import { LAYOUT_CONFIG } from '@/lib/layout';
-import { getMaxDepth, resetAndCheckUsage } from '@/lib/subscription-config';
-import { isValidUUID } from '@/lib/utils';
+import { getMaxDepth } from '@/lib/subscription-config';
+import { resetAndCheckUsage } from '@/lib/subscription-server';
+import { isValidUUID, sanitizeQuery } from '@/lib/utils';
 import { FollowUpType } from '@/types/graph';
+import { logger } from '@/lib/logger';
+import { getRequestContext } from '@/lib/request-context';
+import { recordUsageEventSafe } from '@/lib/usage-tracking';
+import type { AnonymousEdge, AnonymousNode, Edge, Node, SubscriptionTier } from '@prisma/client';
+
+interface GraphSessionTelemetry {
+  id: string;
+  userId: string | null;
+  rootQuery: string;
+  clientId: string | null;
+  ipAddress: string | null;
+  ipHash: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  userAgent: string | null;
+  user: { subscriptionTier: SubscriptionTier } | null;
+}
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -12,12 +31,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { sessionId, parentId, exploreType } = body;
+    const { sessionId, parentId, exploreType, focusTerm, clientId } = body;
+    const requestContext = getRequestContext(request, clientId);
 
     logger.apiStart('POST /api/explore', {
       requestId,
       sessionId: sessionId?.slice(0, 8),
       parentId: parentId?.slice(0, 8),
+      clientId: requestContext.clientId?.slice(0, 8),
       exploreType,
       focusTerm,
     });
@@ -383,7 +404,7 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-    })) as unknown as GraphSessionTelemetry | null;
+    }) as unknown as GraphSessionTelemetry | null;
 
     if (!session) {
       return NextResponse.json(

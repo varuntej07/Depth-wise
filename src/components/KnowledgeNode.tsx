@@ -13,58 +13,54 @@ import { getClientId } from '@/lib/utils';
 interface KnowledgeNodeProps {
   data: KnowledgeNodeData;
   id: string;
-  selected?: boolean;
 }
 
-type FeedbackValue = 'up' | 'down';
-type ExploreAction = {
-  key: string;
-  type?: FollowUpType;
-  label: string;
-};
-
-const DOWN_FEEDBACK_OPTIONS = [
-  { value: 'unclear', label: 'Unclear' },
-  { value: 'too_shallow', label: 'Too shallow' },
-  { value: 'incorrect', label: 'Incorrect' },
-  { value: 'repetitive', label: 'Repetitive' },
-  { value: 'skip_reason', label: 'Skip reason' },
+// Static color lookup map — all classes are fully spelled out so Tailwind's purge scanner can see them
+const DEPTH_COLORS = [
+  {
+    border: 'border-cyan-500',
+    shadow: 'shadow-cyan-500/30',
+    text: 'text-cyan-400',
+    glow: 'hover:shadow-cyan-500/50',
+    hoverBorder: 'hover:border-cyan-500/60',
+    borderLight: 'border-cyan-500/30',
+  },
+  {
+    border: 'border-blue-500',
+    shadow: 'shadow-blue-500/30',
+    text: 'text-blue-400',
+    glow: 'hover:shadow-blue-500/50',
+    hoverBorder: 'hover:border-blue-500/60',
+    borderLight: 'border-blue-500/30',
+  },
+  {
+    border: 'border-violet-500',
+    shadow: 'shadow-violet-500/30',
+    text: 'text-violet-400',
+    glow: 'hover:shadow-violet-500/50',
+    hoverBorder: 'hover:border-violet-500/60',
+    borderLight: 'border-violet-500/30',
+  },
+  {
+    border: 'border-pink-500',
+    shadow: 'shadow-pink-500/30',
+    text: 'text-pink-400',
+    glow: 'hover:shadow-pink-500/50',
+    hoverBorder: 'hover:border-pink-500/60',
+    borderLight: 'border-pink-500/30',
+  },
+  {
+    border: 'border-amber-500',
+    shadow: 'shadow-amber-500/30',
+    text: 'text-amber-400',
+    glow: 'hover:shadow-amber-500/50',
+    hoverBorder: 'hover:border-amber-500/60',
+    borderLight: 'border-amber-500/30',
+  },
 ] as const;
 
 const getDepthColor = (depth: number) => {
-  const colors = [
-    {
-      border: 'border-[rgba(16,185,129,0.55)]',
-      shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]',
-      text: 'text-[var(--mint-accent-1)]',
-      glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]',
-    },
-    {
-      border: 'border-[rgba(16,185,129,0.55)]',
-      shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]',
-      text: 'text-[var(--mint-accent-1)]',
-      glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]',
-    },
-    {
-      border: 'border-[rgba(16,185,129,0.55)]',
-      shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]',
-      text: 'text-[var(--mint-accent-1)]',
-      glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]',
-    },
-    {
-      border: 'border-[rgba(16,185,129,0.55)]',
-      shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]',
-      text: 'text-[var(--mint-accent-1)]',
-      glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]',
-    },
-    {
-      border: 'border-[rgba(16,185,129,0.55)]',
-      shadow: 'shadow-[0_0_24px_var(--mint-accent-glow)]',
-      text: 'text-[var(--mint-accent-1)]',
-      glow: 'hover:shadow-[0_0_24px_var(--mint-accent-glow)]',
-    },
-  ];
-  return colors[Math.min(depth, colors.length - 1)];
+  return DEPTH_COLORS[Math.min(depth, DEPTH_COLORS.length - 1)];
 };
 
 const ROOT_PREVIEW_CHAR_LIMIT = 210;
@@ -292,48 +288,31 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id, selected = fals
             </div>
           )}
 
-          {data.loading && (
-            <div className="flex items-center justify-center gap-1.5 rounded-md border border-[var(--mint-elevated)] bg-[var(--mint-elevated)]/70 px-3 py-2">
-              <Loader2 className={`h-4 w-4 animate-spin ${depthColors.text}`} />
-              <span className={`text-[11px] ${depthColors.text}`}>Exploring...</span>
-            </div>
-          )}
-
-          {!data.loading && !data.error && (
-            <div className="mt-1">
-              {showExploreTerms && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {data.exploreTerms!.map((term) => (
-                    <button
-                      key={`${id}-${term.label}`}
-                      onClick={(event) => {
-                        stopEventPropagation(event);
-                        handleExplore(undefined, term.query);
-                      }}
-                      className={`rounded-md border border-[var(--mint-elevated)] px-2 py-1 text-[10px] font-medium ${depthColors.text} transition-colors hover:border-[var(--mint-accent-2)] hover:bg-[var(--mint-elevated)]`}
-                    >
-                      {term.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {!showExploreTerms && !data.explored && !isReadOnly && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {compactExploreActions.map((action) => (
-                    <button
-                      key={`${id}-action-${action.key}`}
-                      onClick={(event) => {
-                        stopEventPropagation(event);
-                        handleExplore(action.type);
-                      }}
-                      className={`rounded-md border border-[var(--mint-elevated)] px-2 py-1 text-[10px] font-medium ${depthColors.text} transition-colors hover:border-[var(--mint-accent-2)] hover:bg-[var(--mint-elevated)]`}
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+          {/* Follow-up buttons - Only show on non-read-only graphs */}
+          {!data.explored && !data.loading && !data.error && !isReadOnly && (
+            <div className="space-y-2">
+              {/* Follow-up type buttons */}
+              <div className="flex flex-wrap gap-1.5">
+                {getFollowUpButtons().map((btn) => (
+                  <button
+                    key={btn.type}
+                    onClick={() => handleExplore(btn.type)}
+                    className={`text-xs ${depthColors.text} hover:bg-slate-800/50 border border-slate-600/50 rounded-md py-1 px-2.5 font-medium transition-all duration-200 ${depthColors.hoverBorder}`}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+              {/* Generic explore button */}
+              <button
+                onClick={() => handleExplore()}
+                className={`w-full text-xs sm:text-sm ${depthColors.text} hover:bg-slate-800/50 border ${depthColors.borderLight} rounded-lg py-1.5 sm:py-2 px-3 sm:px-4 font-medium transition-all duration-200 ${depthColors.hoverBorder} flex items-center justify-center gap-2 group`}
+              >
+                <span>Explore Deeper</span>
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
             </div>
           )}
 
@@ -444,5 +423,7 @@ export default memo(
     JSON.stringify(prev.data.exploreTerms ?? []) === JSON.stringify(next.data.exploreTerms ?? []) &&
     prev.data.explored === next.data.explored &&
     prev.data.loading === next.data.loading &&
-    prev.data.error === next.data.error
+    prev.data.error === next.data.error &&
+    prev.data.content === next.data.content &&
+    prev.data.summary === next.data.summary
 );

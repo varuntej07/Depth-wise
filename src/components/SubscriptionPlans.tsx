@@ -1,13 +1,92 @@
 'use client';
 
+import { useState } from 'react';
 import { SUBSCRIPTION_PLANS } from '@/lib/subscription-config';
 import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
 
 export default function SubscriptionPlans() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const plans = Object.values(SUBSCRIPTION_PLANS);
+
+  const handleSubscribe = async (tier: string, planName: string) => {
+    if (!session?.user?.email) {
+      router.push('/explore');
+      return;
+    }
+
+    setLoadingTier(tier);
+
+    try {
+      // Step 1: Create subscription on backend
+      const response = await fetch('/api/razorpay/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to create subscription');
+      }
+
+      const { subscriptionId } = await response.json();
+
+      // Step 2: Open Razorpay checkout popup
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        subscription_id: subscriptionId,
+        name: 'Depthwise',
+        description: `${planName} - Monthly Subscription`,
+        currency: 'USD',
+        handler: async (response: {
+          razorpay_payment_id: string;
+          razorpay_subscription_id: string;
+          razorpay_signature: string;
+        }) => {
+          // Step 3: Verify payment on backend
+          try {
+            const verifyResponse = await fetch('/api/razorpay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(response),
+            });
+
+            if (verifyResponse.ok) {
+              router.push('/dashboard');
+            } else {
+              console.error('Payment verification failed');
+            }
+          } catch (error) {
+            console.error('Verification error:', error);
+          }
+        },
+        prefill: {
+          email: session.user.email,
+        },
+        theme: {
+          color: '#06b6d4',
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      console.error('Subscription error:', error);
+    } finally {
+      setLoadingTier(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[var(--mint-page)] via-[var(--mint-surface)] to-[var(--mint-page)] text-white py-16 px-4">
@@ -42,6 +121,7 @@ export default function SubscriptionPlans() {
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             const isPopular = plan.popular;
+            const isLoading = loadingTier === plan.tier;
 
             return (
               <motion.div
@@ -83,25 +163,30 @@ export default function SubscriptionPlans() {
                   </div>
 
                   <button
+                    disabled={isLoading}
                     className={`w-full py-3 px-6 rounded-full font-medium transition-all cursor-pointer ${
                       plan.price === 0
                         ? 'bg-[var(--mint-elevated)] text-[var(--mint-text-secondary)] hover:bg-[rgba(32,52,45,0.55)] cursor-default'
                         : isPopular
-                        ? 'bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] text-white hover:shadow-lg hover:shadow-[0_0_24px_var(--mint-accent-glow)] hover:scale-105'
-                        : 'bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] text-white hover:shadow-lg hover:shadow-[0_0_24px_var(--mint-accent-glow)] hover:scale-105'
-                    }`}
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:shadow-lg hover:shadow-cyan-500/50 hover:scale-105'
+                        : 'bg-gradient-to-r from-violet-500 to-pink-500 text-white hover:shadow-lg hover:shadow-violet-500/50 hover:scale-105'
+                    } ${isLoading ? 'opacity-70 cursor-wait' : ''}`}
                     onClick={() => {
                       if (plan.price === 0) {
-                        // Already on free plan
-                        router.push('/account');
+                        router.push('/dashboard');
                         return;
                       }
-                      // TODO: Integrate Stripe checkout
-                      // For now, show coming soon message
-                      alert('Stripe integration coming soon! This will redirect you to secure checkout.');
+                      handleSubscribe(plan.tier, plan.name);
                     }}
                   >
-                    {plan.price === 0 ? 'Current Plan' : `Upgrade to ${plan.name}`}
+                    {isLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing...
+                      </span>
+                    ) : (
+                      plan.price === 0 ? 'Current Plan' : `Upgrade to ${plan.name}`
+                    )}
                   </button>
                 </div>
 

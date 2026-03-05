@@ -283,9 +283,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ isCompact = false }) => {
     });
 
     setQuery(suggestionQuery);
-    setQuerySource('suggestion');
     const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-    void handleSearch(fakeEvent, suggestionQuery, 'suggestion');
+    handleSearch(fakeEvent, suggestionQuery);
   };
 
   if (isCompact && hasExistingGraph) {

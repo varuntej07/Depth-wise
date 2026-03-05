@@ -32,7 +32,14 @@ export default function SharePage() {
 
   // Use the graph store to render the graph
   // We use loadSession to populate the store with the shared graph data
-  const { loadSession } = useGraphStore();
+  const { loadSession, clearGraph } = useGraphStore();
+
+  // Clean up global store on unmount to prevent shared graph from persisting
+  useEffect(() => {
+    return () => {
+      clearGraph();
+    };
+  }, [clearGraph]);
 
   /**
    * Fetch the public graph data when the page loads

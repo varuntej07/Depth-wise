@@ -85,47 +85,7 @@ const KnowledgeCanvasInner: React.FC = () => {
   const { fitView, setCenter, getZoom } = useReactFlow();
   const posthog = usePostHog();
   const initialFitDone = useRef(false);
-  const centerPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const crispPreferenceHydrated = useRef(false);
-  const shouldRenderDesktopTools = !isMobile && nodes.length > 0;
-  const canvasMinZoom = isMobile ? 0.05 : crispTextMode ? 0.55 : 0.05;
-  const canvasFitMaxZoom = isMobile ? 0.6 : crispTextMode ? 1.05 : 1;
-  const fallbackNodeHeight = isMobile
-    ? NODE_CARD_DIMENSIONS.mobile.height
-    : NODE_CARD_DIMENSIONS.desktop.height;
-  const fallbackNodeWidth = isMobile
-    ? NODE_CARD_DIMENSIONS.mobile.width
-    : NODE_CARD_DIMENSIONS.desktop.width;
-  const minNodeGapX = isMobile ? MIN_NODE_GAP.mobile.x : MIN_NODE_GAP.desktop.x;
-  const minNodeGapY = isMobile ? MIN_NODE_GAP.mobile.y : MIN_NODE_GAP.desktop.y;
-  const baselineDepthYMap = useMemo(() => {
-    const map = new Map<number, number>();
-
-    for (const node of storeNodes) {
-      const depth = Math.max(1, node.data?.depth || 1);
-      const existingY = map.get(depth);
-      const nodeY = node.position.y;
-      map.set(depth, existingY === undefined ? nodeY : Math.min(existingY, nodeY));
-    }
-
-    return map;
-  }, [storeNodes]);
-
-  const getMiniMapNodeColor = useCallback((node: Node) => {
-    const data = (node as Partial<GraphNode>).data as GraphNode['data'] | undefined;
-    if (!data) return '#20342D';
-    if (data.loading) return '#34D399';
-    if (data.explored) return '#10B981';
-    return '#20342D';
-  }, []);
-
-  const getMiniMapNodeStrokeColor = useCallback((node: Node) => {
-    const data = (node as Partial<GraphNode>).data as GraphNode['data'] | undefined;
-    if (!data) return '#D1D5DB';
-    if (data.loading) return '#6EE7B7';
-    if (data.explored) return '#34D399';
-    return '#D1D5DB';
-  }, []);
+  const inFlightRef = useRef<Set<string>>(new Set());
 
   // Detect mobile screen size
   useEffect(() => {
@@ -213,7 +173,7 @@ const KnowledgeCanvasInner: React.FC = () => {
       return !data?.isSkeleton;
     });
 
-    if (hasRealNodes && hasNoSkeletons && nodes.length > 0) {
+    if (hasRealNodes && hasNoSkeletons && storeNodes.length > 0 && !initialFitDone.current) {
       // Delay fitView slightly to ensure nodes are rendered
       const timer = setTimeout(() => {
         fitView({
@@ -350,151 +310,6 @@ const KnowledgeCanvasInner: React.FC = () => {
     [setEdges]
   );
 
-  const clearCenterPulse = useCallback(() => {
-    if (centerPulseTimer.current) {
-      clearTimeout(centerPulseTimer.current);
-      centerPulseTimer.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      clearCenterPulse();
-    };
-  }, [clearCenterPulse]);
-
-  const centerNodeInViewport = useCallback(
-    (node: Node, options?: { addToHistory?: boolean; trigger?: 'click' | 'back' }) => {
-      const fallbackWidth = fallbackNodeWidth;
-      const fallbackHeight = fallbackNodeHeight;
-      const width = node.width ?? fallbackWidth;
-      const height = node.height ?? fallbackHeight;
-      const centerX = node.position.x + width / 2;
-      const centerY = node.position.y + height / 2;
-      const currentZoom = getZoom();
-      const targetZoom = isMobile
-        ? Math.max(currentZoom, 0.65)
-        : Math.max(currentZoom, crispTextMode ? 0.95 : 0.8);
-
-      setCenter(centerX, centerY, {
-        zoom: targetZoom,
-        duration: 320,
-      });
-
-      setCenteredNodeId(node.id);
-      clearCenterPulse();
-      centerPulseTimer.current = setTimeout(() => {
-        setCenteredNodeId((current) => (current === node.id ? null : current));
-      }, 1200);
-
-      if (options?.addToHistory !== false) {
-        setCenterHistory((history) => {
-          if (history[history.length - 1] === node.id) {
-            return history;
-          }
-          const nextHistory = [...history, node.id];
-          return nextHistory.slice(-30);
-        });
-      }
-
-      if (options?.trigger === 'click') {
-        const nodeData = node.data as GraphNode['data'] | undefined;
-        posthog.capture('node_clicked_centered', {
-          node_id: node.id,
-          node_title: nodeData?.title || null,
-          depth: nodeData?.depth ?? null,
-          zoom_before: Number(currentZoom.toFixed(3)),
-          zoom_after: Number(targetZoom.toFixed(3)),
-        });
-      }
-    },
-    [clearCenterPulse, crispTextMode, fallbackNodeHeight, fallbackNodeWidth, getZoom, isMobile, posthog, setCenter]
-  );
-
-  const handleNodeClick = useCallback(
-    (event: React.MouseEvent, node: Node) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('button, a, input, textarea, [role="button"]')) {
-        return;
-      }
-
-      centerNodeInViewport(node, { addToHistory: true, trigger: 'click' });
-    },
-    [centerNodeInViewport]
-  );
-
-  const handleBackToPreviousCenter = useCallback(() => {
-    const previousNodeId = centerHistory[centerHistory.length - 2];
-    if (!previousNodeId) {
-      return;
-    }
-
-    const previousNode = nodes.find((node) => node.id === previousNodeId);
-    if (!previousNode) {
-      return;
-    }
-
-    setCenterHistory((history) => history.slice(0, -1));
-    centerNodeInViewport(previousNode, { addToHistory: false, trigger: 'back' });
-  }, [centerHistory, centerNodeInViewport, nodes]);
-
-  const handleResetViewport = useCallback(() => {
-    fitView({
-      padding: isMobile ? 0.12 : 0.24,
-      duration: 300,
-      minZoom: canvasMinZoom,
-      maxZoom: canvasFitMaxZoom,
-      includeHiddenNodes: false,
-    });
-    posthog.capture('viewport_reset', {
-      crisp_text_mode: crispTextMode,
-    });
-  }, [canvasFitMaxZoom, canvasMinZoom, crispTextMode, fitView, isMobile, posthog]);
-
-  const toggleCrispTextMode = useCallback(() => {
-    setCrispTextMode((previous) => {
-      const next = !previous;
-      posthog.capture('crisp_text_mode_toggled', {
-        enabled: next,
-      });
-      return next;
-    });
-  }, [posthog]);
-
-  // Handle migration after sign-in
-  useEffect(() => {
-    const migrateAnonymousSession = async () => {
-      if (session?.user && anonymousSessionIdForMigration && isAnonymousSession) {
-        try {
-          const response = await fetch('/api/session/migrate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              anonymousSessionId: anonymousSessionIdForMigration,
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            // Update the store with the new session ID and mark as not anonymous
-            useGraphStore.getState().setSessionId(data.sessionId);
-            useGraphStore.getState().setIsAnonymous(false);
-            setAnonymousSessionIdForMigration(null);
-
-            // Close the sign-in dialog
-            setShowSignInDialog(false);
-          } else {
-            console.error('Failed to migrate session');
-          }
-        } catch (error) {
-          console.error('Migration error:', error);
-        }
-      }
-    };
-
-    migrateAnonymousSession();
-  }, [session, anonymousSessionIdForMigration, isAnonymousSession]);
-
   // Handle node exploration
   useEffect(() => {
     const handleExploreNode = async (event: Event) => {
@@ -502,7 +317,11 @@ const KnowledgeCanvasInner: React.FC = () => {
       const { nodeId, exploreType, focusTerm } = customEvent.detail;
 
       const node = storeNodes.find((n) => n.id === nodeId);
-      if (!node || node.data.loading || (node.data.explored && !focusTerm)) return;
+      if (!node || node.data.explored || node.data.loading) return;
+
+      // Prevent duplicate concurrent explores for the same node (double-tap on mobile)
+      if (inFlightRef.current.has(nodeId)) return;
+      inFlightRef.current.add(nodeId);
 
       // For anonymous sessions, sign-in check happens in the API based on depth
       // We'll handle the ANONYMOUS_DEPTH_LIMIT error below
@@ -674,6 +493,8 @@ const KnowledgeCanvasInner: React.FC = () => {
         const errorMessage = error instanceof Error ? error.message : 'Failed to explore node';
         updateNode(nodeId, { loading: false, error: errorMessage });
         useGraphStore.getState().setError(`${errorMessage}. Click the node again to retry.`);
+      } finally {
+        inFlightRef.current.delete(nodeId);
       }
     };
 

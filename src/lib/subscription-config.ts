@@ -28,7 +28,7 @@ export interface SubscriptionPlan {
   name: string;
   description: string;
   price: number;
-  priceId?: string; // Stripe price ID
+  priceId?: string; // Legacy — unused
   icon: LucideIcon;
   iconColor: string;
   badgeColor: string;
@@ -101,7 +101,6 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     name: 'Pro',
     description: 'For serious learners and researchers',
     price: 9.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
     icon: Rocket,
     iconColor: 'text-[var(--mint-accent-1)]',
     badgeColor: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]',
@@ -166,7 +165,6 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     name: 'Enterprise',
     description: 'For power users and teams',
     price: 29.99,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
     icon: Crown,
     iconColor: 'text-[var(--mint-accent-1)]',
     badgeColor: 'from-[var(--mint-accent-1)] to-[var(--mint-accent-3)]',
@@ -281,3 +279,4 @@ export function canUserExplore(user: {
 
   return { allowed: true };
 }
+

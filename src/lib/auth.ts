@@ -5,6 +5,9 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { recordUsageEventSafe } from "@/lib/usage-tracking";
 
+// These env vars are required at runtime. NextAuth will fail with clear errors
+// if they're missing when auth endpoints are actually called.
+// We can't validate at module load because Next.js imports this during build.
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(prisma),
