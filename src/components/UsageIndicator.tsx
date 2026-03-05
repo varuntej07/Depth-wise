@@ -35,7 +35,7 @@ export const UsageIndicator: React.FC = () => {
     }
 
     try {
-      const response = await fetch(API_ENDPOINTS.USER_USAGE);
+      const response = await fetch(API_ENDPOINTS.USER_USAGE, { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
         setUsage(data);

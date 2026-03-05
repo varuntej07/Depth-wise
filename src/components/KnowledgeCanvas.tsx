@@ -5,7 +5,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   Panel,
   useNodesState,
   useEdgesState,
@@ -110,22 +109,6 @@ const KnowledgeCanvasInner: React.FC = () => {
 
     return map;
   }, [storeNodes]);
-
-  const getMiniMapNodeColor = useCallback((node: Node) => {
-    const data = (node as Partial<GraphNode>).data as GraphNode['data'] | undefined;
-    if (!data) return '#20342D';
-    if (data.loading) return '#34D399';
-    if (data.explored) return '#10B981';
-    return '#20342D';
-  }, []);
-
-  const getMiniMapNodeStrokeColor = useCallback((node: Node) => {
-    const data = (node as Partial<GraphNode>).data as GraphNode['data'] | undefined;
-    if (!data) return '#D1D5DB';
-    if (data.loading) return '#6EE7B7';
-    if (data.explored) return '#34D399';
-    return '#D1D5DB';
-  }, []);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -546,8 +529,11 @@ const KnowledgeCanvasInner: React.FC = () => {
             return;
           }
 
-          // Handle authenticated depth limit errors
-          if (response.status === 429 && errorData.code === 'DEPTH_LIMIT_REACHED') {
+          // Handle authenticated plan limit errors with upgrade flow instead of retry UI.
+          if (
+            response.status === 429 &&
+            (errorData.code === 'DEPTH_LIMIT_REACHED' || errorData.code === 'LIMIT_REACHED')
+          ) {
             // Remove skeleton nodes
             const nodeIdsToRemove = skeletonNodes.map((n) => n.id);
             nodeIdsToRemove.forEach((id) => useGraphStore.getState().removeNode(id));
@@ -734,25 +720,6 @@ const KnowledgeCanvasInner: React.FC = () => {
         />
         {/* Desktop-only helper tools */}
         {shouldRenderDesktopTools && <Controls showInteractive={false} />}
-        {shouldRenderDesktopTools && (
-          <MiniMap
-            nodeColor={getMiniMapNodeColor}
-            nodeStrokeColor={getMiniMapNodeStrokeColor}
-            nodeStrokeWidth={2}
-            maskColor="rgba(5, 13, 11, 0.85)"
-            style={{
-              backgroundColor: '#0D1A16',
-              border: '1px solid rgba(16, 185, 129, 0.35)',
-              borderRadius: '8px',
-              width: '180px',
-              height: '120px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-            }}
-            position="bottom-right"
-            pannable
-            zoomable
-          />
-        )}
       </ReactFlow>
       </div>
     </>

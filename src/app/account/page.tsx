@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -25,6 +25,7 @@ interface UsageData {
   tier: SubscriptionTier;
   percentage: number;
   explorationsReset: string;
+  nextResetAt: string;
   savedGraphsCount: number;
   savedGraphsLimit: number | null;
   maxDepth: number;
@@ -42,11 +43,11 @@ export default function AccountPage() {
     }
   }, [status, router]);
 
-  const fetchUsage = async () => {
+  const fetchUsage = useCallback(async () => {
     if (!session?.user) return;
 
     try {
-      const response = await fetch(API_ENDPOINTS.USER_USAGE);
+      const response = await fetch(API_ENDPOINTS.USER_USAGE, { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
         setUsage(data);
@@ -56,21 +57,21 @@ export default function AccountPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user]);
 
   useEffect(() => {
     fetchUsage();
-  }, [session]);
+  }, [fetchUsage]);
 
   // Listen for usage refresh events
   useEffect(() => {
     const handleRefreshUsage = () => {
-      fetchUsage();
+      void fetchUsage();
     };
 
     window.addEventListener('refresh-usage', handleRefreshUsage);
     return () => window.removeEventListener('refresh-usage', handleRefreshUsage);
-  }, [session]);
+  }, [fetchUsage]);
 
   if (status === 'loading' || loading) {
     return (
@@ -90,8 +91,11 @@ export default function AccountPage() {
 
   const plan = SUBSCRIPTION_PLANS[usage.tier];
   const PlanIcon = plan.icon;
-  const resetDate = new Date(usage.explorationsReset);
-  const daysUntilReset = Math.ceil((resetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const nextResetAt = new Date(usage.nextResetAt);
+  const daysUntilReset = Math.max(
+    0,
+    Math.ceil((nextResetAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[var(--mint-page)] via-[var(--mint-surface)] to-[var(--mint-page)] text-white">

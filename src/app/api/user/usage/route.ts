@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getUsageLimit, getMaxDepth, getSavedGraphsLimit } from '@/lib/subscription-config';
+import { getNextUsageResetAt, isUsageResetDue, normalizeUsageResetAt } from '@/lib/subscription-server';
 import { logger } from '@/lib/logger';
 import { touchUserLastSeenSafe } from '@/lib/usage-tracking';
 
@@ -45,32 +46,38 @@ export async function GET() {
 
     await touchUserLastSeenSafe(prisma, user.id, { route: 'GET /api/user/usage', requestId });
 
-    // Check if usage should be reset (30+ days since last reset)
+    // Check if usage should be reset based on the last reset timestamp.
     const now = new Date();
-    const resetDate = new Date(user.explorationsReset);
-    const daysSinceReset = Math.floor(
-      (now.getTime() - resetDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const storedResetAt = new Date(user.explorationsReset);
+    const normalizedResetAt = normalizeUsageResetAt(storedResetAt, now);
 
     let explorationsUsed = user.explorationsUsed;
-    let explorationsReset = user.explorationsReset;
+    let explorationsReset = normalizedResetAt;
 
-    // Reset usage if 30+ days have passed
-    if (daysSinceReset >= 30) {
-      const newResetDate = new Date(now);
-      newResetDate.setDate(newResetDate.getDate() + 30);
+    if (normalizedResetAt.getTime() !== storedResetAt.getTime()) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          explorationsReset: normalizedResetAt,
+        },
+      });
+    }
 
+    // Reset usage if the current 30-day window has expired.
+    if (isUsageResetDue(normalizedResetAt, now)) {
       await prisma.user.update({
         where: { id: user.id },
         data: {
           explorationsUsed: 0,
-          explorationsReset: newResetDate,
+          explorationsReset: now,
         },
       });
 
       explorationsUsed = 0;
-      explorationsReset = newResetDate;
+      explorationsReset = now;
     }
+
+    const nextResetAt = getNextUsageResetAt(new Date(explorationsReset));
 
     // Get tier limits
     const explorationsLimit = getUsageLimit(user.subscriptionTier);
@@ -100,6 +107,7 @@ export async function GET() {
       tier: user.subscriptionTier,
       percentage,
       explorationsReset: explorationsReset.toISOString(),
+      nextResetAt: nextResetAt.toISOString(),
       explorationsTotal: user.explorationsTotal,
       savedGraphsCount,
       savedGraphsLimit,

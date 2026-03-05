@@ -2,11 +2,29 @@ import { SubscriptionTier } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getUsageLimit } from '@/lib/subscription-config';
 
+const USAGE_RESET_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
 // Server-only Razorpay plan ID mapping
 export const RAZORPAY_PLAN_IDS: Record<Exclude<SubscriptionTier, 'FREE'>, string> = {
   STARTER: process.env.RAZORPAY_PLAN_STARTER || '',
   PRO: process.env.RAZORPAY_PLAN_PRO || '',
 };
+
+export function isUsageResetDue(lastResetAt: Date, now = new Date()): boolean {
+  return now.getTime() - lastResetAt.getTime() >= USAGE_RESET_WINDOW_MS;
+}
+
+export function getNextUsageResetAt(lastResetAt: Date): Date {
+  return new Date(lastResetAt.getTime() + USAGE_RESET_WINDOW_MS);
+}
+
+export function normalizeUsageResetAt(storedResetAt: Date, now = new Date()): Date {
+  if (storedResetAt.getTime() > now.getTime()) {
+    return new Date(storedResetAt.getTime() - USAGE_RESET_WINDOW_MS);
+  }
+
+  return storedResetAt;
+}
 
 /**
  * Atomically reset (if needed) and increment usage for a user.
@@ -26,17 +44,21 @@ export async function resetAndCheckUsage(userId: string): Promise<{ allowed: boo
   if (limit === null) return { allowed: true, remaining: Infinity };
 
   const now = new Date();
-  const resetDate = new Date(user.explorationsReset);
-  const daysSinceReset = Math.floor((now.getTime() - resetDate.getTime()) / (1000 * 60 * 60 * 24));
+  const storedResetAt = new Date(user.explorationsReset);
+  const lastResetAt = normalizeUsageResetAt(storedResetAt, now);
 
-  // Reset counter if 30+ days passed
-  if (daysSinceReset >= 30) {
-    const newResetDate = new Date(now);
-    newResetDate.setDate(newResetDate.getDate() + 30);
-
+  if (lastResetAt.getTime() !== storedResetAt.getTime()) {
     await prisma.user.update({
       where: { id: userId },
-      data: { explorationsUsed: 1, explorationsReset: newResetDate },
+      data: { explorationsReset: lastResetAt },
+    });
+  }
+
+  // Reset counter if 30 days have passed since the last cycle start.
+  if (isUsageResetDue(lastResetAt, now)) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { explorationsUsed: 1, explorationsReset: now },
     });
 
     return { allowed: true, remaining: limit - 1 };
