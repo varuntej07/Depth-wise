@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { ExploreTerm, FollowUpType } from '@/types/graph';
+import { ExploreTerm, FollowUpType, QueryClassification } from '@/types/graph';
 import { logger } from '@/lib/logger';
 
 const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -42,6 +42,7 @@ interface ExplorationContext {
   exploreType?: FollowUpType;
   focusTerm?: string;
   branchCount?: number;
+  classification?: QueryClassification;
 }
 
 interface GeneratedBranch {
@@ -161,11 +162,54 @@ function getExploreTypeGuidance(exploreType: FollowUpType): string {
   }
 }
 
+export async function classifyQuery(query: string): Promise<QueryClassification> {
+  const normalized = query.trim().toLowerCase();
+
+  const comparativeSignals = [' vs ', 'versus', 'compare', 'difference between', 'better than', 'pros and cons'];
+  const technicalSignals = ['api', 'sdk', 'code', 'algorithm', 'architecture', 'database', 'typescript', 'react'];
+  const factualSignals = ['what is', 'who is', 'when', 'where', 'define', 'meaning of'];
+  const exploratorySignals = ['ideas', 'trends', 'future', 'explore', 'brainstorm'];
+
+  let intent: QueryClassification['intent'] = 'conceptual';
+  if (comparativeSignals.some((signal) => normalized.includes(signal))) {
+    intent = 'comparative';
+  } else if (technicalSignals.some((signal) => normalized.includes(signal))) {
+    intent = 'technical';
+  } else if (factualSignals.some((signal) => normalized.includes(signal))) {
+    intent = 'factual';
+  } else if (exploratorySignals.some((signal) => normalized.includes(signal))) {
+    intent = 'exploratory';
+  }
+
+  const wordCount = normalized.split(/\s+/).filter(Boolean).length;
+  const complexity: QueryClassification['complexity'] =
+    wordCount > 14 || normalized.includes(' and ') || normalized.includes(' with ')
+      ? 'complex'
+      : wordCount > 6
+        ? 'moderate'
+        : 'simple';
+
+  const suggestedBranchCount =
+    complexity === 'complex' ? 5 : complexity === 'moderate' ? 4 : intent === 'factual' ? 3 : 4;
+
+  return {
+    intent,
+    complexity,
+    suggestedBranchCount,
+  };
+}
+
 function buildPrompt(context: ExplorationContext): string {
-  const branchCount = Math.min(5, Math.max(2, context.branchCount ?? (context.depth === 1 ? 4 : 3)));
+  const branchCount = Math.min(
+    5,
+    Math.max(2, context.branchCount ?? context.classification?.suggestedBranchCount ?? (context.depth === 1 ? 4 : 3))
+  );
   const exploreTypeGuidance = context.exploreType ? getExploreTypeGuidance(context.exploreType) : '';
   const focusTermGuidance = context.focusTerm
     ? `The user clicked this specific term to dig deeper: "${context.focusTerm}". Focus answer and branches around this term.`
+    : '';
+  const classificationGuidance = context.classification
+    ? `Query intent: ${context.classification.intent}. Complexity: ${context.classification.complexity}.`
     : '';
 
   if (context.depth === 1) {
@@ -173,6 +217,7 @@ function buildPrompt(context: ExplorationContext): string {
 
 ${exploreTypeGuidance}
 ${focusTermGuidance}
+${classificationGuidance}
 
 Write a clear answer with:
 1) Definition
@@ -193,6 +238,7 @@ Already covered sibling topics: ${context.coveredTopics.join(', ') || 'none'}
 
 ${exploreTypeGuidance}
 ${focusTermGuidance}
+${classificationGuidance}
 
 Generate one deeper explanation for this node context, then exactly ${branchCount} non-overlapping deeper branches and 3-5 keyTerms from that explanation.
 Avoid repeating covered sibling topics.`;

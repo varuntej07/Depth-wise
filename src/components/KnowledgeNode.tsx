@@ -13,9 +13,25 @@ import { getClientId } from '@/lib/utils';
 interface KnowledgeNodeProps {
   data: KnowledgeNodeData;
   id: string;
+  selected?: boolean;
 }
 
 // Static color lookup map — all classes are fully spelled out so Tailwind's purge scanner can see them
+type FeedbackValue = 'up' | 'down';
+type ExploreAction = {
+  key: string;
+  type?: FollowUpType;
+  label: string;
+};
+
+const DOWN_FEEDBACK_OPTIONS = [
+  { value: 'unclear', label: 'Unclear' },
+  { value: 'too_shallow', label: 'Too shallow' },
+  { value: 'incorrect', label: 'Incorrect' },
+  { value: 'repetitive', label: 'Repetitive' },
+  { value: 'skip_reason', label: 'Skip reason' },
+] as const;
+
 const DEPTH_COLORS = [
   {
     border: 'border-cyan-500',

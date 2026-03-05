@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { isValidUUID } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/share/[sessionId]

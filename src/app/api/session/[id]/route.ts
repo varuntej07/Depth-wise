@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isValidUUID } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+import { getRequestContext } from '@/lib/request-context';
+import { recordUsageEventSafe, touchUserLastSeenSafe } from '@/lib/usage-tracking';
 
 export async function GET(
   request: NextRequest,

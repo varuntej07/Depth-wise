@@ -6,6 +6,7 @@ import { LAYOUT_CONFIG } from '@/lib/layout';
 import { resetAndCheckUsage } from '@/lib/subscription-server';
 import { sanitizeQuery } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { getRequestContext } from '@/lib/request-context';
 
 export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID().slice(0, 8);
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Single AI call: answer + branches + key terms
+    const classification = await classifyQuery(sanitizedQuery);
     logger.external("Claude", "generateBranches", { requestId, depth: 1 });
     const { answer, branches, keyTerms, usage } = await generateBranches({
       rootQuery: sanitizedQuery,
