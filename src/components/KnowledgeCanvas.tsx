@@ -692,7 +692,7 @@ const KnowledgeCanvasInner: React.FC = () => {
           zoomOnDoubleClick={false}
           preventScrolling={true}
         >
-        <Panel position="top-right">
+        <Panel position="top-left">
           <div className="flex flex-col gap-2 rounded-xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.92)] p-2 shadow-xl backdrop-blur-sm">
             <button
               onClick={handleResetViewport}

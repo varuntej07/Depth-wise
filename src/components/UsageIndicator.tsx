@@ -91,7 +91,7 @@ export const UsageIndicator: React.FC = () => {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       tabIndex={0}
-      className="group relative flex items-center gap-1.5 rounded-lg border border-[var(--mint-accent-2)] bg-[var(--mint-surface)] px-2 py-1.5 backdrop-blur-sm focus-visible:outline-none sm:gap-3 sm:px-4 sm:py-2"
+      className="group relative flex items-center gap-1.5 rounded-lg border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.7)] px-2 py-1.5 backdrop-blur-sm focus-visible:outline-none sm:gap-3 sm:px-4 sm:py-2"
     >
       {/* Icon */}
       <Zap className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${getTextColor()}`} />
