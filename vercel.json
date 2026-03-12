@@ -1,5 +1,4 @@
 {
-  "toolbar": false,
   "crons": [
     {
       "path": "/api/cron/dashboard-public-graphs",

@@ -259,19 +259,56 @@ export default function LandingPage() {
                   View Pricing
                 </Link>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 text-sm text-white/60">
-                {premiumHighlights.map((item) => (
-                  <div key={item.title} className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(32,52,45,0.35)] border border-[var(--mint-elevated)]">
-                      <item.icon className="w-4 h-4 text-white/80" />
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-8"
+                variants={{
+                  hidden: {},
+                  visible: { transition: { staggerChildren: 0.13 } },
+                }}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-60px' }}
+              >
+                {premiumHighlights.map((item, i) => (
+                  <motion.div
+                    key={item.title}
+                    variants={{
+                      hidden: { opacity: 0, y: 32, filter: 'blur(6px)' },
+                      visible: {
+                        opacity: 1,
+                        y: 0,
+                        filter: 'blur(0px)',
+                        transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] },
+                      },
+                    }}
+                    whileHover={shouldReduceMotion ? undefined : { y: -5, scale: 1.02 }}
+                    transition={{ type: 'spring', stiffness: 220, damping: 22 }}
+                    className="group relative rounded-2xl border border-[var(--mint-elevated)] bg-[rgba(13,26,22,0.72)] p-5 overflow-hidden backdrop-blur-sm hover:border-[rgba(16,185,129,0.45)] transition-colors duration-300 cursor-default"
+                  >
+                    {/* Hover glow */}
+                    <div
+                      className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[rgba(16,185,129,0.13)] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400 pointer-events-none"
+                      aria-hidden
+                    />
+                    {/* Top accent bar */}
+                    <div
+                      className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-[rgba(110,231,183,0.55)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400"
+                      aria-hidden
+                    />
+
+                    <span className="text-[10px] font-mono tracking-[0.28em] text-[rgba(110,231,183,0.45)] select-none">
+                      0{i + 1}
+                    </span>
+
+                    <div className="mt-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.22)] shadow-[0_0_18px_rgba(16,185,129,0.1)] group-hover:bg-[rgba(16,185,129,0.18)] group-hover:shadow-[0_0_24px_rgba(16,185,129,0.22)] transition-all duration-300">
+                      <item.icon className="w-4.5 h-4.5 text-[rgba(110,231,183,0.92)]" />
                     </div>
-                    <div>
-                      <p className="font-medium text-white/90">{item.title}</p>
-                      <p className="text-xs text-white/60">{item.description}</p>
-                    </div>
-                  </div>
+
+                    <p className="mt-4 text-sm font-semibold text-white/95 tracking-tight">{item.title}</p>
+                    <p className="mt-1.5 text-xs text-white/52 leading-relaxed">{item.description}</p>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </div>
 
             <motion.div
@@ -478,6 +515,14 @@ export default function LandingPage() {
               </Link>
               <Link href="/help" className="hover:text-white transition-colors">
                 Help
+              </Link>
+              <Link
+                href="https://medium.com/@varuntej07/what-if-learning-looked-like-a-map-instead-of-a-chat-thread-68a354a24ff5"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white transition-colors"
+              >
+                Blog
               </Link>
             </div>
             <div className="text-sm text-white/40">(c) {year} Depthwise</div>
