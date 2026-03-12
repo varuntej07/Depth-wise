@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { SignInButton } from '@/components/auth/SignInButton';
 import { UserMenu } from '@/components/auth/UserMenu';
 import Link from 'next/link';
@@ -16,37 +16,14 @@ import {
   Layers,
   ShieldCheck,
 } from 'lucide-react';
-import { motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
+import HeroTreeAnimation from '@/components/HeroTreeAnimation';
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
-type HeroSkeletonNode = {
-  id: string;
-  x: number;
-  y: number;
-  depth: number;
-  sequence: number;
-  parentId?: string;
-};
-
-type HeroSkeletonEdge = {
-  id: string;
-  from: HeroSkeletonNode;
-  to: HeroSkeletonNode;
-};
-
-const heroSkeletonNodes: HeroSkeletonNode[] = [
-  { id: 'root', x: 50, y: 20, depth: 0, sequence: 0 },
-  { id: 'l1', x: 33, y: 50, depth: 1, sequence: 1, parentId: 'root' },
-  { id: 'r1', x: 67, y: 50, depth: 1, sequence: 2, parentId: 'root' },
-  { id: 'l2', x: 18, y: 79, depth: 2, sequence: 3, parentId: 'l1' },
-  { id: 'l3', x: 40, y: 79, depth: 2, sequence: 4, parentId: 'l1' },
-  { id: 'r2', x: 60, y: 79, depth: 2, sequence: 5, parentId: 'r1' },
-  { id: 'r3', x: 82, y: 79, depth: 2, sequence: 6, parentId: 'r1' },
-];
 
 const featureCards = [
   {
@@ -71,39 +48,6 @@ const featureCards = [
   },
 ];
 
-const heroSkeletonNodeById = new Map(heroSkeletonNodes.map((node) => [node.id, node]));
-const heroSkeletonEdges: HeroSkeletonEdge[] = heroSkeletonNodes
-  .filter((node) => node.parentId)
-  .flatMap((node) => {
-    const fromNode = heroSkeletonNodeById.get(node.parentId as string);
-    if (!fromNode) return [];
-    return [{ id: `${fromNode.id}-${node.id}`, from: fromNode, to: node }];
-  });
-
-const treeLoopStepSeconds = 0.22;
-const treePhaseSeconds = 2.7;
-const treeRepeatDelaySeconds = 1.25;
-
-function getSkeletonNodeSizeClass(depth: number): string {
-  if (depth === 0) return 'w-[138px] h-[92px] sm:w-[152px] sm:h-[100px]';
-  if (depth === 1) return 'w-[118px] h-[78px] sm:w-[128px] sm:h-[84px]';
-  return 'w-[104px] h-[70px] sm:w-[112px] sm:h-[76px]';
-}
-
-function getNodeHalfHeight(depth: number): number {
-  if (depth === 0) return 12.2;
-  if (depth === 1) return 10.4;
-  return 9.4;
-}
-
-function buildEdgePath(from: HeroSkeletonNode, to: HeroSkeletonNode): string {
-  const fromX = from.x;
-  const fromY = from.y + getNodeHalfHeight(from.depth);
-  const toX = to.x;
-  const toY = to.y - getNodeHalfHeight(to.depth);
-  const midY = (fromY + toY) / 2;
-  return `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`;
-}
 
 const premiumHighlights = [
   {
@@ -129,13 +73,7 @@ const line2Words = 'Depthwise grows your knowledge like a living tree.'.split(' 
 export default function LandingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const shouldReduceMotion = useReducedMotion();
   const year = useMemo(() => new Date().getFullYear(), []);
-
-  const tiltX = useMotionValue(0);
-  const tiltY = useMotionValue(0);
-  const rotateX = useTransform(tiltY, [-0.5, 0.5], [10, -10]);
-  const rotateY = useTransform(tiltX, [-0.5, 0.5], [-12, 12]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const heroGraphicRef = useRef<HTMLDivElement>(null);
@@ -148,8 +86,6 @@ export default function LandingPage() {
 
   useGSAP(
     () => {
-      if (shouldReduceMotion) return;
-
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
       tl.from('.hero-badge', { opacity: 0, y: 20, duration: 0.5 })
@@ -211,20 +147,6 @@ export default function LandingPage() {
     );
   }
 
-  const handlePointerMove = (event: MouseEvent<HTMLDivElement>) => {
-    if (shouldReduceMotion) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width - 0.5;
-    const y = (event.clientY - rect.top) / rect.height - 0.5;
-    tiltX.set(x);
-    tiltY.set(y);
-  };
-
-  const handlePointerLeave = () => {
-    tiltX.set(0);
-    tiltY.set(0);
-  };
-
   return (
     <div ref={containerRef} className="relative min-h-screen w-full bg-[var(--mint-page)] text-white overflow-hidden">
       <div
@@ -243,12 +165,12 @@ export default function LandingPage() {
       />
       <motion.div
         className="pointer-events-none absolute -top-32 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(110,231,183,0.3),transparent_60%)] blur-3xl"
-        animate={shouldReduceMotion ? undefined : { opacity: [0.6, 0.9, 0.6], scale: [1, 1.05, 1] }}
+        animate={{ opacity: [0.6, 0.9, 0.6], scale: [1, 1.05, 1] }}
         transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
       />
       <motion.div
         className="pointer-events-none absolute top-48 right-[-120px] h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(16,185,129,0.28),transparent_60%)] blur-3xl"
-        animate={shouldReduceMotion ? undefined : { opacity: [0.45, 0.75, 0.45], scale: [1.05, 1, 1.05] }}
+        animate={{ opacity: [0.45, 0.75, 0.45], scale: [1.05, 1, 1.05] }}
         transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
       />
 
@@ -307,110 +229,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div ref={heroGraphicRef}>
-              <motion.div onMouseMove={handlePointerMove} onMouseLeave={handlePointerLeave}>
-                <motion.div
-                  className="relative rounded-[32px] bg-[rgba(13,26,22,0.72)] border border-[var(--mint-elevated)] p-6 sm:p-7 overflow-hidden"
-                  style={{ perspective: '1200px' }}
-                >
-                  <motion.div
-                    className="relative h-[320px] sm:h-[360px]"
-                    style={{
-                      rotateX: shouldReduceMotion ? 0 : rotateX,
-                      rotateY: shouldReduceMotion ? 0 : rotateY,
-                      transformStyle: 'preserve-3d',
-                    }}
-                    transition={{ type: 'spring', stiffness: 140, damping: 20 }}
-                  >
-                    <div className="absolute inset-0 rounded-3xl border border-[var(--mint-elevated)] bg-[radial-gradient(circle_at_26%_20%,rgba(110,231,183,0.16),transparent_60%),radial-gradient(circle_at_74%_78%,rgba(16,185,129,0.15),transparent_55%)]" />
-
-                    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                      {heroSkeletonEdges.map((edge) => {
-                        const edgeDelay = shouldReduceMotion ? 0 : Math.max(0, edge.to.sequence * treeLoopStepSeconds - 0.06);
-                        const edgePath = buildEdgePath(edge.from, edge.to);
-                        return (
-                          <motion.path
-                            key={edge.id}
-                            d={edgePath}
-                            stroke="rgba(110,231,183,0.65)"
-                            strokeWidth="0.62"
-                            strokeLinecap="round"
-                            fill="none"
-                            initial={{ opacity: 0, pathLength: 0 }}
-                            animate={
-                              shouldReduceMotion
-                                ? { opacity: 0.55, pathLength: 1 }
-                                : { opacity: [0, 0.68, 0.68, 0], pathLength: [0, 1, 1, 0] }
-                            }
-                            transition={
-                              shouldReduceMotion
-                                ? undefined
-                                : {
-                                    duration: treePhaseSeconds,
-                                    times: [0, 0.3, 0.78, 1],
-                                    delay: edgeDelay,
-                                    repeat: Infinity,
-                                    repeatDelay: treeRepeatDelaySeconds,
-                                    ease: 'easeInOut',
-                                  }
-                            }
-                          />
-                        );
-                      })}
-                    </svg>
-
-                    {heroSkeletonNodes.map((node) => {
-                      const nodeDelay = shouldReduceMotion ? 0 : node.sequence * treeLoopStepSeconds;
-                      const sizeClass = getSkeletonNodeSizeClass(node.depth);
-                      return (
-                        <motion.div
-                          key={node.id}
-                          className="absolute"
-                          style={{
-                            top: `${node.y}%`,
-                            left: `${node.x}%`,
-                            transform: 'translate(-50%, -50%)',
-                          }}
-                        >
-                          <motion.div
-                            className={`${sizeClass} rounded-xl border border-[var(--mint-accent-2)]/55 bg-[rgba(13,26,22,0.92)] p-2.5 shadow-[0_10px_24px_rgba(5,13,11,0.58)]`}
-                            initial={{ opacity: 0, scale: 0.93, y: 6 }}
-                            animate={
-                              shouldReduceMotion
-                                ? { opacity: 0.95, scale: 1, y: 0 }
-                                : {
-                                    opacity: [0.12, 0.96, 0.96, 0.2],
-                                    scale: [0.93, 1, 1, 0.96],
-                                    y: [6, 0, 0, 4],
-                                  }
-                            }
-                            transition={
-                              shouldReduceMotion
-                                ? undefined
-                                : {
-                                    duration: treePhaseSeconds,
-                                    times: [0, 0.28, 0.76, 1],
-                                    delay: nodeDelay,
-                                    repeat: Infinity,
-                                    repeatDelay: treeRepeatDelaySeconds,
-                                    ease: 'easeInOut',
-                                  }
-                            }
-                          >
-                            <div className="h-3 w-[62%] rounded bg-gradient-to-r from-[var(--mint-accent-1)] via-[var(--mint-accent-2)] to-[var(--mint-accent-3)] animate-shimmer" />
-                            <div className="mt-2 h-px w-full bg-[var(--mint-elevated)]/85" />
-                            <div className="mt-2 space-y-1.5">
-                              <div className="h-2 w-full rounded bg-gradient-to-r from-[var(--mint-accent-1)]/70 via-[var(--mint-accent-2)]/60 to-[var(--mint-accent-3)]/70 animate-shimmer" />
-                              <div className="h-2 w-[86%] rounded bg-gradient-to-r from-[var(--mint-accent-1)]/70 via-[var(--mint-accent-2)]/60 to-[var(--mint-accent-3)]/70 animate-shimmer" />
-                              <div className="h-2 w-[70%] rounded bg-gradient-to-r from-[var(--mint-accent-1)]/70 via-[var(--mint-accent-2)]/60 to-[var(--mint-accent-3)]/70 animate-shimmer" />
-                            </div>
-                          </motion.div>
-                        </motion.div>
-                      );
-                    })}
-                  </motion.div>
-                </motion.div>
-              </motion.div>
+            <div ref={heroGraphicRef} className="relative rounded-[32px] bg-[rgba(13,26,22,0.72)] border border-[var(--mint-elevated)] p-6 sm:p-7 overflow-hidden">
+              <HeroTreeAnimation />
             </div>
           </div>
         </section>

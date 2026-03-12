@@ -319,6 +319,16 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* Hero tree node pulse for growth-edge emphasis */
+@keyframes hero-node-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(110, 231, 183, 0); }
+  50% { opacity: 0.88; box-shadow: 0 0 18px 4px rgba(110, 231, 183, 0.18); }
+}
+
+.hero-node-pulse > div {
+  animation: hero-node-pulse 2.2s ease-in-out infinite;
+}
+
 /* Custom Toggle Switch */
 .toggle {
   appearance: none;
