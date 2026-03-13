@@ -1,7 +1,7 @@
 # Workflow Orchestration
 
 ## 1. Plan Mode Default
-- Enter plan mode for ANY non-trivial task (3+ steps)
+- Enter plan mode for ANY non-trivial task (2+ steps)
 - If something goes sideways, STOP and re-plan immediately
 - Use plan mode for verification steps, not just building
 - Write detailed specs upfront to reduce ambiguity
@@ -44,8 +44,8 @@
 - **Verify Plan**: Check in before starting implementation
 - **Track Progress**: Mark items complete as you go
 - **Explain Changes**: High-level summary at each step
-- **Document Results**: Add review section to `tasks/todo.md` when done
-- **Capture Lessons**: Update `tasks/lessons.md` after corrections
+- **Document Results**: Add review section to `tasks/todo.md` when done with date
+- **Capture Lessons**: Update `tasks/lessons.md` after corrections with date elaborating in simple terms with an example
 
 ---
 
@@ -54,3 +54,5 @@
 - **Simplicity First**: Make every change as simple as possible
 - **No Laziness**: Find root causes. No temporary fixes
 - **Minimal Impact**: Changes should only touch what's necessary
+
+NEVER commit to the main branch
