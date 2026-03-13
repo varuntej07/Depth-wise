@@ -16,8 +16,63 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Depthwise - Explore Any Topic Visually & Deeply",
-  description: "Transform your curiosity into understanding with AI-powered visual knowledge graphs. Ask any question and explore deeper with one click. No documents needed.",
+  metadataBase: new URL("https://depthwise.app"),
+  title: {
+    default: "Depthwise – Explore Any Topic as a Visual Knowledge Tree",
+    template: "%s | Depthwise",
+  },
+  description:
+    "Depthwise uses AI to let you explore any topic as an interactive branching knowledge tree. Go deep on any branch, not just linearly.",
+  keywords: [
+    "interactive knowledge tree",
+    "visual learning",
+    "AI topic explorer",
+    "non-linear learning",
+    "branching explanation",
+    "concept mapping",
+    "depthwise exploration",
+    "learn layer by layer",
+    'visualize complex topics',
+    "knowledge graph explorer",
+  ],
+  openGraph: {
+    title: "Depthwise – Explore Any Topic as a Visual Knowledge Tree",
+    description:
+      "Depthwise uses AI to let you explore any topic as an interactive branching knowledge tree. Go deep on any branch, not just linearly.",
+    type: "website",
+    url: "https://depthwise.app",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Depthwise – Visual Knowledge Tree Explorer",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Depthwise – Explore Any Topic as a Visual Knowledge Tree",
+    description:
+      "Depthwise uses AI to let you explore any topic as an interactive branching knowledge tree. Go deep on any branch, not just linearly.",
+  },
+  alternates: {
+    canonical: "https://depthwise.app",
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Depthwise",
+  url: "https://depthwise.app",
+  description: "AI-powered visual knowledge tree explorer",
+  applicationCategory: "EducationApplication",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
 };
 
 export const viewport: Viewport = {
@@ -39,6 +94,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <PostHogProvider>
           <SessionProvider>
             <PostHogAuthIdentifier />

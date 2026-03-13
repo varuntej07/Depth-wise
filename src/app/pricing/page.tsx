@@ -3,8 +3,11 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export const metadata = {
-  title: 'Pricing - Depthwise',
+  title: 'Pricing',
   description: 'Choose the plan that fits your exploration needs. Start exploring for free or upgrade for unlimited knowledge graphs.',
+  alternates: {
+    canonical: 'https://depthwise.app/pricing',
+  },
 };
 
 export default function PricingPage() {
