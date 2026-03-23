@@ -127,8 +127,8 @@ export const UsageIndicator: React.FC = () => {
         {/* Unlimited Badge */}
         {explorationsLimit === null && (
           <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-[var(--mint-accent-1)] to-[var(--mint-accent-3)] border border-[var(--mint-accent-2)] rounded-full">
-            <TrendingUp className="w-3 h-3 text-[var(--mint-accent-1)]" />
-            <span className="text-xs font-semibold text-[var(--mint-accent-1)]">Unlimited</span>
+            <TrendingUp className="w-3 h-3 text-[#050D0B]" />
+            <span className="text-xs font-semibold text-[#050D0B]">Unlimited</span>
           </div>
         )}
       </div>

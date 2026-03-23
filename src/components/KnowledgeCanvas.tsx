@@ -281,7 +281,21 @@ const KnowledgeCanvasInner: React.FC = () => {
     });
   }, [storeNodes, focusMode, focusedNodeId, centeredNodeId, setNodes, getVisibleNodes, applyDepthRowLayout]);
 
+  // Re-apply layout when React Flow measures node dimensions (not on every position change).
+  // Using a ref to track the measurement key prevents the infinite loop where setNodes → nodes
+  // change -> effect fires -> setNodes -> ... that causes React error.
+  const prevMeasuredKeyRef = useRef<string>('');
   useEffect(() => {
+    const measuredKey = nodes
+      .map((n) => {
+        const measured = (n as Node & { measured?: { width?: number; height?: number } }).measured;
+        return `${n.id}:${measured?.width ?? ''}:${measured?.height ?? ''}`;
+      })
+      .join('|');
+
+    if (measuredKey === prevMeasuredKeyRef.current) return;
+    prevMeasuredKeyRef.current = measuredKey;
+
     setNodes((currentNodes) => applyDepthRowLayout(currentNodes));
   }, [nodes, setNodes, applyDepthRowLayout]);
 
