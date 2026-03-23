@@ -89,7 +89,7 @@ const KnowledgeCanvasInner: React.FC = () => {
   const inFlightRef = useRef<Set<string>>(new Set());
   const centerPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shouldRenderDesktopTools = !isMobile && nodes.length > 0;
-  const canvasMinZoom = isMobile ? 0.05 : 0.55;
+  const canvasMinZoom = isMobile ? 0.05 : 0.30;
   const canvasFitMaxZoom = isMobile ? 0.6 : 1.05;
   const fallbackNodeHeight = isMobile
     ? NODE_CARD_DIMENSIONS.mobile.height
