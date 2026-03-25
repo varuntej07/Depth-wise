@@ -201,8 +201,6 @@ const KnowledgeNode: React.FC<KnowledgeNodeProps> = ({ data, id, selected = fals
   const contentText = (data.content || data.summary || '').trim();
   const shouldClampContent = contentText.length > (isRootNode ? ROOT_PREVIEW_CHAR_LIMIT : 280);
   const isContentExpanded = shouldClampContent && (isHovered || selected);
-  const showExploreTerms = Array.isArray(data.exploreTerms) && data.exploreTerms.length > 0;
-  const compactExploreActions = getFollowUpButtons();
   const showFeedbackControls =
     !isReadOnly && !data.loading && !data.error && (isHovered || selected || showDownvoteReasons);
 

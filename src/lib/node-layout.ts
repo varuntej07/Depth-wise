@@ -55,6 +55,7 @@ export const applyNonOverlappingDepthLayout = (
     return inputNodes;
   }
 
+  const nodeById = new Map(inputNodes.map((n) => [n.id, n as SizedNode]));
   const nextPositionByNodeId = new Map<string, { x: number; y: number }>();
   let previousRowBottom: number | null = null;
 
@@ -75,43 +76,61 @@ export const applyNonOverlappingDepthLayout = (
       id: node.id,
       ...getNodeSize(node, options),
     }));
+    const sizeById = new Map(rowNodeSizes.map((s) => [s.id, s]));
 
-    let cursorRightEdge: number | null = null;
-    const provisionalXById = new Map<string, number>();
-    let desiredRowCenter = 0;
-
-    for (let index = 0; index < rowNodes.length; index += 1) {
-      const node = rowNodes[index];
-      const { width } = rowNodeSizes[index];
-      const desiredX: number = node.position.x;
-      const x: number =
-        cursorRightEdge === null
-          ? desiredX
-          : Math.max(desiredX, cursorRightEdge + options.minHorizontalGap);
-
-      provisionalXById.set(node.id, x);
-      cursorRightEdge = x + width;
-      desiredRowCenter += desiredX + width / 2;
+    // Group nodes in this row by their parentId so each subtree is centered under its parent.
+    const byParent = new Map<string, SizedNode[]>();
+    for (const node of rowNodes) {
+      const parentKey = (node.data as GraphNode['data'] | undefined)?.parentId ?? node.id;
+      if (!byParent.has(parentKey)) byParent.set(parentKey, []);
+      byParent.get(parentKey)!.push(node);
     }
 
-    desiredRowCenter /= rowNodes.length;
+    // Sort groups left to right by parent X midpoint so the cursor pass stays ordered.
+    const sortedGroups = [...byParent.entries()].sort(([aKey], [bKey]) => {
+      const aParent = nodeById.get(aKey);
+      const bParent = nodeById.get(bKey);
+      const aX = aParent ? (nextPositionByNodeId.get(aKey)?.x ?? aParent.position.x) + getNodeSize(aParent, options).width / 2 : 0;
+      const bX = bParent ? (nextPositionByNodeId.get(bKey)?.x ?? bParent.position.x) + getNodeSize(bParent, options).width / 2 : 0;
+      return aX - bX;
+    });
 
-    const firstNode = rowNodes[0];
-    const lastNode = rowNodes[rowNodes.length - 1];
-    const firstX = provisionalXById.get(firstNode.id)!;
-    const lastX = provisionalXById.get(lastNode.id)!;
-    const lastWidth = rowNodeSizes[rowNodeSizes.length - 1].width;
-    const provisionalCenter = (firstX + (lastX + lastWidth)) / 2;
-    const centerShift = desiredRowCenter - provisionalCenter;
+    // Place each group centered under its parent, then resolve inter-group overlaps.
+    const groupSpans: Array<{ right: number; entries: Array<{ id: string; x: number }> }> = [];
+    for (const [parentKey, groupNodes] of sortedGroups) {
+      const parentNode = nodeById.get(parentKey);
+      const parentCenterX = parentNode
+        ? (nextPositionByNodeId.get(parentKey)?.x ?? parentNode.position.x) + getNodeSize(parentNode, options).width / 2
+        : groupNodes.reduce((s, n) => s + n.position.x + sizeById.get(n.id)!.width / 2, 0) / groupNodes.length;
+
+      const totalWidth = groupNodes.reduce(
+        (s, n, i) => s + sizeById.get(n.id)!.width + (i > 0 ? options.minHorizontalGap : 0),
+        0,
+      );
+      let curX = parentCenterX - totalWidth / 2;
+      const entries: Array<{ id: string; x: number }> = [];
+      for (const node of groupNodes) {
+        entries.push({ id: node.id, x: curX });
+        curX += sizeById.get(node.id)!.width + options.minHorizontalGap;
+      }
+      groupSpans.push({ right: curX - options.minHorizontalGap, entries });
+    }
+
+    // Push groups apart left to right if they overlap.
+    for (let g = 1; g < groupSpans.length; g++) {
+      const prev = groupSpans[g - 1];
+      const curr = groupSpans[g];
+      const overlap = prev.right + options.minHorizontalGap - curr.entries[0].x;
+      if (overlap > 0) {
+        for (const e of curr.entries) e.x += overlap;
+        curr.right += overlap;
+      }
+    }
 
     let rowMaxHeight = 0;
-    for (let index = 0; index < rowNodes.length; index += 1) {
-      const node = rowNodes[index];
-      const { height } = rowNodeSizes[index];
-      const finalX = provisionalXById.get(node.id)! + centerShift;
-
-      nextPositionByNodeId.set(node.id, { x: finalX, y: rowY });
-      rowMaxHeight = Math.max(rowMaxHeight, height);
+    for (const size of rowNodeSizes) rowMaxHeight = Math.max(rowMaxHeight, size.height);
+    for (const { entries } of groupSpans) {
+      for (const { id, x } of entries) nextPositionByNodeId.set(id, { x, y: rowY });
     }
 
     previousRowBottom = rowY + rowMaxHeight;

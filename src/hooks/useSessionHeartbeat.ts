@@ -7,7 +7,6 @@ export function useSessionHeartbeat(sessionId: string | null, isAnonymous: boole
   useEffect(() => {
     if (!sessionId) return;
 
-    let intervalId: ReturnType<typeof setInterval>;
     let accumulatedSec = 0;
 
     const sendHeartbeat = () => {
@@ -29,7 +28,7 @@ export function useSessionHeartbeat(sessionId: string | null, isAnonymous: boole
       sendHeartbeat();
     };
 
-    intervalId = setInterval(tick, HEARTBEAT_INTERVAL_MS);
+    const intervalId = setInterval(tick, HEARTBEAT_INTERVAL_MS);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {

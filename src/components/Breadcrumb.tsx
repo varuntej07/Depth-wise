@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { ChevronRight, X, Home } from 'lucide-react';
-import { GraphNode } from '@/types/graph';
 import useGraphStore from '@/store/graphStore';
 
 interface BreadcrumbProps {
@@ -65,7 +64,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ className = '' }) => {
         </button>
 
         {/* Path Items */}
-        {ancestorPath.slice(1).map((node, index) => (
+        {ancestorPath.slice(1).map((node) => (
           <React.Fragment key={node.id}>
             <ChevronRight className="w-3 h-3 text-slate-600 flex-shrink-0" />
             <button

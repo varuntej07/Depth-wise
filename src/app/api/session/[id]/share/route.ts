@@ -62,7 +62,7 @@ export async function POST(
     // Anonymous users (userId: null) can share their own graphs
     // Authenticated users can only share their own graphs
     const session = await auth();
-    let ownerUserId: string | null = graphSession.userId;
+    const ownerUserId: string | null = graphSession.userId;
 
     if (graphSession.userId !== null) {
       // This is an authenticated user's graph
